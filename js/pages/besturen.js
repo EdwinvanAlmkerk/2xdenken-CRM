@@ -108,7 +108,8 @@ function renderBestuurDetail(id) {
       </div>`;
   } else if (bestuurTab === 'dossier') {
     tabContent = `
-      <div style="display:flex;justify-content:flex-end;margin-bottom:16px">
+      <div style="display:flex;justify-content:flex-end;gap:8px;margin-bottom:16px">
+        <button class="btn btn-secondary" onclick="openBestuurBestandModal('${id}')">${svgIcon('add')} Bestand toevoegen</button>
         <button class="btn btn-primary" onclick="openBestuurDossierModal('${id}')">${svgIcon('add')} Notitie toevoegen</button>
       </div>
       ${dossiers.length === 0
@@ -154,19 +155,33 @@ function openBestuurDossierModal(bestuurId) {
      </div>
      <div class="form-group"><label>Notitie *</label>
        <textarea id="f-tekst" rows="5" placeholder="Wat is er besproken, afgesproken of opgemerkt?"></textarea>
-     </div>
-     <div class="form-group">
-       <label>Bijlage toevoegen (optioneel)</label>
-       <input type="file" id="f-bijlage" multiple accept=".pdf,.doc,.docx,.xls,.xlsx,.ppt,.pptx,.jpg,.jpeg,.png,.gif,.txt,.csv,.zip" style="font-size:13px"/>
-       <div style="font-size:11px;color:var(--navy4);margin-top:4px">PDF, Word, Excel, afbeeldingen, etc.</div>
-       <div id="f-bijlage-preview" style="display:flex;flex-wrap:wrap;gap:6px;margin-top:8px"></div>
      </div>`,
     `<button class="btn btn-secondary" onclick="closeModal()">Annuleren</button>
      <button class="btn btn-primary" onclick="saveDossierBestuur('${bestuurId}')">Opslaan</button>`);
+}
+
+function openBestuurBestandModal(bestuurId) {
+  const b = DB.besturen.find(x => x.id === bestuurId);
+  const scholen = DB.scholen.filter(s => s.bestuurId === bestuurId);
+  const schoolOpts = scholen.map(s => `<option value="${s.id}">${esc(s.naam)}</option>`).join('');
+  showModal('Bestand toevoegen — ' + esc(b?.naam || ''),
+    `<div class="form-group"><label>School *</label>
+       <select id="f-school-dos"><option value="">— Kies school —</option>${schoolOpts}</select>
+     </div>
+     <div class="form-group"><label>Onderwerp *</label>
+       <input type="text" id="f-onderwerp" placeholder="Korte titel (bv. 'Offerte 2026')"/>
+     </div>
+     <div class="form-group"><label>Bestand(en) *</label>
+       <input type="file" id="f-bestand" multiple style="font-size:13px"/>
+       <div style="font-size:11px;color:var(--navy4);margin-top:4px">Je kunt meerdere bestanden tegelijk kiezen.</div>
+       <div id="f-bestand-preview" style="display:flex;flex-wrap:wrap;gap:6px;margin-top:8px"></div>
+     </div>`,
+    `<button class="btn btn-secondary" onclick="closeModal()">Annuleren</button>
+     <button class="btn btn-primary" onclick="saveBestandBestuur('${bestuurId}')">Opslaan</button>`);
   setTimeout(() => {
-    const inp = document.getElementById('f-bijlage');
+    const inp = document.getElementById('f-bestand');
     if (inp) inp.addEventListener('change', () => {
-      const prev = document.getElementById('f-bijlage-preview');
+      const prev = document.getElementById('f-bestand-preview');
       if (prev) prev.innerHTML = [...inp.files].map(f => `<span style="background:var(--bg2);border:1px solid var(--bg3);border-radius:5px;padding:3px 8px;font-size:12px">📎 ${esc(f.name)}</span>`).join('');
     });
   }, 50);

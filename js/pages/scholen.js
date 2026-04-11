@@ -174,14 +174,16 @@ function renderSchoolDetail(id) {
                     </div>
                   </div>` : '';
               })()}
-              <div style="margin-top:10px;padding-top:10px;border-top:1px solid var(--bg3);display:flex;gap:6px">
-                <button class="btn btn-secondary btn-sm" style="flex:1;justify-content:center" onclick="openDossierModalContact('${id}','${c.id}')">${svgIcon('note', 14)} Notitie toevoegen</button>
-                <button class="btn btn-secondary btn-sm" style="flex:1;justify-content:center" onclick="openFactuurModal('${id}','','${c.id}')">${svgIcon('invoice', 14)} Nieuwe factuur</button>
+              <div style="margin-top:10px;padding-top:10px;border-top:1px solid var(--bg3);display:flex;gap:6px;flex-wrap:wrap">
+                <button class="btn btn-secondary btn-sm" style="flex:1;justify-content:center" onclick="openDossierModalContact('${id}','${c.id}')">${svgIcon('note', 14)} Notitie</button>
+                <button class="btn btn-secondary btn-sm" style="flex:1;justify-content:center" onclick="openBestandModalContact('${id}','${c.id}')">${svgIcon('add', 14)} Bestand</button>
+                <button class="btn btn-secondary btn-sm" style="flex:1;justify-content:center" onclick="openFactuurModal('${id}','','${c.id}')">${svgIcon('invoice', 14)} Factuur</button>
               </div>
             </div>`).join('')}</div>`}`;
   } else if (schoolTab === 'dossier') {
     tabContent = `
-      <div style="display:flex;justify-content:flex-end;margin-bottom:16px">
+      <div style="display:flex;justify-content:flex-end;gap:8px;margin-bottom:16px">
+        <button class="btn btn-secondary" onclick="openBestandModal('${id}')">${svgIcon('add')} Bestand toevoegen</button>
         <button class="btn btn-primary" onclick="openDossierModal('${id}')">${svgIcon('add')} Notitie toevoegen</button>
       </div>
       ${dossiers.length === 0
@@ -308,21 +310,34 @@ function openDossierModal(schoolId) {
        <select id="f-cid"><option value="">— Algemeen voor ${esc(s?.naam || '')} —</option>${opts}</select>
      </div>
      <div class="form-group"><label>Onderwerp *</label><input type="text" id="f-onderwerp" placeholder="Korte titel van deze notitie"/></div>
-     <div class="form-group"><label>Notitie *</label><textarea id="f-tekst" rows="5" placeholder="Wat is er besproken, afgesproken of opgemerkt?"></textarea></div>
-     <div class="form-group">
-       <label>Document bijvoegen (optioneel)</label>
-       <input type="file" id="f-bijlage" multiple accept=".pdf,.doc,.docx,.xls,.xlsx,.ppt,.pptx,.jpg,.jpeg,.png,.gif,.txt,.csv,.zip" style="font-size:13px"/>
-       <div style="font-size:11px;color:var(--navy4);margin-top:4px">PDF, Word, Excel, afbeeldingen, etc.</div>
-       <div id="f-bijlage-preview" style="display:flex;flex-wrap:wrap;gap:6px;margin-top:8px"></div>
-     </div>`,
+     <div class="form-group"><label>Notitie *</label><textarea id="f-tekst" rows="5" placeholder="Wat is er besproken, afgesproken of opgemerkt?"></textarea></div>`,
     `<button class="btn btn-secondary" onclick="closeModal()">Annuleren</button>
      <button class="btn btn-primary" onclick="saveDossier('${schoolId}')">Opslaan</button>`);
+}
+
+function openBestandModal(schoolId) {
+  const s = DB.scholen.find(x => x.id === schoolId);
+  const contacten = DB.contacten.filter(c => c.schoolId === schoolId);
+  const opts = contacten.map(c => `<option value="${c.id}">${esc(c.naam)} (${esc(c.functie || '')})</option>`).join('');
+  showModal('Bestand toevoegen',
+    `<div class="form-group"><label>Contactpersoon (optioneel)</label>
+       <select id="f-cid"><option value="">— Algemeen voor ${esc(s?.naam || '')} —</option>${opts}</select>
+     </div>
+     <div class="form-group"><label>Onderwerp *</label>
+       <input type="text" id="f-onderwerp" placeholder="Korte titel (bv. 'Offerte 2026')"/>
+     </div>
+     <div class="form-group"><label>Bestand(en) *</label>
+       <input type="file" id="f-bestand" multiple style="font-size:13px"/>
+       <div style="font-size:11px;color:var(--navy4);margin-top:4px">Je kunt meerdere bestanden tegelijk kiezen.</div>
+       <div id="f-bestand-preview" style="display:flex;flex-wrap:wrap;gap:6px;margin-top:8px"></div>
+     </div>`,
+    `<button class="btn btn-secondary" onclick="closeModal()">Annuleren</button>
+     <button class="btn btn-primary" onclick="saveBestand('${schoolId}')">Opslaan</button>`);
   setTimeout(() => {
-    const inp = document.getElementById('f-bijlage');
+    const inp = document.getElementById('f-bestand');
     if (inp) inp.addEventListener('change', () => {
-      const prev = document.getElementById('f-bijlage-preview');
-      if (!prev) return;
-      prev.innerHTML = [...inp.files].map(f => `<span style="background:var(--bg2);border:1px solid var(--bg3);border-radius:5px;padding:3px 8px;font-size:12px">📎 ${esc(f.name)}</span>`).join('');
+      const prev = document.getElementById('f-bestand-preview');
+      if (prev) prev.innerHTML = [...inp.files].map(f => `<span style="background:var(--bg2);border:1px solid var(--bg3);border-radius:5px;padding:3px 8px;font-size:12px">📎 ${esc(f.name)}</span>`).join('');
     });
   }, 50);
 }
@@ -336,19 +351,29 @@ function openDossierModalContact(schoolId, contactId) {
      </div>
      <div class="form-group"><label>Notitie *</label>
        <textarea id="f-tekst" rows="5" placeholder="Wat is er besproken, afgesproken of opgemerkt?"></textarea>
-     </div>
-     <div class="form-group">
-       <label>Bijlage toevoegen (optioneel)</label>
-       <input type="file" id="f-bijlage" multiple accept=".pdf,.doc,.docx,.xls,.xlsx,.ppt,.pptx,.jpg,.jpeg,.png,.gif,.txt,.csv,.zip" style="font-size:13px"/>
-       <div style="font-size:11px;color:var(--navy4);margin-top:4px">PDF, Word, Excel, afbeeldingen, etc.</div>
-       <div id="f-bijlage-preview" style="display:flex;flex-wrap:wrap;gap:6px;margin-top:8px"></div>
      </div>`,
     `<button class="btn btn-secondary" onclick="closeModal()">Annuleren</button>
      <button class="btn btn-primary" onclick="saveDossier('${schoolId}')">Opslaan</button>`);
+}
+
+function openBestandModalContact(schoolId, contactId) {
+  const c = DB.contacten.find(x => x.id === contactId);
+  showModal(`Bestand toevoegen — ${esc(c?.naam || '')}`,
+    `<input type="hidden" id="f-cid" value="${esc(contactId)}"/>
+     <div class="form-group"><label>Onderwerp *</label>
+       <input type="text" id="f-onderwerp" placeholder="Korte titel (bv. 'Offerte 2026')"/>
+     </div>
+     <div class="form-group"><label>Bestand(en) *</label>
+       <input type="file" id="f-bestand" multiple style="font-size:13px"/>
+       <div style="font-size:11px;color:var(--navy4);margin-top:4px">Je kunt meerdere bestanden tegelijk kiezen.</div>
+       <div id="f-bestand-preview" style="display:flex;flex-wrap:wrap;gap:6px;margin-top:8px"></div>
+     </div>`,
+    `<button class="btn btn-secondary" onclick="closeModal()">Annuleren</button>
+     <button class="btn btn-primary" onclick="saveBestand('${schoolId}')">Opslaan</button>`);
   setTimeout(() => {
-    const inp = document.getElementById('f-bijlage');
+    const inp = document.getElementById('f-bestand');
     if (inp) inp.addEventListener('change', () => {
-      const prev = document.getElementById('f-bijlage-preview');
+      const prev = document.getElementById('f-bestand-preview');
       if (prev) prev.innerHTML = [...inp.files].map(f => `<span style="background:var(--bg2);border:1px solid var(--bg3);border-radius:5px;padding:3px 8px;font-size:12px">📎 ${esc(f.name)}</span>`).join('');
     });
   }, 50);

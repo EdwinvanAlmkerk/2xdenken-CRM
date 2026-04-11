@@ -59,7 +59,7 @@ function badge(type) {
   return `<span class="badge badge-${esc(type)}">${esc(map[type] || type)}</span>`;
 }
 
-// ── Bijlagen helpers ─────────────────────────────────────────────
+// ── Bijlagen helpers (oud, base64 — legacy) ──────────────────────
 function downloadBijlage(dossierId, bijlageIdx) {
   const d = DB.dossiers.find(x => x.id === dossierId);
   if (!d || !d.bijlagen || !d.bijlagen[bijlageIdx]) return;
@@ -68,6 +68,72 @@ function downloadBijlage(dossierId, bijlageIdx) {
   a.href = b.data;
   a.download = b.naam;
   a.click();
+}
+
+// ── Supabase Storage helpers (nieuw, bucket: dossier-bestanden) ──
+const STORAGE_BUCKET = 'dossier-bestanden';
+
+async function uploadBestandToStorage(dossierId, file) {
+  const safeName = file.name.replace(/[^a-zA-Z0-9._-]/g, '_');
+  const path = `${dossierId}/${Date.now()}_${safeName}`;
+  const res = await fetch(`${SUPA_URL}/storage/v1/object/${STORAGE_BUCKET}/${encodeURI(path)}`, {
+    method: 'POST',
+    headers: {
+      'apikey': SUPA_KEY,
+      'Authorization': `Bearer ${currentSession?.access_token || SUPA_KEY}`,
+      'Content-Type': file.type || 'application/octet-stream',
+      'x-upsert': 'false'
+    },
+    body: file
+  });
+  if (!res.ok) throw new Error(`Upload mislukt: ${res.status} ${await res.text()}`);
+  return { naam: file.name, pad: path, mimetype: file.type || '', grootte: file.size };
+}
+
+async function downloadBestand(dossierId, idx) {
+  const d = DB.dossiers.find(x => x.id === dossierId);
+  if (!d || !d.bestanden || !d.bestanden[idx]) return;
+  const b = d.bestanden[idx];
+  try {
+    const res = await fetch(`${SUPA_URL}/storage/v1/object/sign/${STORAGE_BUCKET}/${encodeURI(b.pad)}`, {
+      method: 'POST',
+      headers: {
+        'apikey': SUPA_KEY,
+        'Authorization': `Bearer ${currentSession?.access_token || SUPA_KEY}`,
+        'Content-Type': 'application/json'
+      },
+      body: JSON.stringify({ expiresIn: 60 })
+    });
+    if (!res.ok) throw new Error(await res.text());
+    const { signedURL } = await res.json();
+    const url = `${SUPA_URL}/storage/v1${signedURL}`;
+    const a = document.createElement('a');
+    a.href = url;
+    a.download = b.naam;
+    a.target = '_blank';
+    document.body.appendChild(a);
+    a.click();
+    document.body.removeChild(a);
+  } catch (e) {
+    showToast('Download mislukt: ' + e.message, 'error');
+  }
+}
+
+async function deleteBestandFromStorage(path) {
+  await fetch(`${SUPA_URL}/storage/v1/object/${STORAGE_BUCKET}/${encodeURI(path)}`, {
+    method: 'DELETE',
+    headers: {
+      'apikey': SUPA_KEY,
+      'Authorization': `Bearer ${currentSession?.access_token || SUPA_KEY}`
+    }
+  });
+}
+
+function fmtBytes(n) {
+  if (!n) return '';
+  if (n < 1024) return n + ' B';
+  if (n < 1024 * 1024) return (n / 1024).toFixed(1) + ' KB';
+  return (n / (1024 * 1024)).toFixed(1) + ' MB';
 }
 
 function bijlageIcon(type) {
@@ -101,9 +167,25 @@ function toggleDossier(el) {
 function renderDossierItem(d, opts = {}) {
   const { delBtn, delArg, schoolLabel } = opts;
   const titel = d.onderwerp || '(geen onderwerp)';
+  const isBestand = d.type === 'bestand';
+  const typeIcon = isBestand ? '📎' : '📝';
+  const typeCls  = isBestand ? 'dossier-type-bestand' : 'dossier-type-notitie';
+
+  let bodyInhoud = '';
+  if (isBestand && d.bestanden?.length) {
+    bodyInhoud = `<div class="dossier-bestanden">${d.bestanden.map((b, i) => `
+      <span class="bijlage-chip" onclick="downloadBestand('${d.id}',${i})" title="Klik om te downloaden">
+        ${bijlageIcon(b.mimetype)} ${esc(b.naam)} <span style="color:var(--navy4);font-size:11px">(${fmtBytes(b.grootte)})</span>
+      </span>`).join('')}
+    </div>`;
+  } else {
+    bodyInhoud = `<div class="dossier-text">${esc(d.tekst || '')}</div>${renderBijlagen(d, d.schoolId)}`;
+  }
+
   return `
-    <div class="dossier-item">
+    <div class="dossier-item ${typeCls}">
       <div class="dossier-header" onclick="toggleDossier(this)">
+        <span class="dossier-type-icon" title="${isBestand ? 'Bestand' : 'Notitie'}">${typeIcon}</span>
         <span class="dossier-toggle">${svgIcon('chevron', 12)}</span>
         <span class="dossier-onderwerp">${esc(titel)}</span>
         <span class="dossier-date">${fmtDate(d.datum)}</span>
@@ -113,8 +195,7 @@ function renderDossierItem(d, opts = {}) {
         <div style="font-size:12px;color:var(--navy4);margin-bottom:6px">
           ${esc(d.bronNaam || '')}${schoolLabel ? ` <span style="background:var(--bg3);border-radius:4px;padding:2px 7px;margin-left:4px">${esc(schoolLabel)}</span>` : ''}
         </div>
-        <div class="dossier-text">${esc(d.tekst || '')}</div>
-        ${renderBijlagen(d, d.schoolId)}
+        ${bodyInhoud}
       </div>
     </div>`;
 }

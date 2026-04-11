@@ -102,7 +102,7 @@ async function delContact(cid, schoolId) {
   } catch (e) { showToast('Fout: ' + e.message, 'error'); } finally { hideLoading(); }
 }
 
-// ── DOSSIERS ──────────────────────────────────────────────────────
+// ── DOSSIERS: NOTITIES ────────────────────────────────────────────
 async function saveDossier(schoolId) {
   const onderwerp = document.getElementById('f-onderwerp').value.trim();
   if (!onderwerp) return alert('Onderwerp mag niet leeg zijn');
@@ -112,43 +112,15 @@ async function saveDossier(schoolId) {
   const s = DB.scholen.find(x => x.id === schoolId);
   const contact = cid ? DB.contacten.find(c => c.id === cid) : null;
   const bronNaam = contact ? `${contact.naam} — ${s?.naam || ''}` : (s?.naam || '');
-  const bijlageInput = document.getElementById('f-bijlage');
-  const files = bijlageInput ? [...bijlageInput.files] : [];
 
-  const finalize = async (bijlagen) => {
-    const newId = uid();
-    const item = { id: newId, schoolId, contactId: cid || null, datum: new Date().toISOString(), onderwerp, tekst, bronNaam, bijlagen };
-    showLoading();
-    try {
-      const payload = { id: newId, school_id: schoolId, datum: item.datum, onderwerp, tekst, bron_naam: bronNaam };
-      await supa('/rest/v1/dossiers', { method: 'POST', body: JSON.stringify(payload) });
-      DB.dossiers.unshift(item);
-      closeModal(); renderContent();
-    } catch (e) { showToast('Fout: ' + e.message, 'error'); } finally { hideLoading(); }
-  };
-
-  finalize([]);
-}
-
-async function delDossier(did, schoolId) {
-  if (!confirm('Notitie verwijderen?')) return;
+  const newId = uid();
+  const item = { id: newId, schoolId, contactId: cid || null, datum: new Date().toISOString(), type: 'notitie', onderwerp, tekst, bronNaam, bestanden: [], bijlagen: [] };
   showLoading();
   try {
-    await supa(`/rest/v1/dossiers?id=eq.${did}`, { method: 'DELETE' });
-    DB.dossiers = DB.dossiers.filter(d => d.id !== did);
-    renderContent();
-  } catch (e) { showToast('Fout: ' + e.message, 'error'); } finally { hideLoading(); }
-}
-
-async function delBijlage(dossierId, bijlageIdx, schoolId) {
-  const d = DB.dossiers.find(x => x.id === dossierId);
-  if (!d || !d.bijlagen) return;
-  if (!confirm(`"${d.bijlagen[bijlageIdx].naam}" verwijderen?`)) return;
-  d.bijlagen.splice(bijlageIdx, 1);
-  showLoading();
-  try {
-    await supa(`/rest/v1/dossiers?id=eq.${dossierId}`, { method: 'PATCH', body: JSON.stringify({ bijlagen: d.bijlagen }) });
-    renderContent();
+    const payload = { id: newId, school_id: schoolId, contact_id: cid || null, datum: item.datum, type: 'notitie', onderwerp, tekst, bron_naam: bronNaam, bestanden: [] };
+    await supa('/rest/v1/dossiers', { method: 'POST', body: JSON.stringify(payload) });
+    DB.dossiers.unshift(item);
+    closeModal(); renderContent();
   } catch (e) { showToast('Fout: ' + e.message, 'error'); } finally { hideLoading(); }
 }
 
@@ -162,27 +134,86 @@ async function saveDossierBestuur(bestuurId) {
   const b = DB.besturen.find(x => x.id === bestuurId);
   const s = DB.scholen.find(x => x.id === schoolId);
   const bronNaam = `${b?.naam || ''} — ${s?.naam || ''}`;
-  const bijlageInput = document.getElementById('f-bijlage');
-  const files = bijlageInput ? [...bijlageInput.files] : [];
   const newId = uid();
-  const item = { id: newId, schoolId, contactId: null, datum: new Date().toISOString(), onderwerp, tekst, bronNaam, bijlagen: [] };
+  const item = { id: newId, schoolId, contactId: null, datum: new Date().toISOString(), type: 'notitie', onderwerp, tekst, bronNaam, bestanden: [], bijlagen: [] };
   showLoading();
   try {
-    const payload = { id: newId, school_id: schoolId, datum: item.datum, onderwerp, tekst, bron_naam: bronNaam };
+    const payload = { id: newId, school_id: schoolId, contact_id: null, datum: item.datum, type: 'notitie', onderwerp, tekst, bron_naam: bronNaam, bestanden: [] };
     await supa('/rest/v1/dossiers', { method: 'POST', body: JSON.stringify(payload) });
     DB.dossiers.unshift(item);
     closeModal(); renderContent();
   } catch (e) { showToast('Fout: ' + e.message, 'error'); } finally { hideLoading(); }
 }
 
-async function delDossierBestuur(did, bestuurId) {
-  if (!confirm('Notitie verwijderen?')) return;
+// ── DOSSIERS: BESTANDEN ───────────────────────────────────────────
+async function saveBestand(schoolId) {
+  const onderwerp = document.getElementById('f-onderwerp').value.trim();
+  if (!onderwerp) return alert('Onderwerp mag niet leeg zijn');
+  const cid = document.getElementById('f-cid')?.value || '';
+  const fileInput = document.getElementById('f-bestand');
+  const files = fileInput ? [...fileInput.files] : [];
+  if (files.length === 0) return alert('Kies minimaal één bestand');
+
+  const s = DB.scholen.find(x => x.id === schoolId);
+  const contact = cid ? DB.contacten.find(c => c.id === cid) : null;
+  const bronNaam = contact ? `${contact.naam} — ${s?.naam || ''}` : (s?.naam || '');
+
+  const newId = uid();
   showLoading();
   try {
+    const bestanden = [];
+    for (const f of files) bestanden.push(await uploadBestandToStorage(newId, f));
+    const item = { id: newId, schoolId, contactId: cid || null, datum: new Date().toISOString(), type: 'bestand', onderwerp, tekst: '', bronNaam, bestanden, bijlagen: [] };
+    const payload = { id: newId, school_id: schoolId, contact_id: cid || null, datum: item.datum, type: 'bestand', onderwerp, tekst: null, bron_naam: bronNaam, bestanden };
+    await supa('/rest/v1/dossiers', { method: 'POST', body: JSON.stringify(payload) });
+    DB.dossiers.unshift(item);
+    closeModal(); renderContent();
+  } catch (e) { showToast('Fout: ' + e.message, 'error'); } finally { hideLoading(); }
+}
+
+async function saveBestandBestuur(bestuurId) {
+  const schoolId = document.getElementById('f-school-dos').value;
+  if (!schoolId) return alert('Kies een school');
+  const onderwerp = document.getElementById('f-onderwerp').value.trim();
+  if (!onderwerp) return alert('Onderwerp mag niet leeg zijn');
+  const fileInput = document.getElementById('f-bestand');
+  const files = fileInput ? [...fileInput.files] : [];
+  if (files.length === 0) return alert('Kies minimaal één bestand');
+
+  const b = DB.besturen.find(x => x.id === bestuurId);
+  const s = DB.scholen.find(x => x.id === schoolId);
+  const bronNaam = `${b?.naam || ''} — ${s?.naam || ''}`;
+
+  const newId = uid();
+  showLoading();
+  try {
+    const bestanden = [];
+    for (const f of files) bestanden.push(await uploadBestandToStorage(newId, f));
+    const item = { id: newId, schoolId, contactId: null, datum: new Date().toISOString(), type: 'bestand', onderwerp, tekst: '', bronNaam, bestanden, bijlagen: [] };
+    const payload = { id: newId, school_id: schoolId, contact_id: null, datum: item.datum, type: 'bestand', onderwerp, tekst: null, bron_naam: bronNaam, bestanden };
+    await supa('/rest/v1/dossiers', { method: 'POST', body: JSON.stringify(payload) });
+    DB.dossiers.unshift(item);
+    closeModal(); renderContent();
+  } catch (e) { showToast('Fout: ' + e.message, 'error'); } finally { hideLoading(); }
+}
+
+async function delDossier(did, schoolId) {
+  const d = DB.dossiers.find(x => x.id === did);
+  const label = d?.type === 'bestand' ? 'Bestand-item verwijderen?' : 'Notitie verwijderen?';
+  if (!confirm(label)) return;
+  showLoading();
+  try {
+    if (d?.bestanden?.length) {
+      for (const b of d.bestanden) { try { await deleteBestandFromStorage(b.pad); } catch (e) {} }
+    }
     await supa(`/rest/v1/dossiers?id=eq.${did}`, { method: 'DELETE' });
-    DB.dossiers = DB.dossiers.filter(d => d.id !== did);
+    DB.dossiers = DB.dossiers.filter(x => x.id !== did);
     renderContent();
   } catch (e) { showToast('Fout: ' + e.message, 'error'); } finally { hideLoading(); }
+}
+
+async function delDossierBestuur(did, bestuurId) {
+  await delDossier(did, null);
 }
 
 // ── FACTUREN ──────────────────────────────────────────────────────
@@ -302,7 +333,7 @@ async function saveUitvoering(trainingId, uitvId) {
         const scoreStr = data.score ? ` | Score: ${data.score}/5 ★` : '';
         const tekst = `Training uitgevoerd: "${t.naam}"${scoreStr}\n${data.evaluatie || ''}`.trim();
         const dosId = uid();
-        const dosItem = { id: dosId, schoolId, contactId: null, datum: new Date().toISOString(), tekst, bronNaam: `Training — ${school.naam}`, bijlagen: [] };
+        const dosItem = { id: dosId, schoolId, contactId: null, datum: new Date().toISOString(), type: 'notitie', onderwerp: `Training — ${t.naam}`, tekst, bronNaam: `Training — ${school.naam}`, bestanden: [], bijlagen: [] };
         await supa('/rest/v1/dossiers', { method: 'POST', body: JSON.stringify({ id: dosId, ...toDB_dossier(dosItem) }) });
         DB.dossiers.unshift(dosItem);
       }
@@ -344,7 +375,7 @@ async function saveUitvoeringVanSchool(schoolId) {
       const scoreStr = data.score ? ` | Score: ${data.score}/5 ★` : '';
       const tekst = `Training uitgevoerd: "${t.naam}"${scoreStr}\n${data.evaluatie || ''}`.trim();
       const dosId = uid();
-      const dosItem = { id: dosId, schoolId, contactId: null, datum: new Date().toISOString(), tekst, bronNaam: `Training — ${school.naam}`, bijlagen: [] };
+      const dosItem = { id: dosId, schoolId, contactId: null, datum: new Date().toISOString(), type: 'notitie', onderwerp: `Training — ${t.naam}`, tekst, bronNaam: `Training — ${school.naam}`, bestanden: [], bijlagen: [] };
       await supa('/rest/v1/dossiers', { method: 'POST', body: JSON.stringify({ id: dosId, ...toDB_dossier(dosItem) }) });
       DB.dossiers.unshift(dosItem);
     }
