@@ -90,3 +90,31 @@ function renderBijlagen(d, schoolId) {
     </span>`).join('')}
   </div>`;
 }
+
+function toggleDossier(el) {
+  const item = el.closest('.dossier-item');
+  if (item) item.classList.toggle('open');
+}
+
+// Render een dossier-item met inklapbare body.
+// opts: { delBtn: 'delDossier'|'delDossierBestuur'|null, delArg: string, schoolLabel?: string }
+function renderDossierItem(d, opts = {}) {
+  const { delBtn, delArg, schoolLabel } = opts;
+  const titel = d.onderwerp || '(geen onderwerp)';
+  return `
+    <div class="dossier-item">
+      <div class="dossier-header" onclick="toggleDossier(this)">
+        <span class="dossier-toggle">${svgIcon('chevron', 12)}</span>
+        <span class="dossier-onderwerp">${esc(titel)}</span>
+        <span class="dossier-date">${fmtDate(d.datum)}</span>
+        ${delBtn ? `<button class="btn btn-ghost btn-icon btn-sm" onclick="event.stopPropagation();${delBtn}('${d.id}','${delArg}')">${svgIcon('trash', 13)}</button>` : ''}
+      </div>
+      <div class="dossier-body">
+        <div style="font-size:12px;color:var(--navy4);margin-bottom:6px">
+          ${esc(d.bronNaam || '')}${schoolLabel ? ` <span style="background:var(--bg3);border-radius:4px;padding:2px 7px;margin-left:4px">${esc(schoolLabel)}</span>` : ''}
+        </div>
+        <div class="dossier-text">${esc(d.tekst || '')}</div>
+        ${renderBijlagen(d, d.schoolId)}
+      </div>
+    </div>`;
+}

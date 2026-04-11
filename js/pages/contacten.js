@@ -132,18 +132,7 @@ function renderContactDetail(schoolId, contactId) {
       <div class="card-body">
         ${dossiers.length === 0
           ? `<div class="empty-state">${svgIcon('note', 36)}<p>Nog geen dossiernotities</p></div>`
-          : `<div class="dossier-list">${dossiers.map(d => `
-              <div class="dossier-item">
-                <div class="dossier-top">
-                  <span class="dossier-source">${esc(d.bronNaam)}</span>
-                  <div style="display:flex;align-items:center;gap:10px">
-                    <span class="dossier-date">${fmtDate(d.datum)}</span>
-                    <button class="btn btn-ghost btn-icon btn-sm" onclick="delDossier('${d.id}','${schoolId}')" style="padding:2px">${svgIcon('trash', 13)}</button>
-                  </div>
-                </div>
-                <div class="dossier-text">${esc(d.tekst)}</div>
-                ${renderBijlagen(d, schoolId)}
-              </div>`).join('')}</div>`}
+          : `<div class="dossier-list">${dossiers.map(d => renderDossierItem(d, { delBtn: 'delDossier', delArg: schoolId })).join('')}</div>`}
       </div>
     </div>`;
 }

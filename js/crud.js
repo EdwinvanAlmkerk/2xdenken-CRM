@@ -104,6 +104,8 @@ async function delContact(cid, schoolId) {
 
 // ── DOSSIERS ──────────────────────────────────────────────────────
 async function saveDossier(schoolId) {
+  const onderwerp = document.getElementById('f-onderwerp').value.trim();
+  if (!onderwerp) return alert('Onderwerp mag niet leeg zijn');
   const tekst = document.getElementById('f-tekst').value.trim();
   if (!tekst) return alert('Notitie mag niet leeg zijn');
   const cid = document.getElementById('f-cid')?.value || '';
@@ -115,10 +117,10 @@ async function saveDossier(schoolId) {
 
   const finalize = async (bijlagen) => {
     const newId = uid();
-    const item = { id: newId, schoolId, contactId: cid || null, datum: new Date().toISOString(), tekst, bronNaam, bijlagen };
+    const item = { id: newId, schoolId, contactId: cid || null, datum: new Date().toISOString(), onderwerp, tekst, bronNaam, bijlagen };
     showLoading();
     try {
-      const payload = { id: newId, school_id: schoolId, datum: item.datum, tekst, bron_naam: bronNaam };
+      const payload = { id: newId, school_id: schoolId, datum: item.datum, onderwerp, tekst, bron_naam: bronNaam };
       await supa('/rest/v1/dossiers', { method: 'POST', body: JSON.stringify(payload) });
       DB.dossiers.unshift(item);
       closeModal(); renderContent();
@@ -153,6 +155,8 @@ async function delBijlage(dossierId, bijlageIdx, schoolId) {
 async function saveDossierBestuur(bestuurId) {
   const schoolId = document.getElementById('f-school-dos').value;
   if (!schoolId) return alert('Kies een school');
+  const onderwerp = document.getElementById('f-onderwerp').value.trim();
+  if (!onderwerp) return alert('Onderwerp mag niet leeg zijn');
   const tekst = document.getElementById('f-tekst').value.trim();
   if (!tekst) return alert('Notitie mag niet leeg zijn');
   const b = DB.besturen.find(x => x.id === bestuurId);
@@ -161,10 +165,10 @@ async function saveDossierBestuur(bestuurId) {
   const bijlageInput = document.getElementById('f-bijlage');
   const files = bijlageInput ? [...bijlageInput.files] : [];
   const newId = uid();
-  const item = { id: newId, schoolId, contactId: null, datum: new Date().toISOString(), tekst, bronNaam, bijlagen: [] };
+  const item = { id: newId, schoolId, contactId: null, datum: new Date().toISOString(), onderwerp, tekst, bronNaam, bijlagen: [] };
   showLoading();
   try {
-    const payload = { id: newId, school_id: schoolId, datum: item.datum, tekst, bron_naam: bronNaam };
+    const payload = { id: newId, school_id: schoolId, datum: item.datum, onderwerp, tekst, bron_naam: bronNaam };
     await supa('/rest/v1/dossiers', { method: 'POST', body: JSON.stringify(payload) });
     DB.dossiers.unshift(item);
     closeModal(); renderContent();

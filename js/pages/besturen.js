@@ -115,21 +115,8 @@ function renderBestuurDetail(id) {
         ? `<div class="card"><div class="empty-state">${svgIcon('note', 36)}<p>Nog geen dossiernotities</p></div></div>`
         : `<div class="dossier-list">${dossiers.map(d => {
             const school = DB.scholen.find(s => s.id === d.schoolId);
-            return `
-              <div class="dossier-item">
-                <div class="dossier-top">
-                  <div>
-                    <span class="dossier-source">${esc(d.bronNaam)}</span>
-                    ${school ? `<span style="font-size:11px;color:var(--navy4);margin-left:8px;background:var(--bg3);border-radius:4px;padding:2px 7px">${esc(school.naam)}</span>` : ''}
-                  </div>
-                  <div style="display:flex;align-items:center;gap:10px">
-                    <span class="dossier-date">${fmtDate(d.datum)}</span>
-                    <button class="btn btn-ghost btn-icon btn-sm" onclick="delDossierBestuur('${d.id}','${id}')">${svgIcon('trash', 13)}</button>
-                  </div>
-                </div>
-                <div class="dossier-text">${esc(d.tekst)}</div>
-                ${renderBijlagen(d, d.schoolId)}
-              </div>`}).join('')}</div>`}`;
+            return renderDossierItem(d, { delBtn: 'delDossierBestuur', delArg: id, schoolLabel: school?.naam });
+          }).join('')}</div>`}`;
   }
 
   return `
@@ -161,6 +148,9 @@ function openBestuurDossierModal(bestuurId) {
   showModal('Notitie toevoegen — ' + esc(b?.naam || ''),
     `<div class="form-group"><label>School *</label>
        <select id="f-school-dos"><option value="">— Kies school —</option>${schoolOpts}</select>
+     </div>
+     <div class="form-group"><label>Onderwerp *</label>
+       <input type="text" id="f-onderwerp" placeholder="Korte titel van deze notitie"/>
      </div>
      <div class="form-group"><label>Notitie *</label>
        <textarea id="f-tekst" rows="5" placeholder="Wat is er besproken, afgesproken of opgemerkt?"></textarea>

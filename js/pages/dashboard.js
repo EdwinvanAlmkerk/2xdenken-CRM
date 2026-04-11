@@ -45,14 +45,7 @@ function renderDashboard() {
       <div class="card-body">
         ${recentDossiers.length === 0
           ? `<div class="empty-state">${svgIcon('note', 36)}<p>Nog geen notities</p></div>`
-          : `<div class="dossier-list">${recentDossiers.map(d => `
-              <div class="dossier-item">
-                <div class="dossier-top">
-                  <span class="dossier-source">${esc(d.bronNaam)}</span>
-                  <span class="dossier-date">${fmtDate(d.datum)}</span>
-                </div>
-                <div class="dossier-text">${esc(d.tekst)}</div>
-              </div>`).join('')}</div>`}
+          : `<div class="dossier-list">${recentDossiers.map(d => renderDossierItem(d)).join('')}</div>`}
       </div>
     </div>`;
 }

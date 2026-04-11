@@ -186,18 +186,7 @@ function renderSchoolDetail(id) {
       </div>
       ${dossiers.length === 0
         ? `<div class="card"><div class="empty-state">${svgIcon('note', 36)}<p>Nog geen dossiernotities</p></div></div>`
-        : `<div class="dossier-list">${dossiers.map(d => `
-            <div class="dossier-item">
-              <div class="dossier-top">
-                <span class="dossier-source">${esc(d.bronNaam)}</span>
-                <div style="display:flex;align-items:center;gap:10px">
-                  <span class="dossier-date">${fmtDate(d.datum)}</span>
-                  <button class="btn btn-ghost btn-icon btn-sm" onclick="delDossier('${d.id}','${id}')">${svgIcon('trash', 13)}</button>
-                </div>
-              </div>
-              <div class="dossier-text">${esc(d.tekst)}</div>
-              ${renderBijlagen(d, id)}
-            </div>`).join('')}</div>`}`;
+        : `<div class="dossier-list">${dossiers.map(d => renderDossierItem(d, { delBtn: 'delDossier', delArg: id })).join('')}</div>`}`;
   } else if (schoolTab === 'trainingen') {
     tabContent = renderSchoolTrainingenTab(id);
   } else if (schoolTab === 'facturen') {
@@ -318,6 +307,7 @@ function openDossierModal(schoolId) {
     `<div class="form-group"><label>Contactpersoon (optioneel)</label>
        <select id="f-cid"><option value="">— Algemeen voor ${esc(s?.naam || '')} —</option>${opts}</select>
      </div>
+     <div class="form-group"><label>Onderwerp *</label><input type="text" id="f-onderwerp" placeholder="Korte titel van deze notitie"/></div>
      <div class="form-group"><label>Notitie *</label><textarea id="f-tekst" rows="5" placeholder="Wat is er besproken, afgesproken of opgemerkt?"></textarea></div>
      <div class="form-group">
        <label>Document bijvoegen (optioneel)</label>
@@ -341,6 +331,9 @@ function openDossierModalContact(schoolId, contactId) {
   const c = DB.contacten.find(x => x.id === contactId);
   showModal(`Notitie toevoegen — ${esc(c?.naam || '')}`,
     `<input type="hidden" id="f-cid" value="${esc(contactId)}"/>
+     <div class="form-group"><label>Onderwerp *</label>
+       <input type="text" id="f-onderwerp" placeholder="Korte titel van deze notitie"/>
+     </div>
      <div class="form-group"><label>Notitie *</label>
        <textarea id="f-tekst" rows="5" placeholder="Wat is er besproken, afgesproken of opgemerkt?"></textarea>
      </div>
