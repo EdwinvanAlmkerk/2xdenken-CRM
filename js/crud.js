@@ -1,0 +1,412 @@
+// ════════════════════════════════════════════════════════════════
+// CRUD — Alle save/delete functies naar Supabase
+// ════════════════════════════════════════════════════════════════
+
+// ── BESTUREN ─────────────────────────────────────────────────────
+async function saveBestuur(id) {
+  const naam = document.getElementById('f-naam').value.trim();
+  if (!naam) return alert('Naam is verplicht');
+  const data = { naam, website: document.getElementById('f-web').value.trim(), adres: document.getElementById('f-adres').value.trim() };
+  showLoading();
+  try {
+    if (id) {
+      await supa(`/rest/v1/besturen?id=eq.${id}`, { method: 'PATCH', body: JSON.stringify(toDB_bestuur(data)) });
+      DB.besturen = DB.besturen.map(b => b.id === id ? { ...b, ...data } : b);
+    } else {
+      const newId = uid();
+      await supa('/rest/v1/besturen', { method: 'POST', body: JSON.stringify({ id: newId, ...toDB_bestuur(data) }) });
+      DB.besturen.push({ id: newId, ...data });
+    }
+    closeModal(); renderContent();
+  } catch (e) { showToast('Fout: ' + e.message, 'error'); } finally { hideLoading(); }
+}
+
+async function delBestuur(id) {
+  if (!confirm('Bestuur verwijderen? Scholen worden losgekoppeld.')) return;
+  showLoading();
+  try {
+    await supa(`/rest/v1/besturen?id=eq.${id}`, { method: 'DELETE' });
+    DB.besturen = DB.besturen.filter(b => b.id !== id);
+    DB.scholen  = DB.scholen.map(s => s.bestuurId === id ? { ...s, bestuurId: null } : s);
+    await supa(`/rest/v1/scholen?bestuur_id=eq.${id}`, { method: 'PATCH', body: JSON.stringify({ bestuur_id: null }) });
+    renderContent();
+  } catch (e) { showToast('Fout: ' + e.message, 'error'); } finally { hideLoading(); }
+}
+
+// ── SCHOLEN ───────────────────────────────────────────────────────
+async function saveSchool(id) {
+  const naam = document.getElementById('f-naam').value.trim();
+  if (!naam) return alert('Naam is verplicht');
+  const data = {
+    naam,
+    bestuurId:  document.getElementById('f-best').value || null,
+    debiteurnr: document.getElementById('f-debnr-school').value.trim(),
+    adres:      document.getElementById('f-adres').value.trim(),
+    postcode:   document.getElementById('f-pc').value.trim(),
+    plaats:     document.getElementById('f-plaats').value.trim(),
+    website:    document.getElementById('f-web').value.trim(),
+  };
+  showLoading();
+  try {
+    if (id) {
+      await supa(`/rest/v1/scholen?id=eq.${id}`, { method: 'PATCH', body: JSON.stringify(toDB_school(data)) });
+      DB.scholen = DB.scholen.map(s => s.id === id ? { ...s, ...data } : s);
+    } else {
+      const newId = uid();
+      await supa('/rest/v1/scholen', { method: 'POST', body: JSON.stringify({ id: newId, ...toDB_school(data) }) });
+      DB.scholen.push({ id: newId, ...data });
+    }
+    closeModal(); renderContent();
+  } catch (e) { showToast('Fout: ' + e.message, 'error'); } finally { hideLoading(); }
+}
+
+async function delSchool(id) {
+  if (!confirm('School verwijderen? Contactpersonen en dossieritems worden ook verwijderd.')) return;
+  showLoading();
+  try {
+    await supa(`/rest/v1/scholen?id=eq.${id}`, { method: 'DELETE' });
+    DB.scholen   = DB.scholen.filter(s => s.id !== id);
+    DB.contacten = DB.contacten.filter(c => c.schoolId !== id);
+    DB.dossiers  = DB.dossiers.filter(d => d.schoolId !== id);
+    DB.facturen  = DB.facturen.filter(f => f.schoolId !== id);
+    renderContent();
+  } catch (e) { showToast('Fout: ' + e.message, 'error'); } finally { hideLoading(); }
+}
+
+// ── CONTACTEN ─────────────────────────────────────────────────────
+async function saveContact(schoolId, cid) {
+  const naam = document.getElementById('f-naam').value.trim();
+  if (!naam) return alert('Naam is verplicht');
+  const data = { naam, functie: document.getElementById('f-func').value.trim(), type: document.getElementById('f-type').value, email: document.getElementById('f-email').value.trim(), telefoon: document.getElementById('f-tel').value.trim(), schoolId };
+  showLoading();
+  try {
+    if (cid) {
+      await supa(`/rest/v1/contacten?id=eq.${cid}`, { method: 'PATCH', body: JSON.stringify(toDB_contact(data)) });
+      DB.contacten = DB.contacten.map(c => c.id === cid ? { ...c, ...data } : c);
+    } else {
+      const newId = uid();
+      await supa('/rest/v1/contacten', { method: 'POST', body: JSON.stringify({ id: newId, ...toDB_contact(data) }) });
+      DB.contacten.push({ id: newId, ...data });
+    }
+    closeModal(); renderContent();
+  } catch (e) { showToast('Fout: ' + e.message, 'error'); } finally { hideLoading(); }
+}
+
+async function delContact(cid, schoolId) {
+  if (!confirm('Contactpersoon verwijderen?')) return;
+  showLoading();
+  try {
+    await supa(`/rest/v1/contacten?id=eq.${cid}`, { method: 'DELETE' });
+    DB.contacten = DB.contacten.filter(c => c.id !== cid);
+    renderContent();
+  } catch (e) { showToast('Fout: ' + e.message, 'error'); } finally { hideLoading(); }
+}
+
+// ── DOSSIERS ──────────────────────────────────────────────────────
+async function saveDossier(schoolId) {
+  const tekst = document.getElementById('f-tekst').value.trim();
+  if (!tekst) return alert('Notitie mag niet leeg zijn');
+  const cid = document.getElementById('f-cid')?.value || '';
+  const s = DB.scholen.find(x => x.id === schoolId);
+  const contact = cid ? DB.contacten.find(c => c.id === cid) : null;
+  const bronNaam = contact ? `${contact.naam} — ${s?.naam || ''}` : (s?.naam || '');
+  const bijlageInput = document.getElementById('f-bijlage');
+  const files = bijlageInput ? [...bijlageInput.files] : [];
+
+  const finalize = async (bijlagen) => {
+    const newId = uid();
+    const item = { id: newId, schoolId, contactId: cid || null, datum: new Date().toISOString(), tekst, bronNaam, bijlagen };
+    showLoading();
+    try {
+      const payload = { id: newId, school_id: schoolId, datum: item.datum, tekst, bron_naam: bronNaam };
+      await supa('/rest/v1/dossiers', { method: 'POST', body: JSON.stringify(payload) });
+      DB.dossiers.unshift(item);
+      closeModal(); renderContent();
+    } catch (e) { showToast('Fout: ' + e.message, 'error'); } finally { hideLoading(); }
+  };
+
+  finalize([]);
+}
+
+async function delDossier(did, schoolId) {
+  if (!confirm('Notitie verwijderen?')) return;
+  showLoading();
+  try {
+    await supa(`/rest/v1/dossiers?id=eq.${did}`, { method: 'DELETE' });
+    DB.dossiers = DB.dossiers.filter(d => d.id !== did);
+    renderContent();
+  } catch (e) { showToast('Fout: ' + e.message, 'error'); } finally { hideLoading(); }
+}
+
+async function delBijlage(dossierId, bijlageIdx, schoolId) {
+  const d = DB.dossiers.find(x => x.id === dossierId);
+  if (!d || !d.bijlagen) return;
+  if (!confirm(`"${d.bijlagen[bijlageIdx].naam}" verwijderen?`)) return;
+  d.bijlagen.splice(bijlageIdx, 1);
+  showLoading();
+  try {
+    await supa(`/rest/v1/dossiers?id=eq.${dossierId}`, { method: 'PATCH', body: JSON.stringify({ bijlagen: d.bijlagen }) });
+    renderContent();
+  } catch (e) { showToast('Fout: ' + e.message, 'error'); } finally { hideLoading(); }
+}
+
+async function saveDossierBestuur(bestuurId) {
+  const schoolId = document.getElementById('f-school-dos').value;
+  if (!schoolId) return alert('Kies een school');
+  const tekst = document.getElementById('f-tekst').value.trim();
+  if (!tekst) return alert('Notitie mag niet leeg zijn');
+  const b = DB.besturen.find(x => x.id === bestuurId);
+  const s = DB.scholen.find(x => x.id === schoolId);
+  const bronNaam = `${b?.naam || ''} — ${s?.naam || ''}`;
+  const bijlageInput = document.getElementById('f-bijlage');
+  const files = bijlageInput ? [...bijlageInput.files] : [];
+  const newId = uid();
+  const item = { id: newId, schoolId, contactId: null, datum: new Date().toISOString(), tekst, bronNaam, bijlagen: [] };
+  showLoading();
+  try {
+    const payload = { id: newId, school_id: schoolId, datum: item.datum, tekst, bron_naam: bronNaam };
+    await supa('/rest/v1/dossiers', { method: 'POST', body: JSON.stringify(payload) });
+    DB.dossiers.unshift(item);
+    closeModal(); renderContent();
+  } catch (e) { showToast('Fout: ' + e.message, 'error'); } finally { hideLoading(); }
+}
+
+async function delDossierBestuur(did, bestuurId) {
+  if (!confirm('Notitie verwijderen?')) return;
+  showLoading();
+  try {
+    await supa(`/rest/v1/dossiers?id=eq.${did}`, { method: 'DELETE' });
+    DB.dossiers = DB.dossiers.filter(d => d.id !== did);
+    renderContent();
+  } catch (e) { showToast('Fout: ' + e.message, 'error'); } finally { hideLoading(); }
+}
+
+// ── FACTUREN ──────────────────────────────────────────────────────
+async function saveFactuur(schoolId, fid) {
+  const nummer = document.getElementById('f-nr').value.trim();
+  if (!nummer) return alert('Factuurnummer is verplicht');
+  const regels = _regels.map(r => ({
+    id: r.id || uid(),
+    omschrijving: r.omschrijving || '',
+    toelichting:  r.toelichting || '',
+    datum:        r.datum || '',
+    uren:         r.uren || '',
+    bedrag:       parseFloat(r.bedrag) || 0,
+  }));
+  const totaal = Math.round(regels.reduce((s, r) => s + (Math.round((r.bedrag || 0) * 100) / 100), 0) * 100) / 100;
+  const tavVrij = document.getElementById('f-tav')?.value.trim() || '';
+  const data = {
+    schoolId, nummer,
+    contactId:   document.getElementById('f-contact')?.value || null,
+    tav:         tavVrij || null,
+    debiteurnr:  document.getElementById('f-debnr').value.trim(),
+    datum:       document.getElementById('f-datum').value,
+    vervaldatum: document.getElementById('f-verval')?.value || null,
+    status:      document.getElementById('f-status').value,
+    betreft:     document.getElementById('f-betreft').value.trim(),
+    regels, totaal
+  };
+  showLoading();
+  try {
+    if (fid) {
+      await supa(`/rest/v1/facturen?id=eq.${fid}`, { method: 'PATCH', body: JSON.stringify(toDB_factuur(data)) });
+      DB.facturen = DB.facturen.map(f => f.id === fid ? { ...f, ...data } : f);
+    } else {
+      const newId = uid();
+      await supa('/rest/v1/facturen', { method: 'POST', body: JSON.stringify({ id: newId, ...toDB_factuur(data) }) });
+      DB.facturen.push({ id: newId, ...data });
+    }
+    closeModal(); renderContent();
+  } catch (e) { showToast('Fout: ' + e.message, 'error'); } finally { hideLoading(); }
+}
+
+async function delFactuur(fid, schoolId) {
+  if (!confirm('Factuur verwijderen?')) return;
+  showLoading();
+  try {
+    await supa(`/rest/v1/facturen?id=eq.${fid}`, { method: 'DELETE' });
+    DB.facturen = DB.facturen.filter(f => f.id !== fid);
+    renderContent();
+  } catch (e) { showToast('Fout: ' + e.message, 'error'); } finally { hideLoading(); }
+}
+
+async function delFactuurOverview(fid) { await delFactuur(fid, null); }
+
+// ── TRAININGEN ────────────────────────────────────────────────────
+async function saveTraining(id) {
+  const naam = document.getElementById('f-naam').value.trim();
+  if (!naam) return alert('Naam is verplicht');
+  const data = {
+    naam,
+    categorie:     document.getElementById('f-cat').value,
+    duur:          document.getElementById('f-duur').value.trim(),
+    doelgroep:     document.getElementById('f-doel').value.trim(),
+    maxDeelnemers: document.getElementById('f-max').value.trim(),
+    omschrijving:  document.getElementById('f-omschr').value.trim(),
+  };
+  showLoading();
+  try {
+    if (id) {
+      await supa(`/rest/v1/trainingen?id=eq.${id}`, { method: 'PATCH', body: JSON.stringify(toDB_training(data)) });
+      DB.trainingen = DB.trainingen.map(t => t.id === id ? { ...t, ...data } : t);
+    } else {
+      const newId = uid();
+      await supa('/rest/v1/trainingen', { method: 'POST', body: JSON.stringify({ id: newId, ...toDB_training(data), tips: [] }) });
+      DB.trainingen.push({ id: newId, tips: [], ...data });
+    }
+    closeModal();
+    if (id) renderContent(); else navigate('trainingen');
+  } catch (e) { showToast('Fout: ' + e.message, 'error'); } finally { hideLoading(); }
+}
+
+async function delTraining(id) {
+  if (!confirm('Training verwijderen? Alle uitvoeringen worden ook verwijderd.')) return;
+  showLoading();
+  try {
+    await supa(`/rest/v1/trainingen?id=eq.${id}`, { method: 'DELETE' });
+    DB.trainingen   = DB.trainingen.filter(t => t.id !== id);
+    DB.uitvoeringen = DB.uitvoeringen.filter(u => u.trainingId !== id);
+    closeModal(); navigate('trainingen');
+  } catch (e) { showToast('Fout: ' + e.message, 'error'); } finally { hideLoading(); }
+}
+
+// ── UITVOERINGEN ──────────────────────────────────────────────────
+async function saveUitvoering(trainingId, uitvId) {
+  const schoolId = document.getElementById('f-school').value;
+  if (!schoolId) return alert('Kies een school');
+  const data = {
+    trainingId, schoolId,
+    datum:       document.getElementById('f-datum').value,
+    deelnemers:  document.getElementById('f-deel').value || null,
+    score:       _uitvScore || null,
+    evaluatie:   document.getElementById('f-eval').value.trim(),
+    watGingGoed: document.getElementById('f-goed').value.trim(),
+    watKonBeter: document.getElementById('f-beter').value.trim(),
+  };
+  showLoading();
+  try {
+    if (uitvId) {
+      await supa(`/rest/v1/uitvoeringen?id=eq.${uitvId}`, { method: 'PATCH', body: JSON.stringify(toDB_uitv(data)) });
+      DB.uitvoeringen = DB.uitvoeringen.map(u => u.id === uitvId ? { ...u, ...data } : u);
+    } else {
+      const newId = uid();
+      await supa('/rest/v1/uitvoeringen', { method: 'POST', body: JSON.stringify({ id: newId, ...toDB_uitv(data) }) });
+      DB.uitvoeringen.push({ id: newId, ...data });
+      const t = DB.trainingen.find(x => x.id === trainingId);
+      const school = DB.scholen.find(x => x.id === schoolId);
+      if (t && school) {
+        const scoreStr = data.score ? ` | Score: ${data.score}/5 ★` : '';
+        const tekst = `Training uitgevoerd: "${t.naam}"${scoreStr}\n${data.evaluatie || ''}`.trim();
+        const dosId = uid();
+        const dosItem = { id: dosId, schoolId, contactId: null, datum: new Date().toISOString(), tekst, bronNaam: `Training — ${school.naam}`, bijlagen: [] };
+        await supa('/rest/v1/dossiers', { method: 'POST', body: JSON.stringify({ id: dosId, ...toDB_dossier(dosItem) }) });
+        DB.dossiers.unshift(dosItem);
+      }
+    }
+    closeModal(); renderContent();
+  } catch (e) { showToast('Fout: ' + e.message, 'error'); } finally { hideLoading(); }
+}
+
+async function delUitvoering(uitvId, trainingId) {
+  if (!confirm('Uitvoering verwijderen?')) return;
+  showLoading();
+  try {
+    await supa(`/rest/v1/uitvoeringen?id=eq.${uitvId}`, { method: 'DELETE' });
+    DB.uitvoeringen = DB.uitvoeringen.filter(u => u.id !== uitvId);
+    renderContent();
+  } catch (e) { showToast('Fout: ' + e.message, 'error'); } finally { hideLoading(); }
+}
+
+async function saveUitvoeringVanSchool(schoolId) {
+  const trainingId = document.getElementById('f-training').value;
+  if (!trainingId) return alert('Kies een training');
+  const data = {
+    trainingId, schoolId,
+    datum:       document.getElementById('f-datum').value,
+    deelnemers:  document.getElementById('f-deel').value || null,
+    score:       _uitvScore || null,
+    evaluatie:   document.getElementById('f-eval').value.trim(),
+    watGingGoed: document.getElementById('f-goed').value.trim(),
+    watKonBeter: document.getElementById('f-beter').value.trim(),
+  };
+  showLoading();
+  try {
+    const newId = uid();
+    await supa('/rest/v1/uitvoeringen', { method: 'POST', body: JSON.stringify({ id: newId, ...toDB_uitv(data) }) });
+    DB.uitvoeringen.push({ id: newId, ...data });
+    const t = DB.trainingen.find(x => x.id === trainingId);
+    const school = DB.scholen.find(x => x.id === schoolId);
+    if (t && school) {
+      const scoreStr = data.score ? ` | Score: ${data.score}/5 ★` : '';
+      const tekst = `Training uitgevoerd: "${t.naam}"${scoreStr}\n${data.evaluatie || ''}`.trim();
+      const dosId = uid();
+      const dosItem = { id: dosId, schoolId, contactId: null, datum: new Date().toISOString(), tekst, bronNaam: `Training — ${school.naam}`, bijlagen: [] };
+      await supa('/rest/v1/dossiers', { method: 'POST', body: JSON.stringify({ id: dosId, ...toDB_dossier(dosItem) }) });
+      DB.dossiers.unshift(dosItem);
+    }
+    closeModal(); renderContent();
+  } catch (e) { showToast('Fout: ' + e.message, 'error'); } finally { hideLoading(); }
+}
+
+// ── TIPS ──────────────────────────────────────────────────────────
+async function saveTip(trainingId) {
+  const tekst = document.getElementById('f-tiptekst').value.trim();
+  if (!tekst) return alert('Tip mag niet leeg zijn');
+  const tip = { titel: document.getElementById('f-tiptitel').value.trim(), tekst, datum: new Date().toISOString() };
+  const t = DB.trainingen.find(x => x.id === trainingId);
+  if (!t) return;
+  const newTips = [...(t.tips || []), tip];
+  showLoading();
+  try {
+    await supa(`/rest/v1/trainingen?id=eq.${trainingId}`, { method: 'PATCH', body: JSON.stringify({ tips: newTips }) });
+    DB.trainingen = DB.trainingen.map(x => x.id === trainingId ? { ...x, tips: newTips } : x);
+    closeModal(); renderContent();
+  } catch (e) { showToast('Fout: ' + e.message, 'error'); } finally { hideLoading(); }
+}
+
+async function delTip(trainingId, index) {
+  if (!confirm('Tip verwijderen?')) return;
+  const t = DB.trainingen.find(x => x.id === trainingId);
+  if (!t) return;
+  const newTips = (t.tips || []).filter((_, i) => i !== index);
+  showLoading();
+  try {
+    await supa(`/rest/v1/trainingen?id=eq.${trainingId}`, { method: 'PATCH', body: JSON.stringify({ tips: newTips }) });
+    DB.trainingen = DB.trainingen.map(x => x.id === trainingId ? { ...x, tips: newTips } : x);
+    renderContent();
+  } catch (e) { showToast('Fout: ' + e.message, 'error'); } finally { hideLoading(); }
+}
+
+// ── INSTELLINGEN functies ─────────────────────────────────────────
+async function delAlleFacturen() {
+  closeModal();
+  const aantal = DB.facturen.length;
+  if (aantal === 0) return showToast('Er zijn geen facturen om te verwijderen.', 'error');
+  if (!confirm(`Weet je zeker dat je ALLE ${aantal} facturen wilt verwijderen?\n\nDeze actie kan niet ongedaan worden gemaakt.`)) return;
+  if (!confirm(`Laatste bevestiging: ${aantal} facturen permanent verwijderen?`)) return;
+  showLoading();
+  try {
+    await supa('/rest/v1/facturen?id=neq.00000000-0000-0000-0000-000000000000', { method: 'DELETE' });
+    DB.facturen = [];
+    showToast(`Alle ${aantal} facturen zijn verwijderd.`, 'success');
+    renderContent();
+  } catch (e) { showToast('Fout: ' + e.message, 'error'); } finally { hideLoading(); }
+}
+
+async function herberekeningTotalen() {
+  if (!confirm('Alle factuurtotalen herberekenen vanuit de regelitems?\nDit corrigeert afrondingsfouten in de database.')) return;
+  showLoading();
+  let bijgewerkt = 0;
+  try {
+    for (const f of DB.facturen) {
+      const nieuwTotaal = Math.round((f.regels || []).reduce((s, r) => s + (Math.round((parseFloat(r.bedrag) || 0) * 100) / 100), 0) * 100) / 100;
+      if (Math.abs(nieuwTotaal - (f.totaal || 0)) > 0.001) {
+        await supa(`/rest/v1/facturen?id=eq.${f.id}`, { method: 'PATCH', body: JSON.stringify({ totaal: nieuwTotaal }) });
+        f.totaal = nieuwTotaal;
+        bijgewerkt++;
+      }
+    }
+    showToast(`${bijgewerkt} factu${bijgewerkt === 1 ? 'ur' : 'ren'} gecorrigeerd.`, 'success');
+    renderContent();
+  } catch (e) { showToast('Fout: ' + e.message, 'error'); } finally { hideLoading(); }
+}

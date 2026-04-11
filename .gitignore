@@ -1,0 +1,35 @@
+# API keys and sensitive data
+sk-ant-api03-*.txt
+*.key
+*.pem
+
+# Node modules (if any)
+node_modules/
+
+# Build outputs
+dist/
+build/
+
+# IDE files
+.vscode/
+.idea/
+
+# OS files
+.DS_Store
+Thumbs.db
+
+# Logs
+*.log
+npm-debug.log*
+
+# Environment variables
+.env
+.env.local
+.env.development.local
+.env.test.local
+.env.production.local
+
+# Lokale documentatie en backups (niet naar GitHub)
+*.docx
+Backup*.txt
+TECHNICAL_DOCUMENTATION.md
