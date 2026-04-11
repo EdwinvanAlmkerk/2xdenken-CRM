@@ -117,7 +117,7 @@ async function saveDossier(schoolId) {
   const item = { id: newId, schoolId, contactId: cid || null, datum: new Date().toISOString(), type: 'notitie', onderwerp, tekst, bronNaam, bestanden: [], bijlagen: [] };
   showLoading();
   try {
-    const payload = { id: newId, school_id: schoolId, contact_id: cid || null, datum: item.datum, type: 'notitie', onderwerp, tekst, bron_naam: bronNaam, bestanden: [] };
+    const payload = { id: newId, school_id: schoolId, datum: item.datum, type: 'notitie', onderwerp, tekst, bron_naam: bronNaam, bestanden: [] };
     await supa('/rest/v1/dossiers', { method: 'POST', body: JSON.stringify(payload) });
     DB.dossiers.unshift(item);
     closeModal(); renderContent();
@@ -138,7 +138,7 @@ async function saveDossierBestuur(bestuurId) {
   const item = { id: newId, schoolId, contactId: null, datum: new Date().toISOString(), type: 'notitie', onderwerp, tekst, bronNaam, bestanden: [], bijlagen: [] };
   showLoading();
   try {
-    const payload = { id: newId, school_id: schoolId, contact_id: null, datum: item.datum, type: 'notitie', onderwerp, tekst, bron_naam: bronNaam, bestanden: [] };
+    const payload = { id: newId, school_id: schoolId, datum: item.datum, type: 'notitie', onderwerp, tekst, bron_naam: bronNaam, bestanden: [] };
     await supa('/rest/v1/dossiers', { method: 'POST', body: JSON.stringify(payload) });
     DB.dossiers.unshift(item);
     closeModal(); renderContent();
@@ -164,7 +164,7 @@ async function saveBestand(schoolId) {
     const bestanden = [];
     for (const f of files) bestanden.push(await uploadBestandToStorage(newId, f));
     const item = { id: newId, schoolId, contactId: cid || null, datum: new Date().toISOString(), type: 'bestand', onderwerp, tekst: '', bronNaam, bestanden, bijlagen: [] };
-    const payload = { id: newId, school_id: schoolId, contact_id: cid || null, datum: item.datum, type: 'bestand', onderwerp, tekst: null, bron_naam: bronNaam, bestanden };
+    const payload = { id: newId, school_id: schoolId, datum: item.datum, type: 'bestand', onderwerp, tekst: null, bron_naam: bronNaam, bestanden };
     await supa('/rest/v1/dossiers', { method: 'POST', body: JSON.stringify(payload) });
     DB.dossiers.unshift(item);
     closeModal(); renderContent();
@@ -190,7 +190,7 @@ async function saveBestandBestuur(bestuurId) {
     const bestanden = [];
     for (const f of files) bestanden.push(await uploadBestandToStorage(newId, f));
     const item = { id: newId, schoolId, contactId: null, datum: new Date().toISOString(), type: 'bestand', onderwerp, tekst: '', bronNaam, bestanden, bijlagen: [] };
-    const payload = { id: newId, school_id: schoolId, contact_id: null, datum: item.datum, type: 'bestand', onderwerp, tekst: null, bron_naam: bronNaam, bestanden };
+    const payload = { id: newId, school_id: schoolId, datum: item.datum, type: 'bestand', onderwerp, tekst: null, bron_naam: bronNaam, bestanden };
     await supa('/rest/v1/dossiers', { method: 'POST', body: JSON.stringify(payload) });
     DB.dossiers.unshift(item);
     closeModal(); renderContent();
