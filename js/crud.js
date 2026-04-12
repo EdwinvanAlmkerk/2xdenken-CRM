@@ -412,6 +412,49 @@ async function delTip(trainingId, index) {
   } catch (e) { showToast('Fout: ' + e.message, 'error'); } finally { hideLoading(); }
 }
 
+// ── AGENDA ───────────────────────────────────────────────────────
+async function saveAgenda(id) {
+  const titel = document.getElementById('f-titel').value.trim();
+  if (!titel) return alert('Titel is verplicht');
+  const datum = document.getElementById('f-datum').value;
+  if (!datum) return alert('Datum is verplicht');
+  const data = {
+    titel,
+    datum,
+    beginTijd: document.getElementById('f-begintijd').value || '',
+    eindTijd:  document.getElementById('f-eindtijd').value || '',
+    type:      document.getElementById('f-type').value || 'afspraak',
+    schoolId:  document.getElementById('f-school').value || '',
+    contactId: document.getElementById('f-contact').value || '',
+    bestuurId: document.getElementById('f-bestuur').value || '',
+    locatie:   document.getElementById('f-locatie').value.trim(),
+    notitie:   document.getElementById('f-notitie').value.trim(),
+  };
+  showLoading();
+  try {
+    if (id) {
+      await supa(`/rest/v1/agenda?id=eq.${id}`, { method: 'PATCH', body: JSON.stringify(toDB_agenda(data)) });
+      DB.agenda = DB.agenda.map(a => a.id === id ? { ...a, ...data } : a);
+    } else {
+      const newId = uid();
+      await supa('/rest/v1/agenda', { method: 'POST', body: JSON.stringify({ id: newId, ...toDB_agenda(data) }) });
+      DB.agenda.push({ id: newId, ...data, createdAt: new Date().toISOString() });
+    }
+    DB.agenda.sort((a, b) => a.datum.localeCompare(b.datum) || (a.beginTijd || '').localeCompare(b.beginTijd || ''));
+    closeModal(); renderContent();
+  } catch (e) { showToast('Fout: ' + e.message, 'error'); } finally { hideLoading(); }
+}
+
+async function delAgenda(id) {
+  if (!confirm('Afspraak verwijderen?')) return;
+  showLoading();
+  try {
+    await supa(`/rest/v1/agenda?id=eq.${id}`, { method: 'DELETE' });
+    DB.agenda = DB.agenda.filter(a => a.id !== id);
+    renderContent();
+  } catch (e) { showToast('Fout: ' + e.message, 'error'); } finally { hideLoading(); }
+}
+
 // ── INSTELLINGEN functies ─────────────────────────────────────────
 async function delAlleFacturen() {
   closeModal();
