@@ -16,12 +16,13 @@ Browser-gebaseerde CRM-applicatie voor het beheren van besturen, scholen, contac
   - `db.js` — in-memory `DB`-object, `supa()`/`supaAuth()` fetch-helpers, mapping-functies tussen snake_case (Supabase) en camelCase (frontend), en `loadAllData()`.
   - `auth.js` — login, logout en Enter-key handler. Automatisch sessie-herstel is uitgeschakeld.
   - `crud.js` — save- en delete-functies voor besturen, scholen, contacten, dossiers, facturen, trainingen, uitvoeringen, agenda-items, agendatypes en e-mailtemplates richting Supabase.
-  - `email.js` — e-mail compose module: template-variabelen invullen (`resolveTemplateVars`), compose modal (`openEmailModal`), mailto-link genereren en automatische dossiernotitie bij verzending.
+  - `email.js` — e-mail compose module: template-variabelen invullen (`resolveTemplateVars`), compose modal (`openEmailModal`), mailto-link genereren, concepten opslaan/bewerken, doorsturen, automatische dossiernotitie en email_log bij verzending.
   - `router.js` — navigatiestate (`page`, `pageParam`, `contactParam`), `navigate()`, `goBack()`, `renderNav()` en `renderContent()` dispatcher.
   - `utils.js` — SVG-iconen, formatters, Supabase Storage-helpers (bucket `dossier-bestanden`) en dossier-renderhelpers.
   - `ui.js` — loading-overlay, toasts, modals en exportfuncties.
   - `pages/`
     - `dashboard.js` — `renderDashboard()`; overzicht met KPI's en komende agenda-afspraken.
+    - `email-page.js` — e-mailpagina met mappenstructuur (Verzonden, Concepten), berichtenlijst en detailweergave.
     - `agenda.js` — agendapagina met vier weergaven (dag, week, maand, lijst), navigatie (vorige/volgende/vandaag), filtering, zoekfunctie en context-aware afspraakmodal.
     - `besturen.js` — lijst en detailpagina van besturen met tabs (Scholen, Dossier, Agenda).
     - `scholen.js` — lijst en detailpagina van scholen met tabs (Overzicht, Contacten, Dossier, Agenda, Trainingen, Facturen).
@@ -65,7 +66,7 @@ Browser-gebaseerde CRM-applicatie voor het beheren van besturen, scholen, contac
 - **Auth**: automatisch sessie-herstel is uitgeschakeld. Bij het laden van de pagina wordt een eventuele opgeslagen sessie uit `localStorage` verwijderd, zodat de gebruiker altijd expliciet op "Inloggen" moet klikken.
 - **Agendamodule**: volledige agendafunctionaliteit met Supabase-tabel `agenda` (velden: `id`, `titel`, `datum`, `begin_tijd`, `eind_tijd`, `type`, `school_id`, `contact_id`, `bestuur_id`, `locatie`, `notitie`, `created_at`). Vier weergaven: dagview, weekview (Outlook-achtig tijdrooster met uurblokken 07:00–21:00), maandview (kalenderraster) en lijstview. Navigatie met vorige/volgende en vandaag-knop. Kleurcodering per afspraaktype. Huidige-tijdlijn in dag- en weekview. Hele-dag items in aparte rij. Dashboard toont de eerstvolgende 5 afspraken.
 - **Dynamische agendatypes**: agendatypes worden opgeslagen in Supabase-tabel `agenda_types` (velden: `id`, `naam`, `kleur`). Beheerbaar via Instellingen: aanmaken, bewerken en verwijderen met 7 kleuropties (navy, paars, blauw, groen, goud, rood, oranje). Standaard 5 types meegeleverd.
-- **E-mailmodule (fase 1)**: e-mailtemplates beheerbaar via Instellingen (Supabase-tabel `email_templates`). Templates ondersteunen variabelen (`{{contactnaam}}`, `{{factuurnummer}}`, etc.) die automatisch worden ingevuld. Compose-modal met template-keuze, contactselectie en preview. "Open in e-mailprogramma" genereert een `mailto:`-link. Na openen wordt automatisch een dossiernotitie aangemaakt. E-mail knoppen op contactdetail, schooldetail en factuuroverzicht.
+- **E-mailmodule**: eigen pagina in sidebar met mappenstructuur (Verzonden, Concepten). Supabase-tabellen `email_templates` en `email_log`. Templates ondersteunen variabelen (`{{contactnaam}}`, `{{factuurnummer}}`, etc.). Compose-modal met template-keuze, contactselectie, concept opslaan en mailto-verzending. Doorsturen van eerder verzonden berichten. Automatische dossiernotitie + email_log bij verzending. E-mail knoppen op contactdetail, schooldetail en factuuroverzicht.
 - **Agenda-integratie in detailpagina's**: scholen en besturen hebben een eigen "Agenda"-tab die afspraken gekoppeld aan die entiteit toont (komend/verlopen). Contactdetailpagina toont een agenda-kaart boven het dossier. Afspraken aanmaken vanuit deze pagina's vult automatisch de koppeling in; bij school-context worden alleen contactpersonen van die school getoond en het bestuur automatisch afgeleid.
 
 ## Aanpassingen en updates

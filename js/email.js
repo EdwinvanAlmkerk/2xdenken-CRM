@@ -76,15 +76,17 @@ function openEmailModal(opts = {}) {
   } else {
     ontvangerHtml = `<div class="form-group">
       <label>Aan</label>
-      <input type="email" id="f-email-to" value="" placeholder="e-mailadres invullen"/>
+      <input type="email" id="f-email-to" value="${esc(prefillEmail)}" placeholder="e-mailadres invullen"/>
       <input type="hidden" id="f-email-contact-id" value=""/>
     </div>`;
   }
 
-  // Pre-fill als template geselecteerd
-  let prefillOnderwerp = '';
-  let prefillBody = '';
-  if (opts.templateId) {
+  // Pre-fill: vanuit template, of directe prefill (doorsturen/concept)
+  let prefillOnderwerp = opts._prefillOnderwerp || '';
+  let prefillBody = opts._prefillBody || '';
+  const draftId = opts._draftId || '';
+  const prefillEmail = opts._prefillEmail || '';
+  if (!prefillOnderwerp && opts.templateId) {
     const tpl = DB.emailTemplates.find(t => t.id === opts.templateId);
     if (tpl) {
       prefillOnderwerp = resolveTemplateVars(tpl.onderwerp, opts);
@@ -113,7 +115,8 @@ function openEmailModal(opts = {}) {
      <div class="form-group"><label>Onderwerp *</label><input type="text" id="f-email-onderwerp" value="${esc(prefillOnderwerp)}" placeholder="Onderwerp van de e-mail"/></div>
      <div class="form-group"><label>Bericht</label><textarea id="f-email-body" rows="10" placeholder="Typ hier je bericht...">${esc(prefillBody)}</textarea></div>`,
     `<button class="btn btn-secondary" onclick="closeModal()">Annuleren</button>
-     <button class="btn btn-primary" onclick="sendEmail('${esc(opts.schoolId || '')}','${esc(opts.factuurId || '')}')">${svgIcon('mail', 15)} Open in e-mailprogramma</button>`, true);
+     <button class="btn btn-secondary" onclick="saveEmailDraft('${esc(opts.schoolId || '')}','${esc(opts.factuurId || '')}','${esc(draftId)}')">${svgIcon('edit', 14)} Concept opslaan</button>
+     <button class="btn btn-primary" onclick="sendEmail('${esc(opts.schoolId || '')}','${esc(opts.factuurId || '')}','${esc(draftId)}')">${svgIcon('mail', 15)} Open in e-mailprogramma</button>`, true);
 }
 
 // ── Contact-selectie change handler ──────────────────────────────
@@ -152,39 +155,104 @@ function selectEmailTemplate(optsJson) {
 }
 
 // ── Verzenden (mailto) + auto-log ────────────────────────────────
-async function sendEmail(schoolId, factuurId) {
+async function sendEmail(schoolId, factuurId, draftId) {
   const email = document.getElementById('f-email-to')?.value?.trim();
   if (!email) return alert('Geen e-mailadres opgegeven');
   const onderwerp = document.getElementById('f-email-onderwerp').value.trim();
   if (!onderwerp) return alert('Onderwerp is verplicht');
   const body = document.getElementById('f-email-body').value.trim();
   const contactId = document.getElementById('f-email-contact-id')?.value || '';
+  const contact = contactId ? DB.contacten.find(c => c.id === contactId) : null;
 
   // mailto openen
   const mailtoUrl = `mailto:${encodeURIComponent(email)}?subject=${encodeURIComponent(onderwerp)}&body=${encodeURIComponent(body)}`;
   window.open(mailtoUrl, '_blank');
 
-  // Auto-log in dossier
-  if (schoolId) {
-    showLoading();
-    try {
+  showLoading();
+  try {
+    const now = new Date().toISOString();
+
+    // Log naar email_log
+    if (draftId) {
+      // Concept updaten naar verzonden
+      await supa(`/rest/v1/email_log?id=eq.${draftId}`, { method: 'PATCH', body: JSON.stringify({ aan_email: email, aan_naam: contact?.naam || '', onderwerp, body, status: 'verzonden', datum: now }) });
+      DB.emailLog = DB.emailLog.map(e => e.id === draftId ? { ...e, aanEmail: email, aanNaam: contact?.naam || '', onderwerp, body, status: 'verzonden', datum: now } : e);
+    } else {
+      const logId = uid();
+      const logPayload = { id: logId, template_id: null, school_id: schoolId || null, contact_id: contactId || null, factuur_id: factuurId || null, aan_email: email, aan_naam: contact?.naam || '', onderwerp, body, status: 'verzonden', datum: now };
+      await supa('/rest/v1/email_log', { method: 'POST', body: JSON.stringify(logPayload) });
+      DB.emailLog.unshift({ id: logId, templateId: '', schoolId: schoolId || '', contactId: contactId || '', factuurId: factuurId || '', aanEmail: email, aanNaam: contact?.naam || '', onderwerp, body, status: 'verzonden', datum: now });
+    }
+
+    // Log naar dossier als school gekoppeld
+    if (schoolId) {
       const school = DB.scholen.find(s => s.id === schoolId);
-      const contact = contactId ? DB.contacten.find(c => c.id === contactId) : null;
       const bronNaam = contact ? `${contact.naam} — ${school?.naam || ''}` : (school?.naam || '');
       const tekst = `E-mail verzonden aan: ${email}\nOnderwerp: ${onderwerp}\n\n${body}`;
-      const newId = uid();
-      const item = { id: newId, schoolId, contactId: contactId || null, datum: new Date().toISOString(), type: 'notitie', onderwerp: `E-mail — ${onderwerp}`, tekst, bronNaam, bestanden: [], bijlagen: [] };
-      const payload = { id: newId, school_id: schoolId, datum: item.datum, type: 'notitie', onderwerp: item.onderwerp, tekst, bron_naam: bronNaam, bestanden: [] };
+      const dosId = uid();
+      const item = { id: dosId, schoolId, contactId: contactId || null, datum: now, type: 'notitie', onderwerp: `E-mail — ${onderwerp}`, tekst, bronNaam, bestanden: [], bijlagen: [] };
+      const payload = { id: dosId, school_id: schoolId, datum: now, type: 'notitie', onderwerp: item.onderwerp, tekst, bron_naam: bronNaam, bestanden: [] };
       await supa('/rest/v1/dossiers', { method: 'POST', body: JSON.stringify(payload) });
       DB.dossiers.unshift(item);
-      showToast('E-mail geopend en vastgelegd in dossier', 'success');
-    } catch (e) {
-      showToast('E-mail geopend, maar loggen mislukt: ' + e.message, 'error');
-    } finally { hideLoading(); }
-  } else {
-    showToast('E-mail geopend in e-mailprogramma', 'success');
-  }
+    }
+
+    showToast('E-mail geopend en vastgelegd', 'success');
+  } catch (e) {
+    showToast('E-mail geopend, maar loggen mislukt: ' + e.message, 'error');
+  } finally { hideLoading(); }
 
   closeModal();
   renderContent();
+}
+
+// ── Concept opslaan ──────────────────────────────────────────────
+async function saveEmailDraft(schoolId, factuurId, draftId) {
+  const email = document.getElementById('f-email-to')?.value?.trim() || '';
+  const onderwerp = document.getElementById('f-email-onderwerp').value.trim();
+  const body = document.getElementById('f-email-body').value.trim();
+  const contactId = document.getElementById('f-email-contact-id')?.value || '';
+  const contact = contactId ? DB.contacten.find(c => c.id === contactId) : null;
+
+  showLoading();
+  try {
+    const now = new Date().toISOString();
+    if (draftId) {
+      await supa(`/rest/v1/email_log?id=eq.${draftId}`, { method: 'PATCH', body: JSON.stringify({ aan_email: email, aan_naam: contact?.naam || '', onderwerp, body, status: 'concept', datum: now }) });
+      DB.emailLog = DB.emailLog.map(e => e.id === draftId ? { ...e, aanEmail: email, aanNaam: contact?.naam || '', onderwerp, body, status: 'concept', datum: now } : e);
+    } else {
+      const logId = uid();
+      const logPayload = { id: logId, school_id: schoolId || null, contact_id: contactId || null, factuur_id: factuurId || null, aan_email: email, aan_naam: contact?.naam || '', onderwerp, body, status: 'concept', datum: now };
+      await supa('/rest/v1/email_log', { method: 'POST', body: JSON.stringify(logPayload) });
+      DB.emailLog.unshift({ id: logId, templateId: '', schoolId: schoolId || '', contactId: contactId || '', factuurId: factuurId || '', aanEmail: email, aanNaam: contact?.naam || '', onderwerp, body, status: 'concept', datum: now });
+    }
+    showToast('Concept opgeslagen', 'success');
+  } catch (e) { showToast('Fout: ' + e.message, 'error'); } finally { hideLoading(); }
+  closeModal(); renderContent();
+}
+
+// ── Doorsturen ───────────────────────────────────────────────────
+function forwardEmail(logId) {
+  const e = DB.emailLog.find(x => x.id === logId);
+  if (!e) return;
+  const fwdBody = `\n\n---------- Doorgestuurd bericht ----------\nVan: ${e.aanEmail}\nDatum: ${fmtDate(e.datum)}\nOnderwerp: ${e.onderwerp}\n\n${e.body}`;
+  openEmailModal({ schoolId: e.schoolId, _prefillOnderwerp: `Fwd: ${e.onderwerp}`, _prefillBody: fwdBody });
+}
+
+// ── Concept openen als bewerken ──────────────────────────────────
+function openEmailFromDraft(logId) {
+  const e = DB.emailLog.find(x => x.id === logId);
+  if (!e) return;
+  openEmailModal({ schoolId: e.schoolId, contactId: e.contactId, factuurId: e.factuurId, _draftId: logId, _prefillOnderwerp: e.onderwerp, _prefillBody: e.body, _prefillEmail: e.aanEmail });
+}
+
+// ── E-mail log verwijderen ───────────────────────────────────────
+async function delEmailLog(id) {
+  if (!confirm('Bericht verwijderen?')) return;
+  showLoading();
+  try {
+    await supa(`/rest/v1/email_log?id=eq.${id}`, { method: 'DELETE' });
+    DB.emailLog = DB.emailLog.filter(e => e.id !== id);
+    _emailSelected = null;
+    renderContent();
+  } catch (e) { showToast('Fout: ' + e.message, 'error'); } finally { hideLoading(); }
 }

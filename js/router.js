@@ -8,7 +8,7 @@ let bestuurTab = 'scholen';
 let trainingTab = 'info';
 
 const PAGE_LABELS = {
-  dashboard: 'Dashboard', agenda: 'Agenda',
+  dashboard: 'Dashboard', agenda: 'Agenda', email: 'E-mail',
   besturen: 'Besturen', 'bestuur-detail': 'Bestuur',
   scholen: 'Scholen', 'school-detail': 'School', contacten: 'Alle contacten', 'contact-detail': 'Contactpersoon',
   facturen: 'Facturen', trainingen: 'Trainingen & Methodes', 'training-detail': 'Training',
@@ -19,6 +19,7 @@ const NAV_ITEMS = [
   { section: 'Overzicht' },
   { id: 'dashboard',    label: 'Dashboard',              icon: 'board' },
   { id: 'agenda',       label: 'Agenda',                 icon: 'calendar' },
+  { id: 'email',        label: 'E-mail',                 icon: 'mail' },
   { id: 'besturen',     label: 'Besturen',               icon: 'board',    also: ['bestuur-detail'] },
   { id: 'scholen',      label: 'Scholen',                icon: 'school',   also: ['school-detail'] },
   { id: 'contacten',    label: 'Contacten',              icon: 'contact',  also: ['contact-detail'] },
@@ -75,6 +76,7 @@ function renderContent() {
   const c = document.getElementById('content');
   if      (page === 'dashboard')       c.innerHTML = renderDashboard();
   else if (page === 'agenda')          c.innerHTML = renderAgendaPage();
+  else if (page === 'email')           c.innerHTML = renderEmailPage();
   else if (page === 'besturen')        c.innerHTML = renderBesturen(_bestuurSearch || '');
   else if (page === 'bestuur-detail')  c.innerHTML = renderBestuurDetail(pageParam);
   else if (page === 'scholen')         c.innerHTML = renderScholen(_scholenSearch || '');
