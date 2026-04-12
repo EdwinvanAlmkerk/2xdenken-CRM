@@ -163,6 +163,119 @@ async function fetchEmails(
   }
 }
 
+// Haal één e-mail op met body
+async function fetchSingleEmail(
+  host: string, port: number, user: string, pass: string,
+  folder: string, uid: number
+): Promise<{ subject: string; from: any; date: string; body: string }> {
+  const conn = await Deno.connectTls({ hostname: host, port });
+  const encoder = new TextEncoder();
+  const decoder = new TextDecoder();
+  let buffer = "";
+
+  async function readLine(): Promise<string> {
+    while (!buffer.includes("\r\n")) {
+      const buf = new Uint8Array(8192);
+      const n = await conn.read(buf);
+      if (!n) break;
+      buffer += decoder.decode(buf.subarray(0, n));
+    }
+    const idx = buffer.indexOf("\r\n");
+    if (idx === -1) { const line = buffer; buffer = ""; return line; }
+    const line = buffer.substring(0, idx);
+    buffer = buffer.substring(idx + 2);
+    return line;
+  }
+
+  async function readAll(tag: string): Promise<string> {
+    let result = "";
+    while (true) {
+      const line = await readLine();
+      result += line + "\r\n";
+      if (line.startsWith(tag + " ")) break;
+    }
+    return result;
+  }
+
+  async function command(tag: string, cmd: string): Promise<string> {
+    await conn.write(encoder.encode(`${tag} ${cmd}\r\n`));
+    return await readAll(tag);
+  }
+
+  try {
+    await readLine(); // greeting
+    const loginRes = await command("B1", `LOGIN "${user}" "${pass}"`);
+    if (!loginRes.includes("B1 OK")) throw new Error("IMAP login mislukt");
+
+    await command("B2", `SELECT "${folder}"`);
+
+    // Fetch body van specifiek UID
+    const fetchRes = await command("B3", `UID FETCH ${uid} (BODY.PEEK[TEXT] BODY.PEEK[HEADER.FIELDS (CONTENT-TYPE)])`);
+
+    // Parse de body uit het IMAP response
+    let body = "";
+    const lines = fetchRes.split("\r\n");
+    let inBody = false;
+    let contentType = "";
+
+    for (let i = 0; i < lines.length; i++) {
+      const line = lines[i];
+      if (line.includes("BODY[HEADER.FIELDS")) {
+        // Content-Type header
+        for (let j = i + 1; j < lines.length; j++) {
+          if (lines[j].toLowerCase().startsWith("content-type:")) {
+            contentType = lines[j];
+            break;
+          }
+          if (lines[j] === "" || lines[j].startsWith("*") || lines[j].startsWith("B3")) break;
+        }
+      }
+      if (line.includes("BODY[TEXT]")) {
+        inBody = true;
+        // Check for literal {N}
+        const litMatch = line.match(/\{(\d+)\}/);
+        if (litMatch) continue; // body starts next line
+      }
+      if (inBody) {
+        if (line.startsWith("B3 ") || line === ")") break;
+        body += line + "\n";
+      }
+    }
+
+    // Simpele cleanup: als het HTML is, strip tags
+    body = body.trim();
+    if (body.includes("<html") || body.includes("<HTML") || body.includes("<div") || body.includes("<p")) {
+      body = body
+        .replace(/<br\s*\/?>/gi, "\n")
+        .replace(/<\/p>/gi, "\n")
+        .replace(/<\/div>/gi, "\n")
+        .replace(/<[^>]+>/g, "")
+        .replace(/&nbsp;/g, " ")
+        .replace(/&amp;/g, "&")
+        .replace(/&lt;/g, "<")
+        .replace(/&gt;/g, ">")
+        .replace(/&quot;/g, '"')
+        .replace(/\n{3,}/g, "\n\n")
+        .trim();
+    }
+
+    // Decode quoted-printable als dat van toepassing is
+    if (contentType.includes("quoted-printable") || body.includes("=\n") || body.includes("=3D")) {
+      body = body
+        .replace(/=\r?\n/g, "")
+        .replace(/=([0-9A-Fa-f]{2})/g, (_, hex) => String.fromCharCode(parseInt(hex, 16)));
+    }
+
+    await command("B4", "LOGOUT");
+    conn.close();
+
+    return { subject: "", from: null, date: "", body };
+  } catch (e) {
+    try { conn.close(); } catch (_) {}
+    throw e;
+  }
+}
+
 // Decode IMAP encoded strings (=?UTF-8?B?...?= en =?UTF-8?Q?...?=)
 function decodeImapString(s: string): string {
   if (!s) return "";
@@ -205,7 +318,22 @@ serve(async (req) => {
     const url = new URL(req.url);
     const folder = url.searchParams.get("folder") || "INBOX";
     const limit = parseInt(url.searchParams.get("limit") || "30");
+    const uid = url.searchParams.get("uid");
 
+    // Enkel bericht ophalen met body
+    if (uid) {
+      console.log(`Fetching email UID ${uid} from ${folder}`);
+      const result = await fetchSingleEmail(
+        settings.imap_host, settings.imap_port || 993,
+        settings.email_user, settings.email_pass,
+        folder, parseInt(uid)
+      );
+      return new Response(JSON.stringify(result), {
+        headers: { ...corsHeaders, "Content-Type": "application/json" },
+      });
+    }
+
+    // Lijst ophalen
     console.log(`Fetching ${limit} emails from ${folder} via ${settings.imap_host}:${settings.imap_port}`);
 
     const result = await fetchEmails(

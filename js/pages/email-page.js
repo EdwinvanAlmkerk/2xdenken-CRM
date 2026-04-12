@@ -15,6 +15,41 @@ function setEmailFilter(f) { _emailFilter = f; renderContent(); }
 function searchEmail(v) { _emailSearch = v; smartRender(() => renderEmailPage()); }
 function toggleFolderGroup(g) { _foldersCollapsed[g] = !_foldersCollapsed[g]; renderContent(); }
 
+async function selectInboxEmail(uid) {
+  _emailSelected = uid;
+  renderContent();
+
+  // Check of we de body al hebben
+  const msg = _inboxMessages.find(m => (m.uid || m.seq) == uid);
+  if (msg && msg._bodyLoaded) return;
+
+  // Body ophalen via Edge Function
+  try {
+    const res = await fetch(`${SUPA_URL}/functions/v1/fetch-emails?folder=INBOX&uid=${uid}`, {
+      headers: {
+        'apikey': SUPA_KEY,
+        'Authorization': `Bearer ${currentSession?.access_token || SUPA_KEY}`,
+      },
+    });
+    const data = await res.json();
+    if (!res.ok || data.error) throw new Error(data.error || `HTTP ${res.status}`);
+
+    // Update het bericht in de array
+    if (msg) {
+      msg.body = data.body || '';
+      msg._bodyLoaded = true;
+    }
+    renderContent();
+  } catch (e) {
+    console.error('Body ophalen mislukt:', e);
+    if (msg) {
+      msg.body = `[Kon berichtinhoud niet laden: ${e.message}]`;
+      msg._bodyLoaded = true;
+    }
+    renderContent();
+  }
+}
+
 async function fetchInbox() {
   if (!DB.emailSettings?.imapHost) {
     _inboxError = 'Configureer eerst je e-mailserver in Instellingen';
@@ -62,8 +97,8 @@ function renderEmailPage() {
       aanEmail: m.from?.email || '',
       aanNaam: m.from?.name || m.from?.email || '',
       onderwerp: m.subject || '(geen onderwerp)',
-      body: '', datum: m.date || '', status: 'inbox', _isInbox: true,
-      read: m.read || false,
+      body: m.body || '', datum: m.date || '', status: 'inbox', _isInbox: true,
+      read: m.read || false, _bodyLoaded: m._bodyLoaded || false,
     }));
     // Filter ongelezen als dat actief is
     if (_emailFilter === 'ongelezen') items = items.filter(e => !e.read);
@@ -187,7 +222,7 @@ function renderEmailPage() {
                 const naam = e.aanNaam || e.aanEmail || '—';
                 const isUnread = e._isInbox && !e.read;
                 return `
-                  <div onclick="_emailSelected='${e.id}';renderContent()" style="display:grid;grid-template-columns:1fr 1.5fr 140px;padding:9px 16px;border-bottom:1px solid rgba(0,0,0,0.03);cursor:pointer;background:${isActive ? 'var(--mint)' : 'transparent'};border-left:3px solid ${isActive ? 'var(--accent)' : isUnread ? 'var(--accent2)' : 'transparent'};transition:background .1s;align-items:center">
+                  <div onclick="${e._isInbox ? `selectInboxEmail('${e.id}')` : `_emailSelected='${e.id}';renderContent()`}" style="display:grid;grid-template-columns:1fr 1.5fr 140px;padding:9px 16px;border-bottom:1px solid rgba(0,0,0,0.03);cursor:pointer;background:${isActive ? 'var(--mint)' : 'transparent'};border-left:3px solid ${isActive ? 'var(--accent)' : isUnread ? 'var(--accent2)' : 'transparent'};transition:background .1s;align-items:center">
                     <div style="overflow:hidden">
                       <div style="font-size:13px;font-weight:${isUnread ? '800' : '600'};color:var(--navy);white-space:nowrap;overflow:hidden;text-overflow:ellipsis">${isUnread ? '● ' : ''}${esc(naam)}</div>
                       ${matchedSchool ? `<div style="font-size:11px;color:var(--navy4);white-space:nowrap;overflow:hidden;text-overflow:ellipsis">${esc(matchedSchool.naam)}</div>` : matchedContact ? `<div style="font-size:11px;color:var(--accent);white-space:nowrap;overflow:hidden;text-overflow:ellipsis">${esc(matchedContact.naam)}</div>` : ''}
@@ -261,5 +296,5 @@ function renderEmailDetail(e) {
         ${factuur ? `<span>${svgIcon('invoice', 11)} ${esc(factuur.nummer)}</span>` : ''}
       </div>` : ''}
     </div>
-    <div style="flex:1;overflow-y:auto;padding:20px 22px;font-size:14px;color:var(--navy3);line-height:1.7;white-space:pre-wrap">${isInbox && !e.body ? `<div style="text-align:center;color:var(--navy4);padding:30px"><p>Berichtinhoud beschikbaar na IMAP-koppeling.</p></div>` : esc(e.body)}</div>`;
+    <div style="flex:1;overflow-y:auto;padding:20px 22px;font-size:14px;color:var(--navy3);line-height:1.7;white-space:pre-wrap">${isInbox && !e.body && !e._bodyLoaded ? `<div style="text-align:center;color:var(--navy4);padding:30px"><div class="spinner" style="margin:0 auto 12px;width:24px;height:24px;border-width:2px"></div><p>Bericht laden...</p></div>` : esc(e.body || '(leeg bericht)')}</div>`;
 }
