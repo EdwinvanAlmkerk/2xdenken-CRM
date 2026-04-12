@@ -66,6 +66,25 @@ function renderInstellingen() {
 
         </div>
       </div>
+      <div class="card">
+        <div class="card-header"><h3>${svgIcon('trash', 16)} Alle inhoud verwijderen</h3></div>
+        <div class="card-body">
+          <div style="display:flex;align-items:center;justify-content:space-between;gap:16px">
+            <div>
+              <div style="font-size:14px;font-weight:700;color:#C0392B">Volledige database legen</div>
+              <div style="font-size:13px;color:var(--navy3);margin-top:2px">
+                Verwijdert <strong>alle</strong> besturen, scholen, contacten, dossiers, facturen, trainingen, uitvoeringen en agenda-items.
+                Agendatypes blijven bewaard. <strong>Dit kan niet ongedaan worden gemaakt.</strong>
+              </div>
+            </div>
+            <button class="btn" onclick="delAlleInhoud()"
+              style="white-space:nowrap;background:#FDE8E8;color:#C0392B;font-weight:700;flex-shrink:0">
+              ${svgIcon('trash', 15)} Alles verwijderen
+            </button>
+          </div>
+        </div>
+      </div>
+
     </div>`;
 }
 
