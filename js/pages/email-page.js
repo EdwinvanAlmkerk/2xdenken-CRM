@@ -1,7 +1,7 @@
 // ════════════════════════════════════════════════════════════════
 // E-MAIL PAGINA — Outlook-achtige layout
 // ════════════════════════════════════════════════════════════════
-let _emailFolder = 'verzonden';
+let _emailFolder = 'inbox';
 let _emailSearch = '';
 let _emailSelected = null;
 let _emailFilter = 'alles'; // 'alles', 'ongelezen'
