@@ -463,6 +463,33 @@ function renderAgendaList() {
         }).join('')}`;
 }
 
+// ── School-change handler in modal ───────────────────────────────
+function onAgendaSchoolChange() {
+  const schoolId = document.getElementById('f-school').value;
+  const school = schoolId ? DB.scholen.find(s => s.id === schoolId) : null;
+
+  // Bestuur automatisch meezetten
+  const bestuurSel = document.getElementById('f-bestuur');
+  if (school?.bestuurId) {
+    bestuurSel.value = school.bestuurId;
+    bestuurSel.disabled = true;
+  } else {
+    bestuurSel.value = '';
+    bestuurSel.disabled = false;
+  }
+
+  // Contacten filteren op school
+  const contactSel = document.getElementById('f-contact');
+  const currentContact = contactSel.value;
+  const contacten = schoolId
+    ? DB.contacten.filter(c => c.schoolId === schoolId)
+    : DB.contacten;
+  contactSel.innerHTML = '<option value="">— Geen —</option>' +
+    contacten.map(c =>
+      `<option value="${c.id}"${c.id === currentContact ? ' selected' : ''}>${esc(c.naam)}${c.functie ? ` (${esc(c.functie)})` : ''}</option>`
+    ).join('');
+}
+
 // ── Agenda modal ─────────────────────────────────────────────────
 // Parameters:
 //   id          — bestaand agenda-item bewerken (leeg = nieuw)
@@ -477,7 +504,9 @@ function openAgendaModal(id = '', prefillDate = '', prefillSchoolId = '', prefil
   // Bepaal actieve waarden (bestaand item > prefill > leeg)
   const selSchoolId  = a?.schoolId  || prefillSchoolId  || '';
   const selContactId = a?.contactId || prefillContactId || '';
-  const selBestuurId = a?.bestuurId || prefillBestuurId || '';
+  // Bestuur: afleiden uit school als die er is, anders prefill
+  const schoolForBestuur = DB.scholen.find(x => x.id === selSchoolId);
+  const selBestuurId = a?.bestuurId || (schoolForBestuur?.bestuurId || '') || prefillBestuurId || '';
 
   // School: als prefill, toon locked; anders alle scholen
   const schoolLocked = !a && prefillSchoolId;
@@ -485,10 +514,10 @@ function openAgendaModal(id = '', prefillDate = '', prefillSchoolId = '', prefil
     ? (() => { const s = DB.scholen.find(x => x.id === prefillSchoolId); return s ? `<option value="${s.id}" selected>${esc(s.naam)}</option>` : ''; })()
     : DB.scholen.map(s => `<option value="${s.id}"${selSchoolId === s.id ? ' selected' : ''}>${esc(s.naam)}</option>`).join('');
 
-  // Bestuur: als prefill, toon locked; anders alle besturen
-  const bestuurLocked = !a && prefillBestuurId;
+  // Bestuur: locked als prefill OF afgeleid van school
+  const bestuurLocked = !a && (prefillBestuurId || (prefillSchoolId && selBestuurId));
   const bestuurOpts = bestuurLocked
-    ? (() => { const b = DB.besturen.find(x => x.id === prefillBestuurId); return b ? `<option value="${b.id}" selected>${esc(b.naam)}</option>` : ''; })()
+    ? (() => { const b = DB.besturen.find(x => x.id === selBestuurId); return b ? `<option value="${b.id}" selected>${esc(b.naam)}</option>` : ''; })()
     : DB.besturen.map(b => `<option value="${b.id}"${selBestuurId === b.id ? ' selected' : ''}>${esc(b.naam)}</option>`).join('');
 
   // Contacten: als school prefill, toon alleen contacten van die school
@@ -520,8 +549,8 @@ function openAgendaModal(id = '', prefillDate = '', prefillSchoolId = '', prefil
      </div>
      <div class="form-group"><label>Locatie</label><input type="text" id="f-locatie" value="${esc(a?.locatie || '')}" placeholder="Adres of online"/></div>
      <div class="form-row">
-       <div class="form-group"><label>School</label><select id="f-school"${schoolLocked ? ' disabled' : ''}><option value="">— Geen —</option>${schoolOpts}</select>${schoolLocked ? `<input type="hidden" id="f-school-hidden" value="${esc(prefillSchoolId)}"/>` : ''}</div>
-       <div class="form-group"><label>Bestuur</label><select id="f-bestuur"${bestuurLocked ? ' disabled' : ''}><option value="">— Geen —</option>${bestuurOpts}</select>${bestuurLocked ? `<input type="hidden" id="f-bestuur-hidden" value="${esc(prefillBestuurId)}"/>` : ''}</div>
+       <div class="form-group"><label>School</label><select id="f-school"${schoolLocked ? ' disabled' : ''} onchange="onAgendaSchoolChange()">${!schoolLocked ? '<option value="">— Geen —</option>' : ''}${schoolOpts}</select>${schoolLocked ? `<input type="hidden" id="f-school-hidden" value="${esc(prefillSchoolId)}"/>` : ''}</div>
+       <div class="form-group"><label>Bestuur</label><select id="f-bestuur"${bestuurLocked ? ' disabled' : ''}><option value="">— Geen —</option>${bestuurOpts}</select>${bestuurLocked ? `<input type="hidden" id="f-bestuur-hidden" value="${esc(selBestuurId)}"/>` : ''}</div>
      </div>
      <div class="form-group"><label>Contactpersoon</label><select id="f-contact"><option value="">— Geen —</option>${contactOpts}</select></div>
      <div class="form-group"><label>Notitie</label><textarea id="f-notitie" rows="3" placeholder="Extra informatie…">${esc(a?.notitie || '')}</textarea></div>`,
