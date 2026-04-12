@@ -85,9 +85,12 @@ function renderEmailPage() {
 
       <!-- Linker paneel: mappenstructuur -->
       <div style="width:220px;min-width:220px;display:flex;flex-direction:column;background:var(--card-bg);border-right:1px solid var(--glass-border);overflow-y:auto">
-        <div style="padding:12px">
+        <div style="padding:12px;display:flex;flex-direction:column;gap:6px">
           <button class="btn btn-primary" style="width:100%;justify-content:center" onclick="openEmailModal({})">
             ${svgIcon('mail', 15)} Nieuwe e-mail
+          </button>
+          <button class="btn btn-secondary btn-sm" style="width:100%;justify-content:center" onclick="openEmailOptionsModal()">
+            ${svgIcon('settings', 13)} Opties
           </button>
         </div>
 

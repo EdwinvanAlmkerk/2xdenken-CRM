@@ -117,7 +117,7 @@ function _openEmailModalInner(opts) {
        <input type="hidden" id="f-email-opts" value="${esc(JSON.stringify(opts))}"/>
      </div>
      <div class="form-group"><label>Onderwerp *</label><input type="text" id="f-email-onderwerp" value="${esc(prefillOnderwerp)}" placeholder="Onderwerp van de e-mail"/></div>
-     <div class="form-group"><label>Bericht</label><textarea id="f-email-body" rows="10" placeholder="Typ hier je bericht...">${esc(prefillBody)}</textarea></div>`,
+     <div class="form-group"><label>Bericht</label><textarea id="f-email-body" rows="10" placeholder="Typ hier je bericht...">${esc(prefillBody || (getSignature() ? '\n\n-- \n' + getSignature() : ''))}</textarea></div>`,
     `<button class="btn btn-secondary" onclick="closeModal()">Annuleren</button>
      <button class="btn btn-secondary" onclick="saveEmailDraft('${esc(opts.schoolId || '')}','${esc(opts.factuurId || '')}','${esc(draftId)}')">${svgIcon('edit', 14)} Concept opslaan</button>
      <button class="btn btn-primary" onclick="sendEmail('${esc(opts.schoolId || '')}','${esc(opts.factuurId || '')}','${esc(draftId)}')">${svgIcon('mail', 15)} Open in e-mailprogramma</button>`, true);
@@ -150,12 +150,13 @@ function selectEmailTemplate() {
   const onderwerpEl = document.getElementById('f-email-onderwerp');
   const bodyEl = document.getElementById('f-email-body');
 
+  const sig = getSignature() ? '\n\n-- \n' + getSignature() : '';
   if (tpl) {
     onderwerpEl.value = resolveTemplateVars(tpl.onderwerp, opts);
-    bodyEl.value = resolveTemplateVars(tpl.body, opts);
+    bodyEl.value = resolveTemplateVars(tpl.body, opts) + sig;
   } else {
     onderwerpEl.value = '';
-    bodyEl.value = '';
+    bodyEl.value = sig;
   }
 }
 
@@ -283,4 +284,37 @@ async function delEmailLog(id) {
     _emailSelected = null;
     renderContent();
   } catch (e) { showToast('Fout: ' + e.message, 'error'); } finally { hideLoading(); }
+}
+
+// ── E-mail opties modal (handtekening) ───────────────────────────
+function openEmailOptionsModal() {
+  const sig = DB.emailSettings?.signature || '';
+  showModal('E-mailopties',
+    `<div class="form-group">
+       <label>E-mailhandtekening</label>
+       <div style="font-size:12px;color:var(--navy4);margin-bottom:8px">Deze handtekening wordt automatisch onder elk nieuw bericht geplaatst.</div>
+       <textarea id="f-email-sig" rows="8" placeholder="Met vriendelijke groet,&#10;&#10;Jorieke van 2xDenken&#10;06-12345678&#10;www.2xdenken.nl">${esc(sig)}</textarea>
+     </div>
+     ${sig ? `<div style="margin-top:8px;padding:14px 16px;background:var(--glass);border:1px solid var(--bg3);border-radius:var(--r)">
+       <div style="font-size:11px;font-weight:700;color:var(--navy4);text-transform:uppercase;letter-spacing:.5px;margin-bottom:6px">Voorbeeld</div>
+       <div style="font-size:13px;color:var(--navy3);white-space:pre-wrap;line-height:1.6">${esc(sig)}</div>
+     </div>` : ''}`,
+    `<button class="btn btn-secondary" onclick="closeModal()">Annuleren</button>
+     <button class="btn btn-primary" onclick="saveEmailSignature()">Opslaan</button>`);
+}
+
+async function saveEmailSignature() {
+  const sig = document.getElementById('f-email-sig').value;
+  showLoading();
+  try {
+    await supa('/rest/v1/email_settings?id=eq.main', { method: 'PATCH', body: JSON.stringify({ signature: sig, updated_at: new Date().toISOString() }) });
+    if (DB.emailSettings) DB.emailSettings.signature = sig;
+    showToast('Handtekening opgeslagen', 'success');
+    closeModal(); renderContent();
+  } catch (e) { showToast('Fout: ' + e.message, 'error'); } finally { hideLoading(); }
+}
+
+// ── Handtekening ophalen voor in compose ─────────────────────────
+function getSignature() {
+  return DB.emailSettings?.signature || '';
 }
