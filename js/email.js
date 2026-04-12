@@ -120,7 +120,7 @@ function _openEmailModalInner(opts) {
      <div class="form-group"><label>Bericht</label><textarea id="f-email-body" rows="10" placeholder="Typ hier je bericht...">${esc(prefillBody || (getSignature() ? '\n\n-- \n' + getSignature() : ''))}</textarea></div>`,
     `<button class="btn btn-secondary" onclick="closeModal()">Annuleren</button>
      <button class="btn btn-secondary" onclick="saveEmailDraft('${esc(opts.schoolId || '')}','${esc(opts.factuurId || '')}','${esc(draftId)}')">${svgIcon('edit', 14)} Concept opslaan</button>
-     <button class="btn btn-primary" onclick="sendEmail('${esc(opts.schoolId || '')}','${esc(opts.factuurId || '')}','${esc(draftId)}')">${svgIcon('mail', 15)} Open in e-mailprogramma</button>`, true);
+     <button class="btn btn-primary" onclick="sendEmail('${esc(opts.schoolId || '')}','${esc(opts.factuurId || '')}','${esc(draftId)}')">${svgIcon('mail', 15)} ${hasSmtpConfig() ? 'Versturen' : 'Open in e-mailprogramma'}</button>`, true);
 }
 
 // ── Contact-selectie change handler ──────────────────────────────
@@ -162,7 +162,8 @@ function selectEmailTemplate() {
 
 // ── Heeft SMTP-server geconfigureerd? ─────────────────────────────
 function hasSmtpConfig() {
-  return DB.emailSettings?.smtpHost && DB.emailSettings?.emailUser && DB.emailSettings?.emailPass;
+  const ok = DB.emailSettings?.smtpHost && DB.emailSettings?.emailUser && DB.emailSettings?.emailPass;
+  return !!ok;
 }
 
 // ── Verzenden (SMTP of mailto) + auto-log ────────────────────────
