@@ -33,6 +33,9 @@ function resolveTemplateVars(text, opts = {}) {
 // ── Compose modal openen ─────────────────────────────────────────
 // opts: { contactId, schoolId, factuurId, templateId }
 function openEmailModal(opts = {}) {
+  try { return _openEmailModalInner(opts); } catch (e) { console.error('openEmailModal error:', e); alert('Fout bij openen e-mail modal: ' + e.message); }
+}
+function _openEmailModalInner(opts) {
   const contact = opts.contactId ? DB.contacten.find(c => c.id === opts.contactId) : null;
   const school  = opts.schoolId  ? DB.scholen.find(s => s.id === opts.schoolId) : null;
   const factuur = opts.factuurId ? DB.facturen.find(f => f.id === opts.factuurId) : null;
@@ -108,9 +111,10 @@ function openEmailModal(opts = {}) {
      ${ontvangerHtml}
      <div class="form-group">
        <label>Template</label>
-       <select id="f-email-template" onchange="selectEmailTemplate('${esc(JSON.stringify(opts).replace(/'/g, "\\'"))}')">
+       <select id="f-email-template" onchange="selectEmailTemplate()">
          <option value="">— Zonder template —</option>${tplOpts}
        </select>
+       <input type="hidden" id="f-email-opts" value="${esc(JSON.stringify(opts))}"/>
      </div>
      <div class="form-group"><label>Onderwerp *</label><input type="text" id="f-email-onderwerp" value="${esc(prefillOnderwerp)}" placeholder="Onderwerp van de e-mail"/></div>
      <div class="form-group"><label>Bericht</label><textarea id="f-email-body" rows="10" placeholder="Typ hier je bericht...">${esc(prefillBody)}</textarea></div>`,
@@ -131,8 +135,9 @@ function onEmailContactChange() {
 }
 
 // ── Template selectie handler ────────────────────────────────────
-function selectEmailTemplate(optsJson) {
-  const opts = JSON.parse(optsJson);
+function selectEmailTemplate() {
+  const optsEl = document.getElementById('f-email-opts');
+  const opts = optsEl ? JSON.parse(optsEl.value) : {};
   const tplId = document.getElementById('f-email-template').value;
   const tpl = tplId ? DB.emailTemplates.find(t => t.id === tplId) : null;
 
