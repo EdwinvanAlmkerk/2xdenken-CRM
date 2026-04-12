@@ -337,8 +337,8 @@ function startNieuweFactuur() {
   openFactuurModal(schoolId, '', contactId);
 }
 
-// ── Factuur printen ───────────────────────────────────────────────
-function printFactuur(fid) {
+// ── Factuur HTML genereren (herbruikbaar voor print + e-mail) ─────
+function getFactuurHtml(fid) {
   const f = DB.facturen.find(x => x.id === fid);
   if (!f) return;
   const school  = DB.scholen.find(x => x.id === f.schoolId);
@@ -467,6 +467,12 @@ function printFactuur(fid) {
 </body>
 </html>`;
 
+  return html;
+}
+
+function printFactuur(fid) {
+  const html = getFactuurHtml(fid);
+  if (!html) return;
   const win = window.open('', '_blank', 'width=900,height=1150');
   win.document.write(html);
   win.document.close();

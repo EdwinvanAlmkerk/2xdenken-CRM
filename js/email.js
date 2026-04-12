@@ -189,7 +189,7 @@ async function sendEmail(schoolId, factuurId, draftId) {
           'Authorization': `Bearer ${currentSession?.access_token || SUPA_KEY}`,
           'Content-Type': 'application/json',
         },
-        body: JSON.stringify({ to: email, subject: onderwerp, body }),
+        body: JSON.stringify({ to: email, subject: onderwerp, body, html: factuurId && typeof getFactuurHtml === 'function' ? getFactuurHtml(factuurId) : undefined }),
       });
       const result = await res.json();
       if (!res.ok || result.error) {
@@ -235,7 +235,8 @@ async function sendEmail(schoolId, factuurId, draftId) {
       DB.dossiers.unshift(item);
     }
 
-    showToast(sentViaSmtp ? 'E-mail verzonden en vastgelegd' : 'E-mail geopend en vastgelegd', 'success');
+    const naam = contact?.naam || email;
+    showToast(sentViaSmtp ? `E-mail verzonden aan ${naam}` : `E-mail geopend voor ${naam}`, 'success');
   } catch (e) {
     showToast('Loggen mislukt: ' + e.message, 'error');
   } finally { hideLoading(); }

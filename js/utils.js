@@ -203,3 +203,73 @@ function renderDossierItem(d, opts = {}) {
       </div>
     </div>`;
 }
+
+// ── Globale zoekfunctie ──────────────────────────────────────────
+let _globalSearchTimeout = null;
+function globalSearch(q) {
+  clearTimeout(_globalSearchTimeout);
+  _globalSearchTimeout = setTimeout(() => renderGlobalResults(q), 200);
+}
+
+function showGlobalResults() {
+  const q = document.getElementById('global-search')?.value || '';
+  if (q.length >= 2) renderGlobalResults(q);
+}
+
+function renderGlobalResults(q) {
+  const el = document.getElementById('global-search-results');
+  if (!el) return;
+  if (!q || q.length < 2) { el.style.display = 'none'; return; }
+
+  const lq = q.toLowerCase();
+  const results = [];
+  const MAX = 8;
+
+  // Scholen
+  DB.scholen.filter(s => s.naam.toLowerCase().includes(lq) || (s.plaats || '').toLowerCase().includes(lq)).slice(0, MAX).forEach(s => {
+    results.push({ icon: 'school', label: s.naam, sub: s.plaats || '', action: `navigate('school-detail','${s.id}')` });
+  });
+
+  // Besturen
+  DB.besturen.filter(b => b.naam.toLowerCase().includes(lq)).slice(0, MAX).forEach(b => {
+    results.push({ icon: 'board', label: b.naam, sub: 'Bestuur', action: `navigate('bestuur-detail','${b.id}')` });
+  });
+
+  // Contacten
+  DB.contacten.filter(c => c.naam.toLowerCase().includes(lq) || (c.email || '').toLowerCase().includes(lq) || (c.functie || '').toLowerCase().includes(lq)).slice(0, MAX).forEach(c => {
+    const s = DB.scholen.find(x => x.id === c.schoolId);
+    results.push({ icon: 'contact', label: c.naam, sub: [c.functie, s?.naam].filter(Boolean).join(' — '), action: `navigateToContact('${c.schoolId}','${c.id}')` });
+  });
+
+  // Facturen
+  DB.facturen.filter(f => (f.nummer || '').toLowerCase().includes(lq) || (f.betreft || '').toLowerCase().includes(lq)).slice(0, MAX).forEach(f => {
+    const s = DB.scholen.find(x => x.id === f.schoolId);
+    results.push({ icon: 'invoice', label: `Factuur ${f.nummer}`, sub: [s?.naam, fmtEuro(f.totaal)].filter(Boolean).join(' — '), action: `openFactuurModal('${f.schoolId}','${f.id}')` });
+  });
+
+  // Trainingen
+  DB.trainingen.filter(t => t.naam.toLowerCase().includes(lq)).slice(0, MAX).forEach(t => {
+    results.push({ icon: 'training', label: t.naam, sub: t.categorie || '', action: `navigate('training-detail','${t.id}')` });
+  });
+
+  if (results.length === 0) {
+    el.innerHTML = '<div style="padding:16px;text-align:center;color:var(--navy4);font-size:13px">Geen resultaten voor "' + esc(q) + '"</div>';
+  } else {
+    el.innerHTML = results.slice(0, 12).map(r => `
+      <div onclick="${r.action};document.getElementById('global-search').value='';document.getElementById('global-search-results').style.display='none'" style="display:flex;align-items:center;gap:10px;padding:10px 14px;cursor:pointer;border-bottom:1px solid rgba(0,0,0,0.04);transition:background .1s" onmouseover="this.style.background='var(--mint)'" onmouseout="this.style.background='transparent'">
+        ${svgIcon(r.icon, 16)}
+        <div style="flex:1;min-width:0">
+          <div style="font-size:13.5px;font-weight:600;color:var(--navy);white-space:nowrap;overflow:hidden;text-overflow:ellipsis">${esc(r.label)}</div>
+          ${r.sub ? `<div style="font-size:11.5px;color:var(--navy4);white-space:nowrap;overflow:hidden;text-overflow:ellipsis">${esc(r.sub)}</div>` : ''}
+        </div>
+      </div>`).join('');
+  }
+  el.style.display = 'block';
+}
+
+// Sluit zoekresultaten bij klik buiten
+document.addEventListener('click', (e) => {
+  const el = document.getElementById('global-search-results');
+  const input = document.getElementById('global-search');
+  if (el && !el.contains(e.target) && e.target !== input) el.style.display = 'none';
+});

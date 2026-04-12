@@ -18,7 +18,7 @@ Browser-gebaseerde CRM-applicatie voor het beheren van besturen, scholen, contac
   - `crud.js` — save- en delete-functies voor besturen, scholen, contacten, dossiers, facturen, trainingen, uitvoeringen, agenda-items, agendatypes en e-mailtemplates richting Supabase.
   - `email.js` — e-mail compose module: template-variabelen invullen (`resolveTemplateVars`), compose modal (`openEmailModal`), mailto-link genereren, concepten opslaan/bewerken, doorsturen, automatische dossiernotitie en email_log bij verzending.
   - `router.js` — navigatiestate (`page`, `pageParam`, `contactParam`), `navigate()`, `goBack()`, `renderNav()` en `renderContent()` dispatcher.
-  - `utils.js` — SVG-iconen, formatters, Supabase Storage-helpers (bucket `dossier-bestanden`) en dossier-renderhelpers.
+  - `utils.js` — SVG-iconen, formatters, Supabase Storage-helpers (bucket `dossier-bestanden`), dossier-renderhelpers en globale zoekfunctie.
   - `ui.js` — loading-overlay, toasts, modals en exportfuncties.
   - `pages/`
     - `dashboard.js` — `renderDashboard()`; overzicht met KPI's en komende agenda-afspraken.
