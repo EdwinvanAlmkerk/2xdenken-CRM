@@ -263,7 +263,7 @@ function renderRegels(regels) {
         <td><input type="text" value="${esc(r.toelichting || '')}" oninput="updateRegel(${i},'toelichting',this.value)" placeholder="Nader te bepalen…"/></td>
         <td><input type="date" value="${esc(r.datum || '')}" oninput="updateRegel(${i},'datum',this.value)"/></td>
         <td><input type="text" value="${esc(r.uren || '')}" oninput="updateRegel(${i},'uren',this.value)" placeholder="2,5 uur"/></td>
-        <td><input type="number" value="${r.bedrag || 0}" min="0" step="0.01" oninput="updateRegel(${i},'bedrag',this.value)"/></td>
+        <td><input type="text" inputmode="decimal" value="${r.bedrag || 0}" oninput="updateRegel(${i},'bedrag',this.value)" placeholder="0.00"/></td>
         <td><button class="btn btn-ghost btn-icon btn-sm" onclick="delRegel(${i})">${svgIcon('trash', 13)}</button></td>
       </tr>`).join('')}
     </tbody></table></div>`;
