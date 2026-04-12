@@ -24,8 +24,15 @@ async function fetchInbox() {
   _inboxLoading = true; _inboxError = '';
   renderContent();
   try {
-    const res = await supa('/functions/v1/fetch-emails?folder=INBOX&limit=50', { method: 'GET' });
-    _inboxMessages = res.messages || [];
+    const res = await fetch(`${SUPA_URL}/functions/v1/fetch-emails?folder=INBOX&limit=30`, {
+      headers: {
+        'apikey': SUPA_KEY,
+        'Authorization': `Bearer ${currentSession?.access_token || SUPA_KEY}`,
+      },
+    });
+    const data = await res.json();
+    if (!res.ok || data.error) throw new Error(data.error || `HTTP ${res.status}`);
+    _inboxMessages = data.messages || [];
     _inboxError = '';
   } catch (e) {
     _inboxError = e.message;
@@ -36,7 +43,13 @@ async function fetchInbox() {
 }
 
 function renderEmailPage() {
-  const hasConfig = DB.emailSettings?.imapHost && DB.emailSettings?.emailUser;
+  const hasConfig = DB.emailSettings?.imapHost && DB.emailSettings?.emailUser && DB.emailSettings?.emailPass;
+
+  // Auto-load inbox bij eerste keer openen
+  if (hasConfig && _emailFolder === 'inbox' && _inboxMessages.length === 0 && !_inboxLoading && !_inboxError) {
+    fetchInbox();
+    return '<div style="text-align:center;padding:60px;color:var(--navy4)"><div class="spinner" style="margin:0 auto 16px"></div><p>Inbox laden...</p></div>';
+  }
   const emailAddr = DB.emailSettings?.emailUser || 'E-mail';
   const conceptCount = DB.emailLog.filter(e => e.status === 'concept').length;
   const verzondenCount = DB.emailLog.filter(e => e.status === 'verzonden').length;
@@ -50,7 +63,10 @@ function renderEmailPage() {
       aanNaam: m.from?.name || m.from?.email || '',
       onderwerp: m.subject || '(geen onderwerp)',
       body: '', datum: m.date || '', status: 'inbox', _isInbox: true,
+      read: m.read || false,
     }));
+    // Filter ongelezen als dat actief is
+    if (_emailFilter === 'ongelezen') items = items.filter(e => !e.read);
   } else {
     items = DB.emailLog.filter(e => {
       if (_emailFolder === 'verzonden') return e.status === 'verzonden';
@@ -103,7 +119,7 @@ function renderEmailPage() {
             ${esc(emailAddr)}
           </div>
           ${!_foldersCollapsed['account'] ? `
-            ${renderFolder('inbox', 'Postvak IN', 'mail', _inboxMessages.length)}
+            ${renderFolder('inbox', 'Postvak IN', 'mail', _inboxMessages.filter(m => !m.read).length)}
             ${renderFolder('verzonden', 'Verzonden items', 'chevron', verzondenCount)}
             ${renderFolder('concepten', 'Concepten', 'edit', conceptCount)}
           ` : ''}
@@ -166,16 +182,18 @@ function renderEmailPage() {
               </div>`
             : items.map(e => {
                 const isActive = selected && String(e.id) === String(selected.id);
-                const school = e.schoolId ? DB.scholen.find(s => s.id === e.schoolId) : null;
+                const matchedContact = e.aanEmail ? DB.contacten.find(c => c.email && c.email.toLowerCase() === e.aanEmail.toLowerCase()) : null;
+                const matchedSchool = e.schoolId ? DB.scholen.find(s => s.id === e.schoolId) : (matchedContact ? DB.scholen.find(s => s.id === matchedContact.schoolId) : null);
                 const naam = e.aanNaam || e.aanEmail || '—';
+                const isUnread = e._isInbox && !e.read;
                 return `
-                  <div onclick="_emailSelected='${e.id}';renderContent()" style="display:grid;grid-template-columns:1fr 1.5fr 140px;padding:9px 16px;border-bottom:1px solid rgba(0,0,0,0.03);cursor:pointer;background:${isActive ? 'var(--mint)' : 'transparent'};border-left:3px solid ${isActive ? 'var(--accent)' : 'transparent'};transition:background .1s;align-items:center">
+                  <div onclick="_emailSelected='${e.id}';renderContent()" style="display:grid;grid-template-columns:1fr 1.5fr 140px;padding:9px 16px;border-bottom:1px solid rgba(0,0,0,0.03);cursor:pointer;background:${isActive ? 'var(--mint)' : 'transparent'};border-left:3px solid ${isActive ? 'var(--accent)' : isUnread ? 'var(--accent2)' : 'transparent'};transition:background .1s;align-items:center">
                     <div style="overflow:hidden">
-                      <div style="font-size:13px;font-weight:600;color:var(--navy);white-space:nowrap;overflow:hidden;text-overflow:ellipsis">${esc(naam)}</div>
-                      ${school ? `<div style="font-size:11px;color:var(--navy4);white-space:nowrap;overflow:hidden;text-overflow:ellipsis">${esc(school.naam)}</div>` : ''}
+                      <div style="font-size:13px;font-weight:${isUnread ? '800' : '600'};color:var(--navy);white-space:nowrap;overflow:hidden;text-overflow:ellipsis">${isUnread ? '● ' : ''}${esc(naam)}</div>
+                      ${matchedSchool ? `<div style="font-size:11px;color:var(--navy4);white-space:nowrap;overflow:hidden;text-overflow:ellipsis">${esc(matchedSchool.naam)}</div>` : matchedContact ? `<div style="font-size:11px;color:var(--accent);white-space:nowrap;overflow:hidden;text-overflow:ellipsis">${esc(matchedContact.naam)}</div>` : ''}
                     </div>
                     <div style="overflow:hidden">
-                      <div style="font-size:13px;color:var(--navy);white-space:nowrap;overflow:hidden;text-overflow:ellipsis">${esc(e.onderwerp || '(geen onderwerp)')}</div>
+                      <div style="font-size:13px;font-weight:${isUnread ? '700' : '400'};color:var(--navy);white-space:nowrap;overflow:hidden;text-overflow:ellipsis">${esc(e.onderwerp || '(geen onderwerp)')}</div>
                       <div style="font-size:11.5px;color:var(--navy4);white-space:nowrap;overflow:hidden;text-overflow:ellipsis">${esc((e.body || '').slice(0, 100))}</div>
                     </div>
                     <div style="text-align:right;font-size:12px;color:var(--navy4);white-space:nowrap">
