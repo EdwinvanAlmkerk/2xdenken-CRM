@@ -123,10 +123,10 @@ function renderEmailPage() {
 
   items.sort((a, b) => new Date(b.datum) - new Date(a.datum));
 
-  // Geselecteerd item
+  // Geselecteerd item (loose equality omdat inbox-id's numbers zijn)
   let selected = null;
   if (_emailFolder === 'inbox') {
-    selected = _emailSelected ? items.find(e => e.id === _emailSelected) : null;
+    selected = _emailSelected ? items.find(e => String(e.id) === String(_emailSelected)) : null;
   } else {
     selected = _emailSelected ? DB.emailLog.find(e => e.id === _emailSelected) : null;
   }
