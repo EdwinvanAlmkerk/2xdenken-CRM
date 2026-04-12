@@ -182,10 +182,18 @@ async function sendEmail(schoolId, factuurId, draftId) {
   if (hasSmtpConfig()) {
     showLoading();
     try {
-      const res = await supa('/functions/v1/send-email', {
+      const res = await fetch(`${SUPA_URL}/functions/v1/send-email`, {
         method: 'POST',
+        headers: {
+          'Authorization': `Bearer ${currentSession?.access_token || SUPA_KEY}`,
+          'Content-Type': 'application/json',
+        },
         body: JSON.stringify({ to: email, subject: onderwerp, body }),
       });
+      const result = await res.json();
+      if (!res.ok || result.error) {
+        throw new Error(result.error || `HTTP ${res.status}`);
+      }
       sentViaSmtp = true;
     } catch (e) {
       hideLoading();
