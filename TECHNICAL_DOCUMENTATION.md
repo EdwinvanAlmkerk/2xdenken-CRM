@@ -10,7 +10,7 @@ Browser-gebaseerde CRM-applicatie voor het beheren van besturen, scholen, contac
 
 - `index.html` — enige HTML-pagina; bevat de login-schermen, app-shell en laadt alle CSS- en JS-bestanden.
 - `css/`
-  - `style.css` — glassmorphism dark theme; alle styling voor login, sidebar, tabellen, modals, detailpagina's en kalenderweergaven. Font: Outfit. Mesh-achtergrond met radiale gradiënten. Glass-effecten met `backdrop-filter: blur()`.
+  - `style.css` — fris licht thema met glaskaarten op lichte achtergrond; donkerblauwe sidebar. Font: Outfit. Subtiele mesh-achtergrond met radiale gradiënten. Glass-effecten met `backdrop-filter: blur()`.
 - `js/`
   - `config.js` — Supabase URL en anon key.
   - `db.js` — in-memory `DB`-object, `supa()`/`supaAuth()` fetch-helpers, mapping-functies tussen snake_case (Supabase) en camelCase (frontend), en `loadAllData()`.
@@ -74,4 +74,4 @@ Browser-gebaseerde CRM-applicatie voor het beheren van besturen, scholen, contac
 
 ## Laatste update
 - Datum: 2026-04-12
-- Opmerking: Visuele redesign naar glassmorphism dark theme (Outfit font, mesh-achtergrond, glass cards, accent-kleuren teal/paars/oranje). Alle bestaande functionaliteit ongewijzigd.
+- Opmerking: Visuele redesign naar fris licht thema (Outfit font, witte glaskaarten, donkerblauwe sidebar, mesh-achtergrond, accent-kleuren teal/paars/oranje). Alle bestaande functionaliteit ongewijzigd.
