@@ -31,6 +31,7 @@ function renderDashboard() {
 
   return `
     <div class="welcome-banner">
+      ${naam.toLowerCase().includes('jorieke') ? `<img src="img/jorieke.jpg" alt="" style="width:56px;height:56px;border-radius:50%;object-fit:cover;border:2px solid rgba(26,184,184,0.3);flex-shrink:0;position:relative;z-index:1"/>` : ''}
       <div class="welcome-text">
         <h2>${greeting}, ${esc(naam)}! ♥</h2>
         <p>Hier is een overzicht van jouw CRM — coaching, training en advies met ♥ voor onderwijs</p>
