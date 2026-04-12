@@ -128,6 +128,7 @@ function renderContactDetail(schoolId, contactId) {
       <div class="card-header">
         <h3>Dossier</h3>
         <div style="display:flex;gap:6px">
+          <button class="btn btn-secondary btn-sm" onclick="openAgendaModal('','','${schoolId}','${contactId}')">${svgIcon('calendar', 14)} Afspraak</button>
           <button class="btn btn-secondary btn-sm" onclick="openBestandModalContact('${schoolId}','${contactId}')">${svgIcon('add', 14)} Bestand</button>
           <button class="btn btn-primary btn-sm" onclick="openDossierModalContact('${schoolId}','${contactId}')">${svgIcon('add', 14)} Notitie</button>
         </div>

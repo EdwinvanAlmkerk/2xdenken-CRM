@@ -178,11 +178,13 @@ function renderSchoolDetail(id) {
                 <button class="btn btn-secondary btn-sm" style="flex:1;justify-content:center" onclick="openDossierModalContact('${id}','${c.id}')">${svgIcon('note', 14)} Notitie</button>
                 <button class="btn btn-secondary btn-sm" style="flex:1;justify-content:center" onclick="openBestandModalContact('${id}','${c.id}')">${svgIcon('add', 14)} Bestand</button>
                 <button class="btn btn-secondary btn-sm" style="flex:1;justify-content:center" onclick="openFactuurModal('${id}','','${c.id}')">${svgIcon('invoice', 14)} Factuur</button>
+                <button class="btn btn-secondary btn-sm" style="flex:1;justify-content:center" onclick="openAgendaModal('','','${id}','${c.id}')">${svgIcon('calendar', 14)} Afspraak</button>
               </div>
             </div>`).join('')}</div>`}`;
   } else if (schoolTab === 'dossier') {
     tabContent = `
       <div style="display:flex;justify-content:flex-end;gap:8px;margin-bottom:16px">
+        <button class="btn btn-secondary" onclick="openAgendaModal('','','${id}')">${svgIcon('calendar')} Afspraak plannen</button>
         <button class="btn btn-secondary" onclick="openBestandModal('${id}')">${svgIcon('add')} Bestand toevoegen</button>
         <button class="btn btn-primary" onclick="openDossierModal('${id}')">${svgIcon('add')} Notitie toevoegen</button>
       </div>

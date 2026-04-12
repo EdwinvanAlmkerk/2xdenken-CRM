@@ -424,9 +424,9 @@ async function saveAgenda(id) {
     beginTijd: document.getElementById('f-begintijd').value || '',
     eindTijd:  document.getElementById('f-eindtijd').value || '',
     type:      document.getElementById('f-type').value || 'afspraak',
-    schoolId:  document.getElementById('f-school').value || '',
+    schoolId:  document.getElementById('f-school-hidden')?.value || document.getElementById('f-school').value || '',
     contactId: document.getElementById('f-contact').value || '',
-    bestuurId: document.getElementById('f-bestuur').value || '',
+    bestuurId: document.getElementById('f-bestuur-hidden')?.value || document.getElementById('f-bestuur').value || '',
     locatie:   document.getElementById('f-locatie').value.trim(),
     notitie:   document.getElementById('f-notitie').value.trim(),
   };
