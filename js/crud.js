@@ -451,6 +451,7 @@ async function delAgenda(id) {
   try {
     await supa(`/rest/v1/agenda?id=eq.${id}`, { method: 'DELETE' });
     DB.agenda = DB.agenda.filter(a => a.id !== id);
+    closeModal();
     renderContent();
   } catch (e) { showToast('Fout: ' + e.message, 'error'); } finally { hideLoading(); }
 }
