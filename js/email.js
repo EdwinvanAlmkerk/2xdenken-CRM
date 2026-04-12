@@ -178,6 +178,41 @@ async function sendEmail(schoolId, factuurId, draftId) {
 
   let sentViaSmtp = false;
 
+  // Genereer PDF als er een factuur gekoppeld is
+  let _pendingPdfBase64 = null;
+  let _pendingPdfFilename = null;
+  if (factuurId && typeof getFactuurHtml === 'function' && typeof html2pdf !== 'undefined') {
+    showLoading();
+    try {
+      const factuurHtml = getFactuurHtml(factuurId);
+      if (factuurHtml) {
+        const f = DB.facturen.find(x => x.id === factuurId);
+        _pendingPdfFilename = `Factuur_${f?.nummer || 'onbekend'}.pdf`;
+        const container = document.createElement('div');
+        container.innerHTML = factuurHtml;
+        container.style.position = 'fixed';
+        container.style.left = '-9999px';
+        document.body.appendChild(container);
+        const pdfBlob = await html2pdf().set({
+          margin: [10, 12, 12, 12],
+          filename: _pendingPdfFilename,
+          html2canvas: { scale: 2 },
+          jsPDF: { unit: 'mm', format: 'a4', orientation: 'portrait' }
+        }).from(container).outputPdf('blob');
+        document.body.removeChild(container);
+        // Converteer blob naar base64
+        _pendingPdfBase64 = await new Promise((resolve) => {
+          const reader = new FileReader();
+          reader.onloadend = () => resolve(reader.result.split(',')[1]);
+          reader.readAsDataURL(pdfBlob);
+        });
+      }
+    } catch (e) {
+      console.warn('PDF generatie mislukt:', e);
+    }
+    hideLoading();
+  }
+
   // Probeer SMTP als geconfigureerd
   if (hasSmtpConfig()) {
     showLoading();
@@ -189,7 +224,7 @@ async function sendEmail(schoolId, factuurId, draftId) {
           'Authorization': `Bearer ${currentSession?.access_token || SUPA_KEY}`,
           'Content-Type': 'application/json',
         },
-        body: JSON.stringify({ to: email, subject: onderwerp, body, html: factuurId && typeof getFactuurHtml === 'function' ? getFactuurHtml(factuurId) : undefined }),
+        body: JSON.stringify({ to: email, subject: onderwerp, body, pdfBase64: _pendingPdfBase64 || undefined, pdfFilename: _pendingPdfFilename || undefined }),
       });
       const result = await res.json();
       if (!res.ok || result.error) {

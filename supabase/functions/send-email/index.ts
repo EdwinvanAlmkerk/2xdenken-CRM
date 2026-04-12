@@ -6,21 +6,22 @@ const corsHeaders = {
   "Access-Control-Allow-Headers": "authorization, x-client-info, apikey, content-type",
 };
 
-// Bouw MIME bericht (plain text of multipart met HTML)
-function buildMessage(from: string, to: string, subject: string, body: string, html?: string): string {
+// Bouw MIME bericht (plain text, optioneel met PDF bijlage)
+function buildMessage(from: string, to: string, subject: string, body: string, pdfBase64?: string, pdfFilename?: string): string {
   const encodedSubject = `=?UTF-8?B?${btoa(unescape(encodeURIComponent(subject)))}?=`;
   const date = new Date().toUTCString();
   const escapedBody = body.replace(/^\./gm, "..");
 
-  if (html) {
+  if (pdfBase64 && pdfFilename) {
     const boundary = "----=_Part_" + Date.now();
-    const escapedHtml = html.replace(/^\./gm, "..");
+    // Split base64 in regels van 76 tekens
+    const b64Lines = pdfBase64.match(/.{1,76}/g)?.join("\r\n") || pdfBase64;
     return [
       `From: ${from}`,
       `To: ${to}`,
       `Subject: ${encodedSubject}`,
       `MIME-Version: 1.0`,
-      `Content-Type: multipart/alternative; boundary="${boundary}"`,
+      `Content-Type: multipart/mixed; boundary="${boundary}"`,
       `Date: ${date}`,
       ``,
       `--${boundary}`,
@@ -30,10 +31,11 @@ function buildMessage(from: string, to: string, subject: string, body: string, h
       escapedBody,
       ``,
       `--${boundary}`,
-      `Content-Type: text/html; charset=UTF-8`,
-      `Content-Transfer-Encoding: 8bit`,
+      `Content-Type: application/pdf; name="${pdfFilename}"`,
+      `Content-Disposition: attachment; filename="${pdfFilename}"`,
+      `Content-Transfer-Encoding: base64`,
       ``,
-      escapedHtml,
+      b64Lines,
       ``,
       `--${boundary}--`,
     ].join("\r\n");
@@ -55,7 +57,7 @@ function buildMessage(from: string, to: string, subject: string, body: string, h
 // Minimale SMTP client met Deno TCP
 async function sendSmtp(
   host: string, port: number, user: string, pass: string,
-  from: string, to: string, subject: string, body: string, html?: string
+  from: string, to: string, subject: string, body: string, pdfBase64?: string, pdfFilename?: string
 ): Promise<void> {
   const conn = port === 465
     ? await Deno.connectTls({ hostname: host, port })
@@ -102,7 +104,7 @@ async function sendSmtp(
     await tlsWrite(`RCPT TO:<${to}>`);
     await tlsWrite("DATA");
 
-    const msg = buildMessage(from, to, subject, body, html);
+    const msg = buildMessage(from, to, subject, body, pdfBase64, pdfFilename);
     await tlsConn.write(encoder.encode(msg + "\r\n.\r\n"));
     const dataRes = await tlsRead();
     if (!dataRes.startsWith("250")) throw new Error("SMTP data mislukt: " + dataRes.trim());
@@ -119,7 +121,7 @@ async function sendSmtp(
     await write(`RCPT TO:<${to}>`);
     await write("DATA");
 
-    const msg = buildMessage(from, to, subject, body, html);
+    const msg = buildMessage(from, to, subject, body, pdfBase64, pdfFilename);
     await conn.write(encoder.encode(msg + "\r\n.\r\n"));
     const dataRes = await read();
     if (!dataRes.startsWith("250")) throw new Error("SMTP data mislukt: " + dataRes.trim());
@@ -151,7 +153,7 @@ serve(async (req) => {
       });
     }
 
-    const { to, subject, body, html } = await req.json();
+    const { to, subject, body, pdfBase64, pdfFilename } = await req.json();
     if (!to || !subject) {
       return new Response(JSON.stringify({ error: "to en subject zijn verplicht" }), {
         status: 400, headers: { ...corsHeaders, "Content-Type": "application/json" }
@@ -159,14 +161,14 @@ serve(async (req) => {
     }
 
     const fromAddr = settings.email_user;
-    console.log(`Sending to ${to} via ${settings.smtp_host}:${settings.smtp_port}${html ? ' (with HTML)' : ''}`);
+    console.log(`Sending to ${to} via ${settings.smtp_host}:${settings.smtp_port}${pdfBase64 ? ' (with PDF)' : ''}`);
 
     await sendSmtp(
       settings.smtp_host,
       settings.smtp_port || 587,
       settings.email_user,
       settings.email_pass,
-      fromAddr, to, subject, body || " ", html || undefined
+      fromAddr, to, subject, body || " ", pdfBase64 || undefined, pdfFilename || undefined
     );
 
     console.log(`Email sent successfully to ${to}`);
