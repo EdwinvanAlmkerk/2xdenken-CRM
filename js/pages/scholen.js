@@ -59,9 +59,8 @@ function renderScholen(search = '') {
                     <td style="font-size:13px;color:var(--ink3)">${esc(best?.naam || '–')}</td>
                     <td>${esc(s.plaats || '–')}</td>
                     <td style="color:var(--ink3);font-size:13px">${nc}</td>
-                    <td onclick="event.stopPropagation()" style="width:80px">
+                    <td onclick="event.stopPropagation()" style="width:50px">
                       <div class="row-actions">
-                        <button class="btn btn-ghost btn-icon btn-sm" title="Bewerken" onclick="openSchoolModal('${s.id}')">${svgIcon('edit', 14)}</button>
                         <button class="btn btn-ghost btn-icon btn-sm btn-del" title="Verwijderen" onclick="delSchool('${s.id}')" style="color:var(--s-rood)">${svgIcon('trash', 14)}</button>
                       </div>
                     </td>

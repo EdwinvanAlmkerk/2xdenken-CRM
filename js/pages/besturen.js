@@ -51,9 +51,8 @@ function renderBesturen(search = '') {
                     <td style="font-weight:500">${esc(b.naam)}</td>
                     <td style="color:var(--ink3);font-size:13px">${cnt} ${cnt === 1 ? 'school' : 'scholen'}</td>
                     <td>${b.website ? `<a href="${esc(b.website)}" target="_blank" onclick="event.stopPropagation()" style="color:var(--blue);font-size:13px">${esc(b.website)}</a>` : '–'}</td>
-                    <td onclick="event.stopPropagation()" style="width:80px">
+                    <td onclick="event.stopPropagation()" style="width:50px">
                       <div class="row-actions">
-                        <button class="btn btn-ghost btn-icon btn-sm" title="Bewerken" onclick="openBestuurModal('${b.id}')">${svgIcon('edit', 14)}</button>
                         <button class="btn btn-ghost btn-icon btn-sm btn-del" title="Verwijderen" onclick="delBestuur('${b.id}')" style="color:var(--s-rood)">${svgIcon('trash', 14)}</button>
                       </div>
                     </td>

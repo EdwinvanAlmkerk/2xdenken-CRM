@@ -60,9 +60,8 @@ function renderContacten(search = '') {
                     <td style="font-size:13px;color:var(--ink3)">${esc(s?.naam || '—')}</td>
                     <td>${c.email ? `<a href="mailto:${esc(c.email)}" onclick="event.stopPropagation()" style="color:var(--blue);font-size:13px">${esc(c.email)}</a>` : '—'}</td>
                     <td style="font-size:13px;color:var(--ink3)">${esc(c.telefoon || '—')}</td>
-                    <td onclick="event.stopPropagation()" style="width:80px">
+                    <td onclick="event.stopPropagation()" style="width:50px">
                       <div class="row-actions">
-                        <button class="btn btn-ghost btn-icon btn-sm" title="Bewerken" onclick="openContactModal('${s?.id || ''}','${c.id}')">${svgIcon('edit', 14)}</button>
                         <button class="btn btn-ghost btn-icon btn-sm" title="Verwijderen" onclick="delContact('${c.id}','${s?.id || ''}')" style="color:var(--s-rood)">${svgIcon('trash', 14)}</button>
                       </div>
                     </td>
