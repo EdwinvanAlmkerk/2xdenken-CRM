@@ -55,6 +55,12 @@ function _openEmailModalInner(opts) {
     `<option value="${t.id}"${opts.templateId === t.id ? ' selected' : ''}>${esc(t.naam)} (${esc(t.categorie)})</option>`
   ).join('');
 
+  // Pre-fill: vanuit template, of directe prefill (doorsturen/concept)
+  let prefillOnderwerp = opts._prefillOnderwerp || '';
+  let prefillBody = opts._prefillBody || '';
+  const draftId = opts._draftId || '';
+  const prefillEmail = opts._prefillEmail || '';
+
   // Ontvanger-info
   let ontvangerHtml = '';
   if (resolvedContact?.email) {
@@ -83,12 +89,6 @@ function _openEmailModalInner(opts) {
       <input type="hidden" id="f-email-contact-id" value=""/>
     </div>`;
   }
-
-  // Pre-fill: vanuit template, of directe prefill (doorsturen/concept)
-  let prefillOnderwerp = opts._prefillOnderwerp || '';
-  let prefillBody = opts._prefillBody || '';
-  const draftId = opts._draftId || '';
-  const prefillEmail = opts._prefillEmail || '';
   if (!prefillOnderwerp && opts.templateId) {
     const tpl = DB.emailTemplates.find(t => t.id === opts.templateId);
     if (tpl) {
