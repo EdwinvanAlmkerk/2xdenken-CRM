@@ -102,7 +102,7 @@ function renderSchoolDetail(id) {
   const facturen  = DB.facturen.filter(f => f.schoolId === id);
   const adresStr  = [s.adres, s.postcode, s.plaats].filter(Boolean).join(', ');
 
-  const tabs = [['info', 'Overzicht'], ['contacten', 'Contacten'], ['dossier', 'Dossier'], ['trainingen', 'Trainingen'], ['facturen', 'Facturen']];
+  const tabs = [['info', 'Overzicht'], ['contacten', 'Contacten'], ['dossier', 'Dossier'], ['agenda', 'Agenda'], ['trainingen', 'Trainingen'], ['facturen', 'Facturen']];
   let tabContent = '';
 
   if (schoolTab === 'info') {
@@ -184,13 +184,35 @@ function renderSchoolDetail(id) {
   } else if (schoolTab === 'dossier') {
     tabContent = `
       <div style="display:flex;justify-content:flex-end;gap:8px;margin-bottom:16px">
-        <button class="btn btn-secondary" onclick="openAgendaModal('','','${id}')">${svgIcon('calendar')} Afspraak plannen</button>
         <button class="btn btn-secondary" onclick="openBestandModal('${id}')">${svgIcon('add')} Bestand toevoegen</button>
         <button class="btn btn-primary" onclick="openDossierModal('${id}')">${svgIcon('add')} Notitie toevoegen</button>
       </div>
       ${dossiers.length === 0
         ? `<div class="card"><div class="empty-state">${svgIcon('note', 36)}<p>Nog geen dossiernotities</p></div></div>`
         : `<div class="dossier-list">${dossiers.map(d => renderDossierItem(d, { delBtn: 'delDossier', delArg: id })).join('')}</div>`}`;
+  } else if (schoolTab === 'agenda') {
+    const agendaItems = DB.agenda.filter(a => a.schoolId === id).sort((a, b) => a.datum.localeCompare(b.datum) || (a.beginTijd || '').localeCompare(b.beginTijd || ''));
+    const vandaag = new Date().toISOString().slice(0, 10);
+    const komend = agendaItems.filter(a => a.datum >= vandaag);
+    const verlopen = agendaItems.filter(a => a.datum < vandaag);
+    tabContent = `
+      <div style="display:flex;justify-content:flex-end;gap:8px;margin-bottom:16px">
+        <button class="btn btn-primary" onclick="openAgendaModal('','','${id}')">${svgIcon('calendar')} Afspraak plannen</button>
+      </div>
+      ${agendaItems.length === 0
+        ? `<div class="card"><div class="empty-state">${svgIcon('calendar', 36)}<p>Nog geen afspraken voor deze school</p></div></div>`
+        : `${komend.length > 0 ? `<div class="card" style="margin-bottom:16px">
+            <div class="card-header"><h3 style="color:var(--s-blauw)">${svgIcon('calendar', 16)} Komende afspraken</h3></div>
+            <div class="card-body" style="padding:0"><table><tbody>
+              ${komend.map(a => renderAgendaRow(a)).join('')}
+            </tbody></table></div>
+          </div>` : ''}
+          ${verlopen.length > 0 ? `<div class="card">
+            <div class="card-header"><h3 style="color:var(--navy4)">${svgIcon('clock', 16)} Verlopen afspraken</h3></div>
+            <div class="card-body" style="padding:0"><table><tbody>
+              ${verlopen.map(a => renderAgendaRow(a)).join('')}
+            </tbody></table></div>
+          </div>` : ''}`}`;
   } else if (schoolTab === 'trainingen') {
     tabContent = renderSchoolTrainingenTab(id);
   } else if (schoolTab === 'facturen') {

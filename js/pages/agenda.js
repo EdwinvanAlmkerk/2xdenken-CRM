@@ -24,6 +24,35 @@ function fmtTijd(t) {
   return t.slice(0, 5);
 }
 
+// ── Gedeelde agenda-rij voor detailpagina's (school/bestuur/contact) ──
+function renderAgendaRow(a) {
+  const school  = a.schoolId  ? DB.scholen.find(s => s.id === a.schoolId)   : null;
+  const bestuur = a.bestuurId ? DB.besturen.find(b => b.id === a.bestuurId) : null;
+  const contact = a.contactId ? DB.contacten.find(c => c.id === a.contactId) : null;
+  const tijdStr = a.beginTijd
+    ? (a.eindTijd ? `${fmtTijd(a.beginTijd)} – ${fmtTijd(a.eindTijd)}` : fmtTijd(a.beginTijd))
+    : 'Hele dag';
+  const koppeling = [school?.naam, bestuur?.naam, contact?.naam].filter(Boolean).join(' · ');
+  return `<tr>
+    <td style="width:110px;white-space:nowrap;color:var(--navy4);font-size:13px;vertical-align:top;padding:12px 16px">${fmtDateShort(a.datum)}</td>
+    <td style="width:90px;white-space:nowrap;font-weight:600;color:var(--navy);vertical-align:top;padding:12px 8px">${svgIcon('clock', 13)} ${tijdStr}</td>
+    <td style="padding:12px 8px;vertical-align:top">
+      <div style="font-weight:600">${esc(a.titel)}</div>
+      <div style="font-size:13px;color:var(--ink3);margin-top:2px">
+        ${agendaBadge(a.type)}
+        ${a.locatie ? `<span style="margin-left:8px">${svgIcon('location', 13)} ${esc(a.locatie)}</span>` : ''}
+        ${koppeling ? `<span style="margin-left:8px">${esc(koppeling)}</span>` : ''}
+      </div>
+    </td>
+    <td style="width:80px;vertical-align:top;padding:12px 16px">
+      <div class="row-actions">
+        <button class="btn btn-ghost btn-icon btn-sm" title="Bewerken" onclick="openAgendaModal('${a.id}')">${svgIcon('edit', 14)}</button>
+        <button class="btn btn-ghost btn-icon btn-sm" title="Verwijderen" onclick="delAgenda('${a.id}')" style="color:var(--s-rood)">${svgIcon('trash', 14)}</button>
+      </div>
+    </td>
+  </tr>`;
+}
+
 // ── Datum helpers ────────────────────────────────────────────────
 function dateStr(d) { return d.toISOString().slice(0, 10); }
 

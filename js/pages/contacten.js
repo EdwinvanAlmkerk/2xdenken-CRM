@@ -82,6 +82,9 @@ function renderContactDetail(schoolId, contactId) {
   const best = s ? DB.besturen.find(b => b.id === s.bestuurId) : null;
   const dossiers = [...DB.dossiers.filter(d => d.contactId === contactId)].sort((a, b) => new Date(b.datum) - new Date(a.datum));
   const facturen = DB.facturen.filter(f => f.contactId === contactId);
+  const agendaItems = DB.agenda.filter(a => a.contactId === contactId).sort((a, b) => a.datum.localeCompare(b.datum) || (a.beginTijd || '').localeCompare(b.beginTijd || ''));
+  const vandaag = new Date().toISOString().slice(0, 10);
+  const komendeAfspraken = agendaItems.filter(a => a.datum >= vandaag);
 
   return `
     <div class="breadcrumb">
@@ -115,7 +118,7 @@ function renderContactDetail(schoolId, contactId) {
         <div class="card-header"><h3>Snel overzicht</h3></div>
         <div class="card-body">
           <div style="display:flex;gap:12px;flex-wrap:wrap">
-            ${[['Dossiernotities', dossiers.length], ['Facturen', facturen.length]].map(([l, n]) => `
+            ${[['Dossiernotities', dossiers.length], ['Afspraken', komendeAfspraken.length], ['Facturen', facturen.length]].map(([l, n]) => `
               <div style="background:var(--bg);border-radius:8px;padding:14px 18px;flex:1;min-width:80px">
                 <div style="font-size:24px;font-weight:800">${n}</div>
                 <div style="font-size:12px;color:var(--navy4);margin-top:2px">${l}</div>
@@ -124,11 +127,21 @@ function renderContactDetail(schoolId, contactId) {
         </div>
       </div>
     </div>
+    <div class="card" style="margin-bottom:16px">
+      <div class="card-header">
+        <h3>${svgIcon('calendar', 16)} Agenda</h3>
+        <button class="btn btn-primary btn-sm" onclick="openAgendaModal('','','${schoolId}','${contactId}')">${svgIcon('add', 14)} Afspraak plannen</button>
+      </div>
+      <div class="card-body"${agendaItems.length > 0 ? ' style="padding:0"' : ''}>
+        ${agendaItems.length === 0
+          ? `<div class="empty-state">${svgIcon('calendar', 36)}<p>Nog geen afspraken</p></div>`
+          : `<table><tbody>${agendaItems.map(a => renderAgendaRow(a)).join('')}</tbody></table>`}
+      </div>
+    </div>
     <div class="card">
       <div class="card-header">
         <h3>Dossier</h3>
         <div style="display:flex;gap:6px">
-          <button class="btn btn-secondary btn-sm" onclick="openAgendaModal('','','${schoolId}','${contactId}')">${svgIcon('calendar', 14)} Afspraak</button>
           <button class="btn btn-secondary btn-sm" onclick="openBestandModalContact('${schoolId}','${contactId}')">${svgIcon('add', 14)} Bestand</button>
           <button class="btn btn-primary btn-sm" onclick="openDossierModalContact('${schoolId}','${contactId}')">${svgIcon('add', 14)} Notitie</button>
         </div>

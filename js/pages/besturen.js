@@ -83,7 +83,7 @@ function renderBestuurDetail(id) {
   const schoolIds = scholen.map(s => s.id);
   const dossiers = [...DB.dossiers.filter(d => schoolIds.includes(d.schoolId))].sort((a, b) => new Date(b.datum) - new Date(a.datum));
 
-  const tabs = [['scholen', 'Scholen'], ['dossier', 'Dossier']];
+  const tabs = [['scholen', 'Scholen'], ['dossier', 'Dossier'], ['agenda', 'Agenda']];
   let tabContent = '';
 
   if (bestuurTab === 'scholen') {
@@ -109,7 +109,6 @@ function renderBestuurDetail(id) {
   } else if (bestuurTab === 'dossier') {
     tabContent = `
       <div style="display:flex;justify-content:flex-end;gap:8px;margin-bottom:16px">
-        <button class="btn btn-secondary" onclick="openAgendaModal('','','','','${id}')">${svgIcon('calendar')} Afspraak plannen</button>
         <button class="btn btn-secondary" onclick="openBestuurBestandModal('${id}')">${svgIcon('add')} Bestand toevoegen</button>
         <button class="btn btn-primary" onclick="openBestuurDossierModal('${id}')">${svgIcon('add')} Notitie toevoegen</button>
       </div>
@@ -119,6 +118,29 @@ function renderBestuurDetail(id) {
             const school = DB.scholen.find(s => s.id === d.schoolId);
             return renderDossierItem(d, { delBtn: 'delDossierBestuur', delArg: id, schoolLabel: school?.naam });
           }).join('')}</div>`}`;
+  } else if (bestuurTab === 'agenda') {
+    const agendaItems = DB.agenda.filter(a => a.bestuurId === id).sort((a, b) => a.datum.localeCompare(b.datum) || (a.beginTijd || '').localeCompare(b.beginTijd || ''));
+    const vandaag = new Date().toISOString().slice(0, 10);
+    const komend = agendaItems.filter(a => a.datum >= vandaag);
+    const verlopen = agendaItems.filter(a => a.datum < vandaag);
+    tabContent = `
+      <div style="display:flex;justify-content:flex-end;gap:8px;margin-bottom:16px">
+        <button class="btn btn-primary" onclick="openAgendaModal('','','','','${id}')">${svgIcon('calendar')} Afspraak plannen</button>
+      </div>
+      ${agendaItems.length === 0
+        ? `<div class="card"><div class="empty-state">${svgIcon('calendar', 36)}<p>Nog geen afspraken voor dit bestuur</p></div></div>`
+        : `${komend.length > 0 ? `<div class="card" style="margin-bottom:16px">
+            <div class="card-header"><h3 style="color:var(--s-blauw)">${svgIcon('calendar', 16)} Komende afspraken</h3></div>
+            <div class="card-body" style="padding:0"><table><tbody>
+              ${komend.map(a => renderAgendaRow(a)).join('')}
+            </tbody></table></div>
+          </div>` : ''}
+          ${verlopen.length > 0 ? `<div class="card">
+            <div class="card-header"><h3 style="color:var(--navy4)">${svgIcon('clock', 16)} Verlopen afspraken</h3></div>
+            <div class="card-body" style="padding:0"><table><tbody>
+              ${verlopen.map(a => renderAgendaRow(a)).join('')}
+            </tbody></table></div>
+          </div>` : ''}`}`;
   }
 
   return `
