@@ -6,292 +6,353 @@ const corsHeaders = {
   "Access-Control-Allow-Headers": "authorization, x-client-info, apikey, content-type",
 };
 
-// Minimale IMAP client met Deno TCP/TLS
-async function fetchEmails(
-  host: string, port: number, user: string, pass: string,
-  folder: string, limit: number
-): Promise<{ messages: any[]; total: number }> {
-  // Verbind via TLS (port 993)
-  const conn = await Deno.connectTls({ hostname: host, port });
-  const encoder = new TextEncoder();
-  const decoder = new TextDecoder();
+// ═══════════════════════════════════════════════════════════════
+// MIME PARSER
+// ═══════════════════════════════════════════════════════════════
 
-  let buffer = "";
-
-  async function readLine(): Promise<string> {
-    while (!buffer.includes("\r\n")) {
-      const buf = new Uint8Array(8192);
-      const n = await conn.read(buf);
-      if (!n) break;
-      buffer += decoder.decode(buf.subarray(0, n));
-    }
-    const idx = buffer.indexOf("\r\n");
-    if (idx === -1) { const line = buffer; buffer = ""; return line; }
-    const line = buffer.substring(0, idx);
-    buffer = buffer.substring(idx + 2);
-    return line;
+function parseMimeMessage(raw: string): { headers: Map<string, string>; body: string } {
+  // Vind de scheiding tussen headers en body
+  let sepIdx = raw.indexOf("\r\n\r\n");
+  let sepLen = 4;
+  if (sepIdx === -1) {
+    sepIdx = raw.indexOf("\n\n");
+    sepLen = 2;
   }
+  if (sepIdx === -1) return { headers: new Map(), body: raw };
 
-  async function readUntilTag(tag: string): Promise<string[]> {
-    const lines: string[] = [];
-    while (true) {
-      const line = await readLine();
-      lines.push(line);
-      if (line.startsWith(tag + " ")) break;
+  // Unfold headers (continuation lines starten met whitespace)
+  const headerBlock = raw.substring(0, sepIdx).replace(/\r?\n([ \t])/g, " ");
+  const body = raw.substring(sepIdx + sepLen);
+
+  const headers = new Map<string, string>();
+  const lineBreak = headerBlock.includes("\r\n") ? "\r\n" : "\n";
+  for (const line of headerBlock.split(lineBreak)) {
+    const colonIdx = line.indexOf(":");
+    if (colonIdx > 0) {
+      const key = line.substring(0, colonIdx).toLowerCase().trim();
+      const val = line.substring(colonIdx + 1).trim();
+      headers.set(key, val);
     }
-    return lines;
   }
-
-  async function command(tag: string, cmd: string): Promise<string[]> {
-    await conn.write(encoder.encode(`${tag} ${cmd}\r\n`));
-    return await readUntilTag(tag);
-  }
-
-  try {
-    // Greeting
-    await readLine();
-
-    // Login
-    const loginRes = await command("A1", `LOGIN "${user}" "${pass}"`);
-    const loginOk = loginRes.find(l => l.startsWith("A1 "));
-    if (!loginOk?.includes("OK")) throw new Error("IMAP login mislukt: " + (loginOk || "geen response"));
-
-    // Select folder
-    const selRes = await command("A2", `SELECT "${folder}"`);
-    let totalMessages = 0;
-    for (const line of selRes) {
-      const m = line.match(/\*\s+(\d+)\s+EXISTS/);
-      if (m) totalMessages = parseInt(m[1]);
-    }
-
-    const messages: any[] = [];
-
-    if (totalMessages > 0) {
-      const startSeq = Math.max(1, totalMessages - limit + 1);
-
-      // Fetch envelope + body preview
-      const fetchRes = await command("A3", `FETCH ${startSeq}:${totalMessages} (UID FLAGS ENVELOPE BODY.PEEK[TEXT]<0.500>)`);
-
-      let currentMsg: any = null;
-
-      for (const line of fetchRes) {
-        // Start van een nieuw bericht
-        const fetchMatch = line.match(/^\*\s+(\d+)\s+FETCH\s+\(/);
-        if (fetchMatch) {
-          if (currentMsg) messages.push(currentMsg);
-          currentMsg = { seq: parseInt(fetchMatch[1]) };
-        }
-
-        if (!currentMsg) continue;
-
-        // UID
-        const uidMatch = line.match(/UID\s+(\d+)/);
-        if (uidMatch) currentMsg.uid = parseInt(uidMatch[1]);
-
-        // FLAGS
-        const flagsMatch = line.match(/FLAGS\s+\(([^)]*)\)/);
-        if (flagsMatch) currentMsg.flags = flagsMatch[1].split(/\s+/).filter(Boolean);
-
-        // ENVELOPE parsing
-        const envMatch = line.match(/ENVELOPE\s+\((.+)\)/);
-        if (envMatch) {
-          try {
-            const env = envMatch[1];
-
-            // Datum
-            const dateMatch = env.match(/^"([^"]*)"/);
-            if (dateMatch) currentMsg.date = dateMatch[1];
-
-            // Onderwerp - kan quoted of literal zijn
-            const subjMatch = env.match(/^"[^"]*"\s+"([^"]*)"/);
-            if (subjMatch) {
-              currentMsg.subject = decodeImapString(subjMatch[1]);
-            } else {
-              const subjMatch2 = env.match(/^"[^"]*"\s+NIL/);
-              if (subjMatch2) currentMsg.subject = "(geen onderwerp)";
-            }
-
-            // From - zoek het patroon ((name NIL mailbox host))
-            const fromMatch = env.match(/\(\("?([^"]*)"?\s+NIL\s+"([^"]*)"\s+"([^"]*)"\)\)/);
-            if (fromMatch) {
-              currentMsg.from = {
-                name: decodeImapString(fromMatch[1] === "NIL" ? "" : fromMatch[1]),
-                email: `${fromMatch[2]}@${fromMatch[3]}`
-              };
-            }
-          } catch (_e) {
-            // Envelope parsing is complex, skip bij fouten
-          }
-        }
-
-        // Body text preview
-        if (line.includes("BODY[TEXT]")) {
-          const textMatch = line.match(/BODY\[TEXT\]<0>\s+\{(\d+)\}/);
-          if (textMatch) {
-            // Literal volgt op de volgende regel(s)
-            // We hebben het al in de buffer via readUntilTag
-          }
-        }
-      }
-
-      if (currentMsg) messages.push(currentMsg);
-
-      // Nieuwste eerst
-      messages.reverse();
-    }
-
-    // Logout
-    await command("A4", "LOGOUT");
-    conn.close();
-
-    // Cleanup: zorg dat elk bericht minimaal de basis velden heeft
-    return {
-      messages: messages.map(m => ({
-        uid: m.uid || m.seq,
-        seq: m.seq,
-        flags: m.flags || [],
-        from: m.from || { name: "", email: "" },
-        subject: m.subject || "(geen onderwerp)",
-        date: m.date || "",
-        read: (m.flags || []).includes("\\Seen"),
-      })),
-      total: totalMessages,
-    };
-  } catch (e) {
-    try { conn.close(); } catch (_) {}
-    throw e;
-  }
+  return { headers, body };
 }
 
-// Haal één e-mail op met body
-async function fetchSingleEmail(
-  host: string, port: number, user: string, pass: string,
-  folder: string, uid: number
-): Promise<{ subject: string; from: any; date: string; body: string }> {
-  const conn = await Deno.connectTls({ hostname: host, port });
-  const encoder = new TextEncoder();
-  const decoder = new TextDecoder();
-  let buffer = "";
+function splitMimeParts(body: string, boundary: string): string[] {
+  const delim = "--" + boundary;
+  const parts: string[] = [];
+  const segments = body.split(delim);
 
-  async function readLine(): Promise<string> {
-    while (!buffer.includes("\r\n")) {
-      const buf = new Uint8Array(8192);
-      const n = await conn.read(buf);
-      if (!n) break;
-      buffer += decoder.decode(buf.subarray(0, n));
+  for (let i = 1; i < segments.length; i++) {
+    const seg = segments[i];
+    if (seg.startsWith("--")) break; // eind-boundary
+    // Verwijder leading linebreak
+    const cleaned = seg.replace(/^\r?\n/, "");
+    if (cleaned.trim()) parts.push(cleaned);
+  }
+  return parts;
+}
+
+function decodeContent(content: string, encoding: string): string {
+  const enc = (encoding || "7bit").toLowerCase().trim();
+
+  if (enc === "base64") {
+    try {
+      const cleaned = content.replace(/[\r\n\s]/g, "");
+      const bytes = Uint8Array.from(atob(cleaned), c => c.charCodeAt(0));
+      return new TextDecoder("utf-8", { fatal: false }).decode(bytes);
+    } catch {
+      return content;
     }
-    const idx = buffer.indexOf("\r\n");
-    if (idx === -1) { const line = buffer; buffer = ""; return line; }
-    const line = buffer.substring(0, idx);
-    buffer = buffer.substring(idx + 2);
-    return line;
   }
 
-  async function readAll(tag: string): Promise<string> {
-    let result = "";
-    while (true) {
-      const line = await readLine();
-      result += line + "\r\n";
-      if (line.startsWith(tag + " ")) break;
+  if (enc === "quoted-printable") {
+    return content
+      .replace(/=\r?\n/g, "")  // soft line breaks
+      .replace(/=([0-9A-Fa-f]{2})/g, (_, hex) =>
+        String.fromCharCode(parseInt(hex, 16))
+      );
+  }
+
+  return content; // 7bit, 8bit, binary
+}
+
+function stripHtml(html: string): string {
+  return html
+    .replace(/<style[^>]*>[\s\S]*?<\/style>/gi, "")
+    .replace(/<script[^>]*>[\s\S]*?<\/script>/gi, "")
+    .replace(/<br\s*\/?>/gi, "\n")
+    .replace(/<\/p>/gi, "\n\n")
+    .replace(/<\/div>/gi, "\n")
+    .replace(/<\/tr>/gi, "\n")
+    .replace(/<\/li>/gi, "\n")
+    .replace(/<\/h[1-6]>/gi, "\n\n")
+    .replace(/<[^>]+>/g, "")
+    .replace(/&nbsp;/g, " ")
+    .replace(/&amp;/g, "&")
+    .replace(/&lt;/g, "<")
+    .replace(/&gt;/g, ">")
+    .replace(/&quot;/g, '"')
+    .replace(/&#39;/g, "'")
+    .replace(/&#(\d+);/g, (_, n) => String.fromCharCode(parseInt(n)))
+    .replace(/\n{3,}/g, "\n\n")
+    .trim();
+}
+
+function extractTextFromMime(raw: string): string {
+  const { headers, body } = parseMimeMessage(raw);
+  const contentType = headers.get("content-type") || "text/plain";
+  const encoding = headers.get("content-transfer-encoding") || "7bit";
+  const ctLower = contentType.toLowerCase();
+
+  // Niet-multipart: direct decoderen
+  if (!ctLower.includes("multipart")) {
+    const decoded = decodeContent(body, encoding);
+
+    if (ctLower.includes("text/plain")) {
+      return decoded.trim();
     }
-    return result;
+    if (ctLower.includes("text/html")) {
+      return stripHtml(decoded);
+    }
+    // Ander type (image, application, etc.) — overslaan
+    if (ctLower.includes("text/")) return decoded.trim();
+    return "";
   }
 
-  async function command(tag: string, cmd: string): Promise<string> {
-    await conn.write(encoder.encode(`${tag} ${cmd}\r\n`));
-    return await readAll(tag);
-  }
+  // Multipart: boundary zoeken en recursief parsen
+  const boundaryMatch = contentType.match(/boundary="?([^";\r\n]+)"?/i);
+  if (!boundaryMatch) return body.substring(0, 500); // fallback
+  const boundary = boundaryMatch[1].trim();
+  const parts = splitMimeParts(body, boundary);
 
-  try {
-    await readLine(); // greeting
-    const loginRes = await command("B1", `LOGIN "${user}" "${pass}"`);
-    if (!loginRes.includes("B1 OK")) throw new Error("IMAP login mislukt");
-
-    await command("B2", `SELECT "${folder}"`);
-
-    // Fetch body van specifiek UID
-    const fetchRes = await command("B3", `UID FETCH ${uid} (BODY.PEEK[TEXT] BODY.PEEK[HEADER.FIELDS (CONTENT-TYPE)])`);
-
-    // Parse de body uit het IMAP response
-    let body = "";
-    const lines = fetchRes.split("\r\n");
-    let inBody = false;
-    let contentType = "";
-
-    for (let i = 0; i < lines.length; i++) {
-      const line = lines[i];
-      if (line.includes("BODY[HEADER.FIELDS")) {
-        // Content-Type header
-        for (let j = i + 1; j < lines.length; j++) {
-          if (lines[j].toLowerCase().startsWith("content-type:")) {
-            contentType = lines[j];
-            break;
-          }
-          if (lines[j] === "" || lines[j].startsWith("*") || lines[j].startsWith("B3")) break;
-        }
+  if (ctLower.includes("multipart/alternative")) {
+    // Voorkeur: text/plain > text/html
+    let plainText = "";
+    let htmlText = "";
+    for (const part of parts) {
+      const partParsed = parseMimeMessage(part);
+      const partCt = (partParsed.headers.get("content-type") || "").toLowerCase();
+      if (partCt.includes("text/plain") && !plainText) {
+        plainText = extractTextFromMime(part);
+      } else if (partCt.includes("text/html") && !htmlText) {
+        htmlText = extractTextFromMime(part);
+      } else if (partCt.includes("multipart")) {
+        const nested = extractTextFromMime(part);
+        if (nested && !plainText) plainText = nested;
       }
-      if (line.includes("BODY[TEXT]")) {
-        inBody = true;
-        // Check for literal {N}
-        const litMatch = line.match(/\{(\d+)\}/);
-        if (litMatch) continue; // body starts next line
-      }
-      if (inBody) {
-        if (line.startsWith("B3 ") || line === ")") break;
-        body += line + "\n";
-      }
     }
-
-    // Simpele cleanup: als het HTML is, strip tags
-    body = body.trim();
-    if (body.includes("<html") || body.includes("<HTML") || body.includes("<div") || body.includes("<p")) {
-      body = body
-        .replace(/<br\s*\/?>/gi, "\n")
-        .replace(/<\/p>/gi, "\n")
-        .replace(/<\/div>/gi, "\n")
-        .replace(/<[^>]+>/g, "")
-        .replace(/&nbsp;/g, " ")
-        .replace(/&amp;/g, "&")
-        .replace(/&lt;/g, "<")
-        .replace(/&gt;/g, ">")
-        .replace(/&quot;/g, '"')
-        .replace(/\n{3,}/g, "\n\n")
-        .trim();
-    }
-
-    // Decode quoted-printable als dat van toepassing is
-    if (contentType.includes("quoted-printable") || body.includes("=\n") || body.includes("=3D")) {
-      body = body
-        .replace(/=\r?\n/g, "")
-        .replace(/=([0-9A-Fa-f]{2})/g, (_, hex) => String.fromCharCode(parseInt(hex, 16)));
-    }
-
-    await command("B4", "LOGOUT");
-    conn.close();
-
-    return { subject: "", from: null, date: "", body };
-  } catch (e) {
-    try { conn.close(); } catch (_) {}
-    throw e;
+    return plainText || htmlText || "";
   }
+
+  // multipart/mixed, multipart/related, etc.: eerste text-part pakken
+  for (const part of parts) {
+    const result = extractTextFromMime(part);
+    if (result.trim()) return result;
+  }
+  return "";
 }
 
 // Decode IMAP encoded strings (=?UTF-8?B?...?= en =?UTF-8?Q?...?=)
 function decodeImapString(s: string): string {
   if (!s) return "";
-  return s.replace(/=\?([^?]+)\?([BQ])\?([^?]*)\?=/gi, (_, charset, encoding, data) => {
+  return s.replace(/=\?([^?]+)\?([BQ])\?([^?]*)\?=/gi, (_, charset, enc, data) => {
     try {
-      if (encoding.toUpperCase() === "B") {
-        return new TextDecoder(charset).decode(Uint8Array.from(atob(data), c => c.charCodeAt(0)));
+      if (enc.toUpperCase() === "B") {
+        return new TextDecoder(charset, { fatal: false }).decode(
+          Uint8Array.from(atob(data), c => c.charCodeAt(0))
+        );
       }
-      if (encoding.toUpperCase() === "Q") {
-        const decoded = data.replace(/_/g, " ").replace(/=([0-9A-Fa-f]{2})/g, (_: string, hex: string) => String.fromCharCode(parseInt(hex, 16)));
-        return decoded;
+      if (enc.toUpperCase() === "Q") {
+        return data
+          .replace(/_/g, " ")
+          .replace(/=([0-9A-Fa-f]{2})/g, (_: string, hex: string) =>
+            String.fromCharCode(parseInt(hex, 16))
+          );
       }
-    } catch (_) {}
+    } catch { /* ignore */ }
     return data;
   });
 }
+
+// ═══════════════════════════════════════════════════════════════
+// IMAP CLIENT
+// ═══════════════════════════════════════════════════════════════
+
+class ImapClient {
+  private conn!: Deno.TlsConn;
+  private encoder = new TextEncoder();
+  private decoder = new TextDecoder();
+  private buffer = "";
+  private tagCounter = 0;
+
+  async connect(host: string, port: number): Promise<void> {
+    this.conn = await Deno.connectTls({ hostname: host, port });
+    await this.readLine(); // greeting
+  }
+
+  private nextTag(): string {
+    return `A${++this.tagCounter}`;
+  }
+
+  private async readLine(): Promise<string> {
+    while (!this.buffer.includes("\r\n")) {
+      const buf = new Uint8Array(16384);
+      const n = await this.conn.read(buf);
+      if (!n) break;
+      this.buffer += this.decoder.decode(buf.subarray(0, n));
+    }
+    const idx = this.buffer.indexOf("\r\n");
+    if (idx === -1) {
+      const line = this.buffer;
+      this.buffer = "";
+      return line;
+    }
+    const line = this.buffer.substring(0, idx);
+    this.buffer = this.buffer.substring(idx + 2);
+    return line;
+  }
+
+  private async readBytes(n: number): Promise<string> {
+    // Lees eerst uit buffer
+    let result = "";
+    if (this.buffer.length > 0) {
+      if (this.buffer.length >= n) {
+        result = this.buffer.substring(0, n);
+        this.buffer = this.buffer.substring(n);
+        return result;
+      }
+      result = this.buffer;
+      this.buffer = "";
+    }
+    // Lees rest van de connectie
+    while (result.length < n) {
+      const buf = new Uint8Array(Math.min(32768, n - result.length + 4096));
+      const bytesRead = await this.conn.read(buf);
+      if (!bytesRead) break;
+      result += this.decoder.decode(buf.subarray(0, bytesRead));
+    }
+    // Te veel gelezen? Terug in buffer
+    if (result.length > n) {
+      this.buffer = result.substring(n);
+      result = result.substring(0, n);
+    }
+    return result;
+  }
+
+  async command(cmd: string): Promise<string[]> {
+    const tag = this.nextTag();
+    await this.conn.write(this.encoder.encode(`${tag} ${cmd}\r\n`));
+    const lines: string[] = [];
+    while (true) {
+      const line = await this.readLine();
+      lines.push(line);
+      if (line.startsWith(`${tag} `)) break;
+    }
+    return lines;
+  }
+
+  async commandWithLiteral(cmd: string): Promise<{ lines: string[]; literal: string }> {
+    const tag = this.nextTag();
+    await this.conn.write(this.encoder.encode(`${tag} ${cmd}\r\n`));
+    let literal = "";
+    const lines: string[] = [];
+
+    while (true) {
+      const line = await this.readLine();
+
+      // Check voor literal {N}
+      const litMatch = line.match(/\{(\d+)\}$/);
+      if (litMatch) {
+        const byteCount = parseInt(litMatch[1]);
+        literal = await this.readBytes(byteCount);
+        // Na literal komt er een sluit-regel
+        continue;
+      }
+
+      lines.push(line);
+      if (line.startsWith(`${tag} `)) break;
+    }
+
+    return { lines, literal };
+  }
+
+  async login(user: string, pass: string): Promise<void> {
+    const res = await this.command(`LOGIN "${user}" "${pass}"`);
+    const ok = res.find(l => l.includes(" OK"));
+    if (!ok) throw new Error("IMAP login mislukt: " + (res[res.length - 1] || ""));
+  }
+
+  async select(folder: string): Promise<number> {
+    const res = await this.command(`SELECT "${folder}"`);
+    let total = 0;
+    for (const line of res) {
+      const m = line.match(/\*\s+(\d+)\s+EXISTS/);
+      if (m) total = parseInt(m[1]);
+    }
+    return total;
+  }
+
+  async fetchList(startSeq: number, endSeq: number): Promise<any[]> {
+    const res = await this.command(`FETCH ${startSeq}:${endSeq} (UID FLAGS ENVELOPE)`);
+    const messages: any[] = [];
+    let cur: any = null;
+
+    for (const line of res) {
+      const fetchMatch = line.match(/^\*\s+(\d+)\s+FETCH\s+\(/);
+      if (fetchMatch) {
+        if (cur) messages.push(cur);
+        cur = { seq: parseInt(fetchMatch[1]) };
+      }
+      if (!cur) continue;
+
+      const uidMatch = line.match(/UID\s+(\d+)/);
+      if (uidMatch) cur.uid = parseInt(uidMatch[1]);
+
+      const flagsMatch = line.match(/FLAGS\s+\(([^)]*)\)/);
+      if (flagsMatch) cur.flags = flagsMatch[1].split(/\s+/).filter(Boolean);
+
+      const envMatch = line.match(/ENVELOPE\s+\((.+)\)/);
+      if (envMatch) {
+        try {
+          const env = envMatch[1];
+          const dateMatch = env.match(/^"([^"]*)"/);
+          if (dateMatch) cur.date = dateMatch[1];
+
+          const subjMatch = env.match(/^"[^"]*"\s+"([^"]*)"/);
+          if (subjMatch) cur.subject = decodeImapString(subjMatch[1]);
+          else if (env.match(/^"[^"]*"\s+NIL/)) cur.subject = "(geen onderwerp)";
+
+          const fromMatch = env.match(/\(\("?([^"]*)"?\s+NIL\s+"([^"]*)"\s+"([^"]*)"\)\)/);
+          if (fromMatch) {
+            cur.from = {
+              name: decodeImapString(fromMatch[1] === "NIL" ? "" : fromMatch[1]),
+              email: `${fromMatch[2]}@${fromMatch[3]}`
+            };
+          }
+        } catch { /* envelope parsing kan falen */ }
+      }
+    }
+    if (cur) messages.push(cur);
+    return messages;
+  }
+
+  async fetchSingle(uid: number): Promise<string> {
+    // Haal maximaal 256KB op (genoeg voor headers + tekst, bijlagen worden afgekapt)
+    const { literal } = await this.commandWithLiteral(`UID FETCH ${uid} (BODY.PEEK[]<0.262144>)`);
+    return literal;
+  }
+
+  async logout(): Promise<void> {
+    try {
+      await this.command("LOGOUT");
+      this.conn.close();
+    } catch { /* ignore */ }
+  }
+}
+
+// ═══════════════════════════════════════════════════════════════
+// SERVE
+// ═══════════════════════════════════════════════════════════════
 
 serve(async (req) => {
   if (req.method === "OPTIONS") {
@@ -320,34 +381,69 @@ serve(async (req) => {
     const limit = parseInt(url.searchParams.get("limit") || "30");
     const uid = url.searchParams.get("uid");
 
-    // Enkel bericht ophalen met body
+    const client = new ImapClient();
+    await client.connect(settings.imap_host, settings.imap_port || 993);
+    await client.login(settings.email_user, settings.email_pass);
+
+    // ── Enkel bericht ophalen met body ──
     if (uid) {
       console.log(`Fetching email UID ${uid} from ${folder}`);
-      const result = await fetchSingleEmail(
-        settings.imap_host, settings.imap_port || 993,
-        settings.email_user, settings.email_pass,
-        folder, parseInt(uid)
-      );
-      return new Response(JSON.stringify(result), {
+      await client.select(folder);
+      const rawMessage = await client.fetchSingle(parseInt(uid));
+      await client.logout();
+
+      if (!rawMessage) {
+        return new Response(JSON.stringify({ error: "Bericht niet gevonden" }), {
+          status: 404, headers: { ...corsHeaders, "Content-Type": "application/json" }
+        });
+      }
+
+      // Parse headers voor metadata
+      const { headers } = parseMimeMessage(rawMessage);
+      const subject = decodeImapString(headers.get("subject") || "");
+      const fromHeader = headers.get("from") || "";
+      const date = headers.get("date") || "";
+
+      // Parse from header: "Naam <email>" of "email"
+      let from = { name: "", email: fromHeader };
+      const fromParsed = fromHeader.match(/"?([^"<]*)"?\s*<([^>]+)>/);
+      if (fromParsed) {
+        from = { name: decodeImapString(fromParsed[1].trim()), email: fromParsed[2] };
+      }
+
+      // Extraheer leesbare tekst
+      const body = extractTextFromMime(rawMessage);
+
+      return new Response(JSON.stringify({ subject, from, date, body }), {
         headers: { ...corsHeaders, "Content-Type": "application/json" },
       });
     }
 
-    // Lijst ophalen
-    console.log(`Fetching ${limit} emails from ${folder} via ${settings.imap_host}:${settings.imap_port}`);
+    // ── Lijst ophalen ──
+    console.log(`Fetching ${limit} emails from ${folder} via ${settings.imap_host}`);
+    const total = await client.select(folder);
+    let messages: any[] = [];
 
-    const result = await fetchEmails(
-      settings.imap_host,
-      settings.imap_port || 993,
-      settings.email_user,
-      settings.email_pass,
-      folder,
-      limit
-    );
+    if (total > 0) {
+      const startSeq = Math.max(1, total - limit + 1);
+      messages = await client.fetchList(startSeq, total);
+      messages.reverse(); // nieuwste eerst
+    }
 
-    console.log(`Fetched ${result.messages.length} messages (${result.total} total)`);
+    await client.logout();
 
-    return new Response(JSON.stringify(result), {
+    return new Response(JSON.stringify({
+      messages: messages.map(m => ({
+        uid: m.uid || m.seq,
+        seq: m.seq,
+        flags: m.flags || [],
+        from: m.from || { name: "", email: "" },
+        subject: m.subject || "(geen onderwerp)",
+        date: m.date || "",
+        read: (m.flags || []).includes("\\Seen"),
+      })),
+      total,
+    }), {
       headers: { ...corsHeaders, "Content-Type": "application/json" },
     });
   } catch (e) {
