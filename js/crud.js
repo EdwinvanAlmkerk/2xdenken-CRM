@@ -490,6 +490,28 @@ async function delAgendaType(id) {
   } catch (e) { showToast('Fout: ' + e.message, 'error'); } finally { hideLoading(); }
 }
 
+// ── EMAIL SETTINGS ──────────────────────────────────────────────
+async function saveEmailSettings() {
+  const data = {
+    imap_host:  document.getElementById('f-imap-host').value.trim(),
+    imap_port:  parseInt(document.getElementById('f-imap-port').value) || 993,
+    smtp_host:  document.getElementById('f-smtp-host').value.trim(),
+    smtp_port:  parseInt(document.getElementById('f-smtp-port').value) || 587,
+    email_user: document.getElementById('f-email-user').value.trim(),
+    email_pass: document.getElementById('f-email-pass').value.trim(),
+    email_from: document.getElementById('f-email-from').value.trim(),
+    updated_at: new Date().toISOString(),
+  };
+  if (!data.imap_host || !data.smtp_host || !data.email_user) return alert('Vul minimaal IMAP-server, SMTP-server en e-mailadres in');
+  showLoading();
+  try {
+    await supa('/rest/v1/email_settings?id=eq.main', { method: 'PATCH', body: JSON.stringify(data) });
+    DB.emailSettings = fromDB_emailSettings({ id: 'main', ...data });
+    showToast('E-mailinstellingen opgeslagen', 'success');
+    renderContent();
+  } catch (e) { showToast('Fout: ' + e.message, 'error'); } finally { hideLoading(); }
+}
+
 // ── EMAIL TEMPLATES ──────────────────────────────────────────────
 async function saveEmailTemplate(id) {
   const naam = document.getElementById('f-tpl-naam').value.trim();

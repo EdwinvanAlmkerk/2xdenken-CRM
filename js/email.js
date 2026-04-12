@@ -154,7 +154,12 @@ function selectEmailTemplate(optsJson) {
   }
 }
 
-// ── Verzenden (mailto) + auto-log ────────────────────────────────
+// ── Heeft SMTP-server geconfigureerd? ─────────────────────────────
+function hasSmtpConfig() {
+  return DB.emailSettings?.smtpHost && DB.emailSettings?.emailUser && DB.emailSettings?.emailPass;
+}
+
+// ── Verzenden (SMTP of mailto) + auto-log ────────────────────────
 async function sendEmail(schoolId, factuurId, draftId) {
   const email = document.getElementById('f-email-to')?.value?.trim();
   if (!email) return alert('Geen e-mailadres opgegeven');
@@ -164,9 +169,28 @@ async function sendEmail(schoolId, factuurId, draftId) {
   const contactId = document.getElementById('f-email-contact-id')?.value || '';
   const contact = contactId ? DB.contacten.find(c => c.id === contactId) : null;
 
-  // mailto openen
-  const mailtoUrl = `mailto:${encodeURIComponent(email)}?subject=${encodeURIComponent(onderwerp)}&body=${encodeURIComponent(body)}`;
-  window.open(mailtoUrl, '_blank');
+  let sentViaSmtp = false;
+
+  // Probeer SMTP als geconfigureerd
+  if (hasSmtpConfig()) {
+    showLoading();
+    try {
+      const res = await supa('/functions/v1/send-email', {
+        method: 'POST',
+        body: JSON.stringify({ to: email, subject: onderwerp, body }),
+      });
+      sentViaSmtp = true;
+    } catch (e) {
+      hideLoading();
+      if (!confirm(`SMTP verzending mislukt: ${e.message}\n\nWil je het bericht openen in je e-mailprogramma (mailto)?`)) return;
+    }
+  }
+
+  // Fallback naar mailto als geen SMTP of SMTP mislukt
+  if (!sentViaSmtp) {
+    const mailtoUrl = `mailto:${encodeURIComponent(email)}?subject=${encodeURIComponent(onderwerp)}&body=${encodeURIComponent(body)}`;
+    window.open(mailtoUrl, '_blank');
+  }
 
   showLoading();
   try {
@@ -174,7 +198,6 @@ async function sendEmail(schoolId, factuurId, draftId) {
 
     // Log naar email_log
     if (draftId) {
-      // Concept updaten naar verzonden
       await supa(`/rest/v1/email_log?id=eq.${draftId}`, { method: 'PATCH', body: JSON.stringify({ aan_email: email, aan_naam: contact?.naam || '', onderwerp, body, status: 'verzonden', datum: now }) });
       DB.emailLog = DB.emailLog.map(e => e.id === draftId ? { ...e, aanEmail: email, aanNaam: contact?.naam || '', onderwerp, body, status: 'verzonden', datum: now } : e);
     } else {
@@ -188,7 +211,7 @@ async function sendEmail(schoolId, factuurId, draftId) {
     if (schoolId) {
       const school = DB.scholen.find(s => s.id === schoolId);
       const bronNaam = contact ? `${contact.naam} — ${school?.naam || ''}` : (school?.naam || '');
-      const tekst = `E-mail verzonden aan: ${email}\nOnderwerp: ${onderwerp}\n\n${body}`;
+      const tekst = `E-mail ${sentViaSmtp ? 'verzonden' : 'geopend'} aan: ${email}\nOnderwerp: ${onderwerp}\n\n${body}`;
       const dosId = uid();
       const item = { id: dosId, schoolId, contactId: contactId || null, datum: now, type: 'notitie', onderwerp: `E-mail — ${onderwerp}`, tekst, bronNaam, bestanden: [], bijlagen: [] };
       const payload = { id: dosId, school_id: schoolId, datum: now, type: 'notitie', onderwerp: item.onderwerp, tekst, bron_naam: bronNaam, bestanden: [] };
@@ -196,9 +219,9 @@ async function sendEmail(schoolId, factuurId, draftId) {
       DB.dossiers.unshift(item);
     }
 
-    showToast('E-mail geopend en vastgelegd', 'success');
+    showToast(sentViaSmtp ? 'E-mail verzonden en vastgelegd' : 'E-mail geopend en vastgelegd', 'success');
   } catch (e) {
-    showToast('E-mail geopend, maar loggen mislukt: ' + e.message, 'error');
+    showToast('Loggen mislukt: ' + e.message, 'error');
   } finally { hideLoading(); }
 
   closeModal();

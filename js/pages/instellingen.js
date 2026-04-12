@@ -66,6 +66,37 @@ function renderInstellingen() {
       </div>
 
       <div class="card">
+        <div class="card-header"><h3>${svgIcon('settings', 16)} E-mailserver (IMAP/SMTP)</h3></div>
+        <div class="card-body">
+          ${DB.emailSettings?.imapHost ? `<div style="margin-bottom:16px;padding:10px 14px;background:var(--s-groen-s);border:1px solid rgba(22,163,74,0.2);border-radius:var(--r);font-size:13px;color:var(--groen);display:flex;align-items:center;gap:8px">
+            ${svgIcon('lightning', 14)} Verbonden met <strong>${esc(DB.emailSettings.emailUser)}</strong> via ${esc(DB.emailSettings.imapHost)}
+          </div>` : `<div style="margin-bottom:16px;padding:10px 14px;background:var(--s-goud-s);border:1px solid rgba(217,119,6,0.2);border-radius:var(--r);font-size:13px;color:var(--geel);display:flex;align-items:center;gap:8px">
+            ${svgIcon('lightning', 14)} Nog niet geconfigureerd — vul de gegevens hieronder in
+          </div>`}
+          <div class="form-row">
+            <div class="form-group"><label>IMAP Server *</label><input type="text" id="f-imap-host" value="${esc(DB.emailSettings?.imapHost || '')}" placeholder="imap.gmail.com"/></div>
+            <div class="form-group"><label>IMAP Poort</label><input type="text" inputmode="numeric" id="f-imap-port" value="${DB.emailSettings?.imapPort || 993}" placeholder="993"/></div>
+          </div>
+          <div class="form-row">
+            <div class="form-group"><label>SMTP Server *</label><input type="text" id="f-smtp-host" value="${esc(DB.emailSettings?.smtpHost || '')}" placeholder="smtp.gmail.com"/></div>
+            <div class="form-group"><label>SMTP Poort</label><input type="text" inputmode="numeric" id="f-smtp-port" value="${DB.emailSettings?.smtpPort || 587}" placeholder="587"/></div>
+          </div>
+          <div class="form-row">
+            <div class="form-group"><label>E-mailadres (login) *</label><input type="email" id="f-email-user" value="${esc(DB.emailSettings?.emailUser || '')}" placeholder="jorieke@2xdenken.nl"/></div>
+            <div class="form-group"><label>Wachtwoord / App-wachtwoord</label><input type="password" id="f-email-pass" value="${esc(DB.emailSettings?.emailPass || '')}" placeholder="••••••••"/></div>
+          </div>
+          <div class="form-group"><label>Afzendernaam (optioneel)</label><input type="text" id="f-email-from" value="${esc(DB.emailSettings?.emailFrom || '')}" placeholder="Jorieke — 2xDenken"/></div>
+          <div style="display:flex;gap:8px;margin-top:8px">
+            <button class="btn btn-primary" onclick="saveEmailSettings()">${svgIcon('settings', 14)} Opslaan</button>
+          </div>
+          <div style="margin-top:14px;font-size:11.5px;color:var(--navy4);line-height:1.6">
+            <strong>Tip:</strong> Bij Gmail of Microsoft 365 met tweestapsverificatie heb je een <em>app-wachtwoord</em> nodig, niet je gewone wachtwoord.
+            Ga naar je Google/Microsoft accountinstellingen om er een aan te maken.
+          </div>
+        </div>
+      </div>
+
+      <div class="card">
         <div class="card-header"><h3>${svgIcon('invoice', 16)} Facturen</h3></div>
         <div class="card-body" style="display:flex;flex-direction:column;gap:0">
 
