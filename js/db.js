@@ -8,7 +8,8 @@ let currentUser = null;
 let DB = {
   besturen: [], scholen: [], contacten: [],
   dossiers: [], facturen: [], trainingen: [], uitvoeringen: [],
-  agenda: []
+  agenda: [],
+  agendaTypes: []
 };
 
 function uid() {
@@ -57,6 +58,7 @@ function fromDB_factuur(r)  { return { id: r.id, schoolId: r.school_id, contactI
 function fromDB_training(r) { return { id: r.id, naam: r.naam, categorie: r.categorie || 'training', duur: r.duur || '', doelgroep: r.doelgroep || '', maxDeelnemers: r.max_deelnemers || '', omschrijving: r.omschrijving || '', tips: r.tips || [] }; }
 function fromDB_uitv(r)     { return { id: r.id, trainingId: r.training_id, schoolId: r.school_id, datum: r.datum, deelnemers: r.deelnemers, score: r.score, evaluatie: r.evaluatie || '', watGingGoed: r.wat_ging_goed || '', watKonBeter: r.wat_kon_beter || '' }; }
 function fromDB_agenda(r)   { return { id: r.id, titel: r.titel, datum: r.datum, beginTijd: r.begin_tijd || '', eindTijd: r.eind_tijd || '', type: r.type || 'afspraak', schoolId: r.school_id || '', contactId: r.contact_id || '', bestuurId: r.bestuur_id || '', locatie: r.locatie || '', notitie: r.notitie || '', createdAt: r.created_at }; }
+function fromDB_agendaType(r) { return { id: r.id, naam: r.naam, kleur: r.kleur || 'navy' }; }
 
 // ── camelCase → snake_case for writes ────────────────────────────
 function toDB_bestuur(d)  { return { naam: d.naam, website: d.website || null, adres: d.adres || null }; }
@@ -72,7 +74,7 @@ function toDB_agenda(d)   { return { titel: d.titel, datum: d.datum, begin_tijd:
 async function loadAllData() {
   showLoading();
   try {
-    const [besturen, scholen, contacten, dossiers, facturen, trainingen, uitvoeringen, agenda] = await Promise.all([
+    const [besturen, scholen, contacten, dossiers, facturen, trainingen, uitvoeringen, agenda, agendaTypes] = await Promise.all([
       supa('/rest/v1/besturen?select=*&order=naam'),
       supa('/rest/v1/scholen?select=*&order=naam'),
       supa('/rest/v1/contacten?select=*&order=naam'),
@@ -81,6 +83,7 @@ async function loadAllData() {
       supa('/rest/v1/trainingen?select=*&order=naam'),
       supa('/rest/v1/uitvoeringen?select=*&order=datum.desc'),
       supa('/rest/v1/agenda?select=*&order=datum.asc,begin_tijd.asc'),
+      supa('/rest/v1/agenda_types?select=*&order=naam'),
     ]);
     DB.besturen     = (besturen || []).map(fromDB_bestuur);
     DB.scholen      = (scholen || []).map(fromDB_school);
@@ -90,6 +93,7 @@ async function loadAllData() {
     DB.trainingen   = (trainingen || []).map(fromDB_training);
     DB.uitvoeringen = (uitvoeringen || []).map(fromDB_uitv);
     DB.agenda       = (agenda || []).map(fromDB_agenda);
+    DB.agendaTypes  = (agendaTypes || []).map(fromDB_agendaType);
   } catch (e) {
     showToast('Fout bij laden data: ' + e.message, 'error');
   } finally {

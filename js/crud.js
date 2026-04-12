@@ -456,6 +456,40 @@ async function delAgenda(id) {
   } catch (e) { showToast('Fout: ' + e.message, 'error'); } finally { hideLoading(); }
 }
 
+// ── AGENDA TYPES ─────────────────────────────────────────────────
+async function saveAgendaType(id) {
+  const naam = document.getElementById('f-typename').value.trim();
+  if (!naam) return alert('Naam is verplicht');
+  const kleur = document.getElementById('f-typekleur').value;
+  showLoading();
+  try {
+    if (id) {
+      await supa(`/rest/v1/agenda_types?id=eq.${id}`, { method: 'PATCH', body: JSON.stringify({ naam, kleur }) });
+      DB.agendaTypes = DB.agendaTypes.map(t => t.id === id ? { ...t, naam, kleur } : t);
+    } else {
+      const newId = naam.toLowerCase().replace(/[^a-z0-9]/g, '_').replace(/_+/g, '_').replace(/^_|_$/g, '') || uid();
+      if (DB.agendaTypes.find(t => t.id === newId)) return alert('Er bestaat al een type met deze naam');
+      await supa('/rest/v1/agenda_types', { method: 'POST', body: JSON.stringify({ id: newId, naam, kleur }) });
+      DB.agendaTypes.push({ id: newId, naam, kleur });
+    }
+    closeModal(); renderContent();
+  } catch (e) { showToast('Fout: ' + e.message, 'error'); } finally { hideLoading(); }
+}
+
+async function delAgendaType(id) {
+  const inGebruik = DB.agenda.filter(a => a.type === id).length;
+  const msg = inGebruik > 0
+    ? `Dit type wordt gebruikt door ${inGebruik} afspra${inGebruik === 1 ? 'ak' : 'ken'}. Verwijderen? De afspraken behouden hun type-waarde maar tonen dan als standaard.`
+    : 'Agendatype verwijderen?';
+  if (!confirm(msg)) return;
+  showLoading();
+  try {
+    await supa(`/rest/v1/agenda_types?id=eq.${id}`, { method: 'DELETE' });
+    DB.agendaTypes = DB.agendaTypes.filter(t => t.id !== id);
+    closeModal(); renderContent();
+  } catch (e) { showToast('Fout: ' + e.message, 'error'); } finally { hideLoading(); }
+}
+
 // ── INSTELLINGEN functies ─────────────────────────────────────────
 async function delAlleFacturen() {
   closeModal();

@@ -454,6 +454,11 @@ textarea { resize: vertical; min-height: 80px; }
 .cal-event-opvolging   { background: var(--s-blauw-s); border-color: var(--s-blauw); color: var(--s-blauw); }
 .cal-event-training    { background: var(--s-groen-s); border-color: var(--s-groen); color: var(--s-groen); }
 .cal-event-overig      { background: var(--s-goud-s); border-color: var(--s-goud); color: var(--s-goud); }
+.cal-event-rood        { background: var(--s-rood-s); border-color: var(--s-rood); color: var(--s-rood); }
+.cal-event-oranje      { background: #FEF3E8; border-color: var(--oranje); color: var(--oranje); }
+
+.badge-vervallen       { background: var(--s-rood-s); color: var(--s-rood); }
+.badge-oranje          { background: #FEF3E8; color: var(--oranje); }
 
 /* Maand grid */
 .cal-month {

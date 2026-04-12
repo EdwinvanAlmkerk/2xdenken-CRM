@@ -6,17 +6,36 @@ let _agendaDate   = new Date();
 let _agendaFilter = 'komend';
 let _agendaSearch = '';
 
-const AGENDA_TYPES = {
-  afspraak:    { label: 'Afspraak',    cls: 'badge-beslisser' },
-  belafspraak: { label: 'Belafspraak', cls: 'badge-beinvloeder' },
-  opvolging:   { label: 'Opvolging',   cls: 'badge-verzonden' },
-  training:    { label: 'Training',    cls: 'badge-betaald' },
-  overig:      { label: 'Overig',      cls: 'badge-concept' },
+// Kleur-mapping: kleur-id → badge CSS class + event CSS class
+const AGENDA_KLEUREN = {
+  navy:   { badge: 'badge-beslisser',   event: 'cal-event-afspraak' },
+  paars:  { badge: 'badge-beinvloeder', event: 'cal-event-belafspraak' },
+  blauw:  { badge: 'badge-verzonden',   event: 'cal-event-opvolging' },
+  groen:  { badge: 'badge-betaald',     event: 'cal-event-training' },
+  goud:   { badge: 'badge-concept',     event: 'cal-event-overig' },
+  rood:   { badge: 'badge-vervallen',   event: 'cal-event-rood' },
+  oranje: { badge: 'badge-oranje',      event: 'cal-event-oranje' },
 };
 
+const AGENDA_KLEUR_LABELS = {
+  navy: 'Navy', paars: 'Paars', blauw: 'Blauw', groen: 'Groen',
+  goud: 'Goud', rood: 'Rood', oranje: 'Oranje',
+};
+
+function getAgendaType(typeId) {
+  return DB.agendaTypes.find(t => t.id === typeId) || { id: typeId, naam: typeId, kleur: 'navy' };
+}
+
 function agendaBadge(type) {
-  const t = AGENDA_TYPES[type] || AGENDA_TYPES.overig;
-  return `<span class="badge ${t.cls}">${esc(t.label)}</span>`;
+  const t = getAgendaType(type);
+  const k = AGENDA_KLEUREN[t.kleur] || AGENDA_KLEUREN.navy;
+  return `<span class="badge ${k.badge}">${esc(t.naam)}</span>`;
+}
+
+function agendaEventClass(type) {
+  const t = getAgendaType(type);
+  const k = AGENDA_KLEUREN[t.kleur] || AGENDA_KLEUREN.navy;
+  return k.event;
 }
 
 function fmtTijd(t) {
@@ -202,7 +221,7 @@ function renderWeekView() {
       const iso = dateStr(d);
       const items = getItemsForDate(iso).filter(a => !a.beginTijd);
       return `<div class="cal-allday-cell">
-        ${items.map(a => `<div class="cal-month-event cal-event-${a.type || 'overig'}" onclick="openAgendaModal('${a.id}')" title="${esc(a.titel)}">${esc(a.titel)}</div>`).join('')}
+        ${items.map(a => `<div class="cal-month-event ${agendaEventClass(a.type)}" onclick="openAgendaModal('${a.id}')" title="${esc(a.titel)}">${esc(a.titel)}</div>`).join('')}
       </div>`;
     }).join('')}
   </div>`;
@@ -228,7 +247,7 @@ function renderWeekView() {
       const height = Math.max(((endMin - startMin) / 60) * 60, 20);
       const school = a.schoolId ? DB.scholen.find(s => s.id === a.schoolId) : null;
       const meta = [fmtTijd(a.beginTijd), a.locatie, school?.naam].filter(Boolean).join(' · ');
-      return `<div class="cal-event cal-event-${a.type || 'overig'}" style="top:${top}px;height:${height}px" onclick="openAgendaModal('${a.id}')" title="${esc(a.titel)}">
+      return `<div class="cal-event ${agendaEventClass(a.type)}" style="top:${top}px;height:${height}px" onclick="openAgendaModal('${a.id}')" title="${esc(a.titel)}">
         <div class="cal-event-title">${esc(a.titel)}</div>
         ${height > 28 ? `<div class="cal-event-meta">${esc(meta)}</div>` : ''}
       </div>`;
@@ -294,7 +313,7 @@ function renderDayView() {
     const height = Math.max(((endMin - startMin) / 60) * 60, 20);
     const school = a.schoolId ? DB.scholen.find(s => s.id === a.schoolId) : null;
     const meta = [fmtTijd(a.beginTijd) + (a.eindTijd ? ` – ${fmtTijd(a.eindTijd)}` : ''), a.locatie, school?.naam].filter(Boolean).join(' · ');
-    return `<div class="cal-event cal-event-${a.type || 'overig'}" style="top:${top}px;height:${height}px;right:20%" onclick="openAgendaModal('${a.id}')">
+    return `<div class="cal-event ${agendaEventClass(a.type)}" style="top:${top}px;height:${height}px;right:20%" onclick="openAgendaModal('${a.id}')">
       <div class="cal-event-title">${esc(a.titel)}</div>
       ${height > 28 ? `<div class="cal-event-meta">${esc(meta)}</div>` : ''}
     </div>`;
@@ -313,7 +332,7 @@ function renderDayView() {
   const allday = alldayItems.length > 0 ? `
     <div style="padding:8px 16px 8px 72px;background:var(--bg2);border-bottom:1px solid var(--bg3);font-size:12px">
       <span style="color:var(--navy4);font-weight:700;margin-right:8px">Hele dag:</span>
-      ${alldayItems.map(a => `<span class="cal-month-event cal-event-${a.type || 'overig'}" style="display:inline-block;margin-right:6px" onclick="openAgendaModal('${a.id}')">${esc(a.titel)}</span>`).join('')}
+      ${alldayItems.map(a => `<span class="cal-month-event ${agendaEventClass(a.type)}" style="display:inline-block;margin-right:6px" onclick="openAgendaModal('${a.id}')">${esc(a.titel)}</span>`).join('')}
     </div>` : '';
 
   const totalHeight = (CAL_END_HOUR - CAL_START_HOUR) * 60;
@@ -370,7 +389,7 @@ function renderMonthView() {
 
     dayCells += `<div class="cal-month-day${isOther ? ' cal-other' : ''}${isToday ? ' cal-today' : ''}" onclick="_agendaDate=new Date('${iso}');setAgendaView('dag')">
       <div class="cal-month-num">${current.getDate()}</div>
-      ${dayItems.map(a => `<div class="cal-month-event cal-event-${a.type || 'overig'}" onclick="event.stopPropagation();openAgendaModal('${a.id}')" title="${esc(a.titel)}">
+      ${dayItems.map(a => `<div class="cal-month-event ${agendaEventClass(a.type)}" onclick="event.stopPropagation();openAgendaModal('${a.id}')" title="${esc(a.titel)}">
         ${a.beginTijd ? fmtTijd(a.beginTijd) + ' ' : ''}${esc(a.titel)}
       </div>`).join('')}
       ${totalItems > 3 ? `<div class="cal-month-more" onclick="event.stopPropagation();_agendaDate=new Date('${iso}');setAgendaView('dag')">+${totalItems - 3} meer</div>` : ''}
@@ -398,7 +417,7 @@ function renderAgendaList() {
       a.titel.toLowerCase().includes(q) ||
       (a.locatie || '').toLowerCase().includes(q) ||
       (a.notitie || '').toLowerCase().includes(q) ||
-      (AGENDA_TYPES[a.type]?.label || '').toLowerCase().includes(q)
+      (getAgendaType(a.type).naam || '').toLowerCase().includes(q)
     );
   }
 
@@ -557,8 +576,8 @@ function openAgendaModal(id = '', prefillDate = '', prefillSchoolId = '', prefil
     `<option value="${c.id}"${selContactId === c.id ? ' selected' : ''}>${esc(c.naam)}${c.functie ? ` (${esc(c.functie)})` : ''}</option>`
   ).join('');
 
-  const typeSelect = Object.entries(AGENDA_TYPES).map(([val, { label }]) =>
-    `<option value="${val}"${(a?.type || 'afspraak') === val ? ' selected' : ''}>${esc(label)}</option>`
+  const typeSelect = DB.agendaTypes.map(t =>
+    `<option value="${t.id}"${(a?.type || (DB.agendaTypes[0]?.id || 'afspraak')) === t.id ? ' selected' : ''}>${esc(t.naam)}</option>`
   ).join('');
 
   // Context-info voor de modal titel
