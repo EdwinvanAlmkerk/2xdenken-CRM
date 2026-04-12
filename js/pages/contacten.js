@@ -100,7 +100,10 @@ function renderContactDetail(schoolId, contactId) {
           ${best ? `<span class="meta-item">${svgIcon('board', 15)} <a onclick="navigate('bestuur-detail','${best.id}')" style="cursor:pointer;color:var(--blue)">${esc(best.naam)}</a></span>` : ''}
         </div>
       </div>
-      <button class="btn btn-secondary" onclick="openContactModal('${schoolId}','${contactId}')">${svgIcon('edit', 15)} Bewerken</button>
+      <div style="display:flex;gap:8px">
+        ${c.email ? `<button class="btn btn-primary" onclick="openEmailModal({contactId:'${contactId}',schoolId:'${c.schoolId}'})">${svgIcon('mail', 15)} E-mail sturen</button>` : ''}
+        <button class="btn btn-secondary" onclick="openContactModal('${schoolId}','${contactId}')">${svgIcon('edit', 15)} Bewerken</button>
+      </div>
     </div>
     <div class="grid-2">
       <div class="card">

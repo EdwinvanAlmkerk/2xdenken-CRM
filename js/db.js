@@ -9,7 +9,8 @@ let DB = {
   besturen: [], scholen: [], contacten: [],
   dossiers: [], facturen: [], trainingen: [], uitvoeringen: [],
   agenda: [],
-  agendaTypes: []
+  agendaTypes: [],
+  emailTemplates: []
 };
 
 function uid() {
@@ -59,6 +60,7 @@ function fromDB_training(r) { return { id: r.id, naam: r.naam, categorie: r.cate
 function fromDB_uitv(r)     { return { id: r.id, trainingId: r.training_id, schoolId: r.school_id, datum: r.datum, deelnemers: r.deelnemers, score: r.score, evaluatie: r.evaluatie || '', watGingGoed: r.wat_ging_goed || '', watKonBeter: r.wat_kon_beter || '' }; }
 function fromDB_agenda(r)   { return { id: r.id, titel: r.titel, datum: r.datum, beginTijd: r.begin_tijd || '', eindTijd: r.eind_tijd || '', type: r.type || 'afspraak', schoolId: r.school_id || '', contactId: r.contact_id || '', bestuurId: r.bestuur_id || '', locatie: r.locatie || '', notitie: r.notitie || '', createdAt: r.created_at }; }
 function fromDB_agendaType(r) { return { id: r.id, naam: r.naam, kleur: r.kleur || 'navy' }; }
+function fromDB_emailTemplate(r) { return { id: r.id, naam: r.naam, onderwerp: r.onderwerp || '', body: r.body || '', categorie: r.categorie || 'algemeen', createdAt: r.created_at }; }
 
 // ── camelCase → snake_case for writes ────────────────────────────
 function toDB_bestuur(d)  { return { naam: d.naam, website: d.website || null, adres: d.adres || null }; }
@@ -74,7 +76,7 @@ function toDB_agenda(d)   { return { titel: d.titel, datum: d.datum, begin_tijd:
 async function loadAllData() {
   showLoading();
   try {
-    const [besturen, scholen, contacten, dossiers, facturen, trainingen, uitvoeringen, agenda, agendaTypes] = await Promise.all([
+    const [besturen, scholen, contacten, dossiers, facturen, trainingen, uitvoeringen, agenda, agendaTypes, emailTemplates] = await Promise.all([
       supa('/rest/v1/besturen?select=*&order=naam'),
       supa('/rest/v1/scholen?select=*&order=naam'),
       supa('/rest/v1/contacten?select=*&order=naam'),
@@ -84,6 +86,7 @@ async function loadAllData() {
       supa('/rest/v1/uitvoeringen?select=*&order=datum.desc'),
       supa('/rest/v1/agenda?select=*&order=datum.asc,begin_tijd.asc'),
       supa('/rest/v1/agenda_types?select=*&order=naam'),
+      supa('/rest/v1/email_templates?select=*&order=naam'),
     ]);
     DB.besturen     = (besturen || []).map(fromDB_bestuur);
     DB.scholen      = (scholen || []).map(fromDB_school);
@@ -94,6 +97,7 @@ async function loadAllData() {
     DB.uitvoeringen = (uitvoeringen || []).map(fromDB_uitv);
     DB.agenda       = (agenda || []).map(fromDB_agenda);
     DB.agendaTypes  = (agendaTypes || []).map(fromDB_agendaType);
+    DB.emailTemplates = (emailTemplates || []).map(fromDB_emailTemplate);
   } catch (e) {
     showToast('Fout bij laden data: ' + e.message, 'error');
   } finally {

@@ -234,7 +234,10 @@ function renderSchoolDetail(id) {
           ${s.website ? `<span class="meta-item">${svgIcon('web', 15)} <a href="${esc(s.website)}" target="_blank">${esc(s.website)}</a></span>` : ''}
         </div>
       </div>
-      <button class="btn btn-secondary" onclick="openSchoolModal('${id}')">${svgIcon('edit', 15)} Bewerken</button>
+      <div style="display:flex;gap:8px">
+        <button class="btn btn-primary" onclick="openEmailModal({schoolId:'${id}'})">${svgIcon('mail', 15)} E-mail sturen</button>
+        <button class="btn btn-secondary" onclick="openSchoolModal('${id}')">${svgIcon('edit', 15)} Bewerken</button>
+      </div>
     </div>
     <div class="tabs">
       ${tabs.map(([k, l]) => `<div class="tab${schoolTab === k ? ' active' : ''}" onclick="setSchoolTab('${id}','${k}')">${l}</div>`).join('')}

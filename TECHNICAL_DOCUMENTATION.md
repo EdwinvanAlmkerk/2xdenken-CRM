@@ -15,7 +15,8 @@ Browser-gebaseerde CRM-applicatie voor het beheren van besturen, scholen, contac
   - `config.js` — Supabase URL en anon key.
   - `db.js` — in-memory `DB`-object, `supa()`/`supaAuth()` fetch-helpers, mapping-functies tussen snake_case (Supabase) en camelCase (frontend), en `loadAllData()`.
   - `auth.js` — login, logout en Enter-key handler. Automatisch sessie-herstel is uitgeschakeld.
-  - `crud.js` — save- en delete-functies voor besturen, scholen, contacten, dossiers, facturen, trainingen, uitvoeringen, agenda-items en agendatypes richting Supabase.
+  - `crud.js` — save- en delete-functies voor besturen, scholen, contacten, dossiers, facturen, trainingen, uitvoeringen, agenda-items, agendatypes en e-mailtemplates richting Supabase.
+  - `email.js` — e-mail compose module: template-variabelen invullen (`resolveTemplateVars`), compose modal (`openEmailModal`), mailto-link genereren en automatische dossiernotitie bij verzending.
   - `router.js` — navigatiestate (`page`, `pageParam`, `contactParam`), `navigate()`, `goBack()`, `renderNav()` en `renderContent()` dispatcher.
   - `utils.js` — SVG-iconen, formatters, Supabase Storage-helpers (bucket `dossier-bestanden`) en dossier-renderhelpers.
   - `ui.js` — loading-overlay, toasts, modals en exportfuncties.
@@ -27,7 +28,7 @@ Browser-gebaseerde CRM-applicatie voor het beheren van besturen, scholen, contac
     - `contacten.js` — contactenoverzicht en `renderContactDetail()` met agenda-kaart en dossier-weergave.
     - `trainingen.js` — trainingen/methodes lijst, detailpagina en uitvoeringen.
     - `facturen.js` — facturenoverzicht, filters en factuurmodal.
-    - `instellingen.js` — instellingenpagina met beheer van agendatypes (aanmaken, bewerken, verwijderen, kleurkeuze).
+    - `instellingen.js` — instellingenpagina met beheer van agendatypes en e-mailtemplates, plus database-onderhoud.
 - `TECHNICAL_DOCUMENTATION.md` — dit document.
 
 ## Technische stack
@@ -51,7 +52,7 @@ Browser-gebaseerde CRM-applicatie voor het beheren van besturen, scholen, contac
 
 1. `index.html` toont eerst het login-scherm; pas na een geslaagde `doLogin()` wordt de app-shell zichtbaar.
 2. `auth.js` stuurt credentials naar `/auth/v1/token?grant_type=password` via `supaAuth()` en bewaart de sessie in `currentSession`. Er is geen automatisch herstel bij paginalaad; oude sessies worden juist gewist.
-3. Na login roept `loadAllData()` in `db.js` parallel alle tabellen (inclusief `agenda` en `agenda_types`) op via PostgREST en mapt de rijen naar camelCase-objecten in het globale `DB`-object.
+3. Na login roept `loadAllData()` in `db.js` parallel alle tabellen (inclusief `agenda`, `agenda_types` en `email_templates`) op via PostgREST en mapt de rijen naar camelCase-objecten in het globale `DB`-object.
 4. `router.js` beheert `page`, `pageParam` en `contactParam` en dispatcht naar de `render*`-functies in `js/pages/`. Navigatie verloopt via `navigate()` / `navigateToContact()` / `goBack()`.
 5. Pagina-scripts renderen HTML-strings op basis van `DB` en koppelen `onclick`-handlers aan CRUD-functies in `crud.js`.
 6. `crud.js` schrijft wijzigingen direct naar Supabase en werkt daarna `DB` bij, waarna `renderContent()` de UI ververst.
@@ -64,6 +65,7 @@ Browser-gebaseerde CRM-applicatie voor het beheren van besturen, scholen, contac
 - **Auth**: automatisch sessie-herstel is uitgeschakeld. Bij het laden van de pagina wordt een eventuele opgeslagen sessie uit `localStorage` verwijderd, zodat de gebruiker altijd expliciet op "Inloggen" moet klikken.
 - **Agendamodule**: volledige agendafunctionaliteit met Supabase-tabel `agenda` (velden: `id`, `titel`, `datum`, `begin_tijd`, `eind_tijd`, `type`, `school_id`, `contact_id`, `bestuur_id`, `locatie`, `notitie`, `created_at`). Vier weergaven: dagview, weekview (Outlook-achtig tijdrooster met uurblokken 07:00–21:00), maandview (kalenderraster) en lijstview. Navigatie met vorige/volgende en vandaag-knop. Kleurcodering per afspraaktype. Huidige-tijdlijn in dag- en weekview. Hele-dag items in aparte rij. Dashboard toont de eerstvolgende 5 afspraken.
 - **Dynamische agendatypes**: agendatypes worden opgeslagen in Supabase-tabel `agenda_types` (velden: `id`, `naam`, `kleur`). Beheerbaar via Instellingen: aanmaken, bewerken en verwijderen met 7 kleuropties (navy, paars, blauw, groen, goud, rood, oranje). Standaard 5 types meegeleverd.
+- **E-mailmodule (fase 1)**: e-mailtemplates beheerbaar via Instellingen (Supabase-tabel `email_templates`). Templates ondersteunen variabelen (`{{contactnaam}}`, `{{factuurnummer}}`, etc.) die automatisch worden ingevuld. Compose-modal met template-keuze, contactselectie en preview. "Open in e-mailprogramma" genereert een `mailto:`-link. Na openen wordt automatisch een dossiernotitie aangemaakt. E-mail knoppen op contactdetail, schooldetail en factuuroverzicht.
 - **Agenda-integratie in detailpagina's**: scholen en besturen hebben een eigen "Agenda"-tab die afspraken gekoppeld aan die entiteit toont (komend/verlopen). Contactdetailpagina toont een agenda-kaart boven het dossier. Afspraken aanmaken vanuit deze pagina's vult automatisch de koppeling in; bij school-context worden alleen contactpersonen van die school getoond en het bestuur automatisch afgeleid.
 
 ## Aanpassingen en updates
@@ -74,4 +76,4 @@ Browser-gebaseerde CRM-applicatie voor het beheren van besturen, scholen, contac
 
 ## Laatste update
 - Datum: 2026-04-12
-- Opmerking: Visuele redesign naar fris licht thema (Outfit font, witte glaskaarten, donkerblauwe sidebar, mesh-achtergrond, accent-kleuren teal/paars/oranje). Alle bestaande functionaliteit ongewijzigd.
+- Opmerking: E-mailmodule fase 1 (templates, compose modal, mailto, auto-log). Visuele redesign naar fris licht thema (Outfit font, witte glaskaarten, donkerblauwe sidebar, mesh-achtergrond, accent-kleuren teal/paars/oranje). Alle bestaande functionaliteit ongewijzigd.

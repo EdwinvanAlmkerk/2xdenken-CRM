@@ -490,6 +490,42 @@ async function delAgendaType(id) {
   } catch (e) { showToast('Fout: ' + e.message, 'error'); } finally { hideLoading(); }
 }
 
+// ── EMAIL TEMPLATES ──────────────────────────────────────────────
+async function saveEmailTemplate(id) {
+  const naam = document.getElementById('f-tpl-naam').value.trim();
+  if (!naam) return alert('Naam is verplicht');
+  const onderwerp = document.getElementById('f-tpl-onderwerp').value.trim();
+  if (!onderwerp) return alert('Onderwerp is verplicht');
+  const data = {
+    naam,
+    onderwerp,
+    body: document.getElementById('f-tpl-body').value.trim(),
+    categorie: document.getElementById('f-tpl-categorie').value || 'algemeen',
+  };
+  showLoading();
+  try {
+    if (id) {
+      await supa(`/rest/v1/email_templates?id=eq.${id}`, { method: 'PATCH', body: JSON.stringify(data) });
+      DB.emailTemplates = DB.emailTemplates.map(t => t.id === id ? { ...t, ...data } : t);
+    } else {
+      const newId = uid();
+      await supa('/rest/v1/email_templates', { method: 'POST', body: JSON.stringify({ id: newId, ...data }) });
+      DB.emailTemplates.push({ id: newId, ...data, createdAt: new Date().toISOString() });
+    }
+    closeModal(); renderContent();
+  } catch (e) { showToast('Fout: ' + e.message, 'error'); } finally { hideLoading(); }
+}
+
+async function delEmailTemplate(id) {
+  if (!confirm('E-mailtemplate verwijderen?')) return;
+  showLoading();
+  try {
+    await supa(`/rest/v1/email_templates?id=eq.${id}`, { method: 'DELETE' });
+    DB.emailTemplates = DB.emailTemplates.filter(t => t.id !== id);
+    closeModal(); renderContent();
+  } catch (e) { showToast('Fout: ' + e.message, 'error'); } finally { hideLoading(); }
+}
+
 // ── INSTELLINGEN functies ─────────────────────────────────────────
 async function delAlleFacturen() {
   closeModal();

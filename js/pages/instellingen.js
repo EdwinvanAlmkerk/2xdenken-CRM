@@ -39,6 +39,33 @@ function renderInstellingen() {
       </div>
 
       <div class="card">
+        <div class="card-header">
+          <h3>${svgIcon('mail', 16)} E-mailtemplates</h3>
+          <button class="btn btn-primary btn-sm" onclick="openEmailTemplateModal()">${svgIcon('add', 14)} Template toevoegen</button>
+        </div>
+        <div class="card-body" style="padding:0">
+          <table>
+            <thead><tr><th>Naam</th><th>Categorie</th><th>Onderwerp</th><th style="width:80px"></th></tr></thead>
+            <tbody>
+              ${DB.emailTemplates.length === 0
+                ? `<tr><td colspan="4"><div class="empty-state" style="padding:20px"><p>Geen e-mailtemplates</p></div></td></tr>`
+                : DB.emailTemplates.map(t => `<tr>
+                    <td style="font-weight:600">${esc(t.naam)}</td>
+                    <td><span class="badge badge-verzonden">${esc(t.categorie)}</span></td>
+                    <td style="font-size:13px;color:var(--navy3);max-width:250px;overflow:hidden;text-overflow:ellipsis;white-space:nowrap">${esc(t.onderwerp)}</td>
+                    <td>
+                      <div class="row-actions">
+                        <button class="btn btn-ghost btn-icon btn-sm" title="Bewerken" onclick="openEmailTemplateModal('${t.id}')">${svgIcon('edit', 14)}</button>
+                        <button class="btn btn-ghost btn-icon btn-sm" title="Verwijderen" onclick="delEmailTemplate('${t.id}')" style="color:var(--s-rood)">${svgIcon('trash', 14)}</button>
+                      </div>
+                    </td>
+                  </tr>`).join('')}
+            </tbody>
+          </table>
+        </div>
+      </div>
+
+      <div class="card">
         <div class="card-header"><h3>${svgIcon('invoice', 16)} Facturen</h3></div>
         <div class="card-body" style="display:flex;flex-direction:column;gap:0">
 
@@ -108,4 +135,28 @@ function openAgendaTypeModal(id = '') {
     `<button class="btn btn-secondary" onclick="closeModal()">Annuleren</button>
      ${t ? `<button class="btn" style="background:#FDE8E8;color:#C0392B;font-weight:700" onclick="delAgendaType('${id}')">Verwijderen</button>` : ''}
      <button class="btn btn-primary" onclick="document.getElementById('f-typekleur').value=document.querySelector('input[name=typekleur]:checked')?.value||'navy';saveAgendaType('${id}')">${t ? 'Opslaan' : 'Toevoegen'}</button>`);
+}
+
+function openEmailTemplateModal(id = '') {
+  const t = id ? DB.emailTemplates.find(x => x.id === id) : null;
+  const cats = ['algemeen', 'factuur', 'herinnering', 'intake', 'opvolging'];
+  const catOpts = cats.map(c => `<option value="${c}"${(t?.categorie || 'algemeen') === c ? ' selected' : ''}>${c.charAt(0).toUpperCase() + c.slice(1)}</option>`).join('');
+
+  const varsRef = `<div style="margin-top:12px;padding:10px 14px;background:var(--glass);border:1px solid var(--bg3);border-radius:var(--r);font-size:11.5px;color:var(--navy3)">
+    <strong style="color:var(--navy)">Beschikbare variabelen:</strong><br>
+    <code>{{contactnaam}}</code> <code>{{contactemail}}</code> <code>{{schoolnaam}}</code> <code>{{schooladres}}</code> <code>{{schoolplaats}}</code> <code>{{bestuursnaam}}</code> <code>{{debiteurnummer}}</code><br>
+    <code>{{factuurnummer}}</code> <code>{{factuurbedrag}}</code> <code>{{factuurdatum}}</code> <code>{{vervaldatum}}</code> <code>{{factuurbetreft}}</code> <code>{{vandaag}}</code> <code>{{gebruikersnaam}}</code>
+  </div>`;
+
+  showModal(t ? 'Template bewerken' : 'Nieuwe e-mailtemplate',
+    `<div class="form-row">
+       <div class="form-group"><label>Naam *</label><input type="text" id="f-tpl-naam" value="${esc(t?.naam || '')}" placeholder="Bijv. Factuurherinnering"/></div>
+       <div class="form-group"><label>Categorie</label><select id="f-tpl-categorie">${catOpts}</select></div>
+     </div>
+     <div class="form-group"><label>Onderwerp *</label><input type="text" id="f-tpl-onderwerp" value="${esc(t?.onderwerp || '')}" placeholder="Herinnering factuur {{factuurnummer}} — 2xDenken"/></div>
+     <div class="form-group"><label>Berichttekst</label><textarea id="f-tpl-body" rows="8" placeholder="Beste {{contactnaam}},&#10;&#10;Hierbij herinner ik u aan...">${esc(t?.body || '')}</textarea></div>
+     ${varsRef}`,
+    `<button class="btn btn-secondary" onclick="closeModal()">Annuleren</button>
+     ${t ? `<button class="btn" style="background:#FDE8E8;color:#C0392B;font-weight:700" onclick="delEmailTemplate('${id}')">Verwijderen</button>` : ''}
+     <button class="btn btn-primary" onclick="saveEmailTemplate('${id}')">${t ? 'Opslaan' : 'Toevoegen'}</button>`);
 }

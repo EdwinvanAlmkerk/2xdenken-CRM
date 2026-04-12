@@ -134,6 +134,7 @@ function renderFacturenPage(search = '') {
                     <td>${badge(f.status)}</td>
                     <td>
                       <div style="display:flex;gap:4px;justify-content:center">
+                        <button class="btn btn-ghost btn-icon btn-sm" title="Factuur e-mailen" onclick="openEmailModal({factuurId:'${f.id}',schoolId:'${f.schoolId}',contactId:'${f.contactId || ''}'})" style="color:var(--accent)">${svgIcon('mail', 14)}</button>
                         <button class="btn btn-ghost btn-icon btn-sm" title="Factuur bekijken" onclick="printFactuur('${f.id}')" style="color:var(--navy);border:1.5px solid var(--bg3)">${svgIcon('eye', 15)}</button>
                         <button class="btn btn-ghost btn-icon btn-sm" title="Bewerken" onclick="openFactuurModal('${f.schoolId}','${f.id}')">${svgIcon('edit', 14)}</button>
                         <button class="btn btn-ghost btn-icon btn-sm" title="Verwijderen" onclick="delFactuurOverview('${f.id}')" style="color:var(--s-rood)">${svgIcon('trash', 14)}</button>
