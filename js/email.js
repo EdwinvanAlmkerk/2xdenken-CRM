@@ -185,6 +185,7 @@ async function sendEmail(schoolId, factuurId, draftId) {
       const res = await fetch(`${SUPA_URL}/functions/v1/send-email`, {
         method: 'POST',
         headers: {
+          'apikey': SUPA_KEY,
           'Authorization': `Bearer ${currentSession?.access_token || SUPA_KEY}`,
           'Content-Type': 'application/json',
         },
