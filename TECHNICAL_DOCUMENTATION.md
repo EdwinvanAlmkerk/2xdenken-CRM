@@ -77,4 +77,4 @@ Browser-gebaseerde CRM-applicatie voor het beheren van besturen, scholen, contac
 
 ## Laatste update
 - Datum: 2026-04-13
-- Opmerking: Agenda week-/dagweergave: rasterlijnen duidelijker zichtbaar gemaakt (uurlijnen en kolomscheidingen naar rgba 0.38–0.42, half-uur stippels naar 0.26) en een afkap-bug van het 07:00-tijdlabel opgelost door padding-top op `.cal-body-scroll` en `top: 0` op het eerste tijdlabel. Wijziging zit volledig in `css/style.css`; geen JS- of structuurwijzigingen.
+- Opmerking: E-mailmodule berichtenlijst visueel versterkt. Kolomheader (VAN/ONDERWERP/ONTVANGEN) krijgt een lichte navy-tint-achtergrond, duidelijkere onderrand en navy3-tekstkleur; rijscheidingen verhoogd naar rgba(30,45,74,0.1) met iets meer padding. Rijen hebben nu CSS-classes `email-row` / `is-active` / `is-unread` en een nieuwe sectie "E-MAIL — BERICHTENLIJST" in `css/style.css` voegt hover-state (mint glow) en een subtiele paarse achtergrond voor ongelezen berichten toe. Wijziging in `js/pages/email-page.js` en `css/style.css`; geen functionele of data-flow wijzigingen.

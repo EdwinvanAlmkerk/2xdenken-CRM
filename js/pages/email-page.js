@@ -192,7 +192,7 @@ function renderEmailPage() {
         </div>
 
         <!-- Kolom-headers -->
-        <div style="display:grid;grid-template-columns:1fr 1.5fr 140px;padding:6px 16px;border-bottom:1px solid var(--glass-border);background:rgba(255,255,255,0.3);font-size:10.5px;font-weight:700;text-transform:uppercase;letter-spacing:.5px;color:var(--navy4)">
+        <div style="display:grid;grid-template-columns:1fr 1.5fr 140px;padding:8px 16px;border-bottom:1px solid rgba(30,45,74,0.14);background:rgba(30,45,74,0.045);font-size:10.5px;font-weight:700;text-transform:uppercase;letter-spacing:.6px;color:var(--navy3)">
           <span>${_emailFolder === 'inbox' ? 'Van' : 'Aan'}</span>
           <span>Onderwerp</span>
           <span style="text-align:right">Ontvangen</span>
@@ -222,7 +222,7 @@ function renderEmailPage() {
                 const naam = e.aanNaam || e.aanEmail || '—';
                 const isUnread = e._isInbox && !e.read;
                 return `
-                  <div onclick="${e._isInbox ? `selectInboxEmail('${e.id}')` : `_emailSelected='${e.id}';renderContent()`}" style="display:grid;grid-template-columns:1fr 1.5fr 140px;padding:9px 16px;border-bottom:1px solid rgba(0,0,0,0.03);cursor:pointer;background:${isActive ? 'var(--mint)' : 'transparent'};border-left:3px solid ${isActive ? 'var(--accent)' : isUnread ? 'var(--accent2)' : 'transparent'};transition:background .1s;align-items:center">
+                  <div class="email-row${isActive ? ' is-active' : ''}${isUnread ? ' is-unread' : ''}" onclick="${e._isInbox ? `selectInboxEmail('${e.id}')` : `_emailSelected='${e.id}';renderContent()`}" style="display:grid;grid-template-columns:1fr 1.5fr 140px;padding:11px 16px;border-bottom:1px solid rgba(30,45,74,0.1);cursor:pointer;background:${isActive ? 'var(--mint)' : 'transparent'};border-left:3px solid ${isActive ? 'var(--accent)' : isUnread ? 'var(--accent2)' : 'transparent'};transition:background .12s;align-items:center">
                     <div style="overflow:hidden">
                       <div style="font-size:13px;font-weight:${isUnread ? '800' : '600'};color:var(--navy);white-space:nowrap;overflow:hidden;text-overflow:ellipsis">${isUnread ? '● ' : ''}${esc(naam)}</div>
                       ${matchedSchool ? `<div style="font-size:11px;color:var(--navy4);white-space:nowrap;overflow:hidden;text-overflow:ellipsis">${esc(matchedSchool.naam)}</div>` : matchedContact ? `<div style="font-size:11px;color:var(--accent);white-space:nowrap;overflow:hidden;text-overflow:ellipsis">${esc(matchedContact.naam)}</div>` : ''}

@@ -696,6 +696,12 @@ input:disabled, select:disabled { opacity: .5; cursor: not-allowed; }
 }
 .cal-month-more { font-size: 10px; color: var(--accent); font-weight: 700; padding: 1px 4px; cursor: pointer; }
 
+/* ═══ E-MAIL — BERICHTENLIJST ═══ */
+.email-row:hover { background: rgba(26,184,184,0.06) !important; }
+.email-row.is-active:hover { background: var(--mint) !important; }
+.email-row.is-unread { background: rgba(108,92,231,0.035); }
+.email-row.is-unread:hover { background: rgba(108,92,231,0.08) !important; }
+
 /* ═══ RESPONSIVE ═══ */
 @media (max-width: 680px) {
   .sidebar { width: 56px; min-width: 56px; padding: 16px 0; }
