@@ -97,30 +97,6 @@ function renderInstellingen() {
       </div>
 
       <div class="card">
-        <div class="card-header"><h3>${svgIcon('calendar', 16)} iCloud Agenda (CalDAV)</h3></div>
-        <div class="card-body">
-          ${DB.caldavSettings?.appleId ? `<div style="margin-bottom:16px;padding:10px 14px;background:var(--s-groen-s);border:1px solid rgba(22,163,74,0.2);border-radius:var(--r);font-size:13px;color:var(--groen);display:flex;align-items:center;gap:8px">
-            ${svgIcon('lightning', 14)} Verbonden met <strong>${esc(DB.caldavSettings.appleId)}</strong>${DB.caldavSettings.calendarName ? ` — kalender: <strong>${esc(DB.caldavSettings.calendarName)}</strong>` : ''}
-          </div>` : `<div style="margin-bottom:16px;padding:10px 14px;background:var(--s-goud-s);border:1px solid rgba(217,119,6,0.2);border-radius:var(--r);font-size:13px;color:var(--geel);display:flex;align-items:center;gap:8px">
-            ${svgIcon('lightning', 14)} Nog niet geconfigureerd — vul je Apple ID en app-wachtwoord hieronder in
-          </div>`}
-          <div class="form-row">
-            <div class="form-group"><label>Apple ID *</label><input type="email" id="f-caldav-apple-id" value="${esc(DB.caldavSettings?.appleId || '')}" placeholder="jouw@icloud.com"/></div>
-            <div class="form-group"><label>App-specific password *</label><input type="password" id="f-caldav-password" value="${esc(DB.caldavSettings?.appPassword || '')}" placeholder="xxxx-xxxx-xxxx-xxxx"/></div>
-          </div>
-          <div style="display:flex;gap:8px;margin-top:8px">
-            <button class="btn btn-primary" onclick="saveCaldavSettings()">${svgIcon('settings', 14)} Opslaan</button>
-            ${DB.caldavSettings?.appleId ? `<button class="btn btn-secondary" onclick="testCaldavConnection()">${svgIcon('lightning', 14)} Test verbinding</button>` : ''}
-          </div>
-          <div style="margin-top:14px;font-size:11.5px;color:var(--navy4);line-height:1.6">
-            <strong>App-specific password aanmaken:</strong> ga naar <a href="https://appleid.apple.com/account/manage" target="_blank" style="color:var(--accent)">appleid.apple.com</a> → Sign-in and Security → App-Specific Passwords. Je normale iCloud wachtwoord werkt <strong>niet</strong>. Tweestapsverificatie moet aan staan.
-            <br><br>
-            <strong>Bekende beperkingen (MVP):</strong> alleen de standaardkalender wordt opgehaald. Herhalende afspraken (RRULE) worden nog niet volledig uitgeklapt — je ziet alleen de eerste instantie. Tijdzones anders dan je lokale tijd kunnen verkeerd weergegeven worden.
-          </div>
-        </div>
-      </div>
-
-      <div class="card">
         <div class="card-header"><h3>${svgIcon('invoice', 16)} Facturen</h3></div>
         <div class="card-body" style="display:flex;flex-direction:column;gap:0">
 

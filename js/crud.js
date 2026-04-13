@@ -512,51 +512,6 @@ async function saveEmailSettings() {
   } catch (e) { showToast('Fout: ' + e.message, 'error'); } finally { hideLoading(); }
 }
 
-// ── iCloud / CalDAV instellingen ─────────────────────────────────
-async function saveCaldavSettings() {
-  const data = {
-    apple_id: document.getElementById('f-caldav-apple-id').value.trim(),
-    app_password: document.getElementById('f-caldav-password').value.trim(),
-    // Discovery-resultaten resetten zodat volgende fetch opnieuw discovert
-    principal_url: null,
-    calendar_url: null,
-    calendar_name: null,
-    updated_at: new Date().toISOString(),
-  };
-  if (!data.apple_id || !data.app_password) return alert('Vul je Apple ID en app-specific password in');
-  showLoading();
-  try {
-    await supa('/rest/v1/caldav_settings?id=eq.main', { method: 'PATCH', body: JSON.stringify(data) });
-    DB.caldavSettings = fromDB_caldavSettings({ id: 'main', ...data });
-    // Lokale iCloud cache leegmaken zodat volgende agenda-opening vers fetcht
-    try { localStorage.removeItem('_crm_icloud_cache_v1'); } catch {}
-    if (typeof _icloudFetchedOnce !== 'undefined') _icloudFetchedOnce = false;
-    showToast('iCloud-instellingen opgeslagen', 'success');
-    renderContent();
-  } catch (e) { showToast('Fout: ' + e.message, 'error'); } finally { hideLoading(); }
-}
-
-async function testCaldavConnection() {
-  showLoading();
-  try {
-    const res = await fetch(`${SUPA_URL}/functions/v1/fetch-caldav?test=true`, {
-      headers: {
-        'apikey': SUPA_KEY,
-        'Authorization': `Bearer ${currentSession?.access_token || SUPA_KEY}`,
-      },
-    });
-    const data = await res.json();
-    if (!res.ok || data.error) throw new Error(data.error || `HTTP ${res.status}`);
-    showToast(`Verbonden! ${data.calendars} kalender(s) gevonden. Eerste: ${data.firstCalendar}`, 'success');
-    // Reload settings om de calendar_name op te halen
-    const fresh = await supa('/rest/v1/caldav_settings?select=*&id=eq.main');
-    DB.caldavSettings = (fresh || []).map(fromDB_caldavSettings)[0] || null;
-    renderContent();
-  } catch (e) {
-    showToast('Verbinding mislukt: ' + e.message, 'error');
-  } finally { hideLoading(); }
-}
-
 // ── EMAIL TEMPLATES ──────────────────────────────────────────────
 async function saveEmailTemplate(id) {
   const naam = document.getElementById('f-tpl-naam').value.trim();

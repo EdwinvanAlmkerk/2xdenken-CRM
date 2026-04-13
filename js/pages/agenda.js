@@ -6,86 +6,6 @@ let _agendaDate   = new Date();
 let _agendaFilter = 'komend';
 let _agendaSearch = '';
 
-// ── iCloud agenda sync state ────────────────────────────────────
-let _icloudEvents = [];
-let _icloudLoading = false;
-let _icloudError = '';
-let _icloudFetchedOnce = false;
-const ICLOUD_CACHE_KEY = '_crm_icloud_cache_v1';
-
-function _loadIcloudCache() {
-  try {
-    const raw = localStorage.getItem(ICLOUD_CACHE_KEY);
-    if (!raw) return null;
-    const parsed = JSON.parse(raw);
-    return Array.isArray(parsed) ? parsed : null;
-  } catch { return null; }
-}
-function _saveIcloudCache(events) {
-  try { localStorage.setItem(ICLOUD_CACHE_KEY, JSON.stringify(events)); } catch {}
-}
-
-async function fetchIcloudEvents() {
-  if (!DB.caldavSettings?.appleId || !DB.caldavSettings?.appPassword) {
-    _icloudFetchedOnce = true;
-    return;
-  }
-  _icloudLoading = true; _icloudError = '';
-  try {
-    const res = await fetch(`${SUPA_URL}/functions/v1/fetch-caldav`, {
-      headers: {
-        'apikey': SUPA_KEY,
-        'Authorization': `Bearer ${currentSession?.access_token || SUPA_KEY}`,
-      },
-    });
-    const data = await res.json();
-    if (!res.ok || data.error) throw new Error(data.error || `HTTP ${res.status}`);
-    _icloudEvents = (data.events || []).map(icloudEventToAgendaItem).filter(Boolean);
-    _saveIcloudCache(_icloudEvents);
-  } catch (e) {
-    _icloudError = e.message;
-    console.error('iCloud fetch mislukt:', e);
-  }
-  _icloudLoading = false;
-  _icloudFetchedOnce = true;
-  renderContent();
-}
-
-// Converteer een iCloud event naar het interne agenda-item formaat
-function icloudEventToAgendaItem(ev) {
-  if (!ev.start) return null;
-  let datum, beginTijd = '', eindTijd = '';
-  if (ev.allDay) {
-    datum = ev.start; // YYYY-MM-DD
-  } else {
-    // ISO datetime, eventueel met Z (UTC) of zonder (lokaal)
-    const d = new Date(ev.start);
-    if (isNaN(d.getTime())) return null;
-    datum = `${d.getFullYear()}-${String(d.getMonth()+1).padStart(2,'0')}-${String(d.getDate()).padStart(2,'0')}`;
-    beginTijd = `${String(d.getHours()).padStart(2,'0')}:${String(d.getMinutes()).padStart(2,'0')}`;
-    if (ev.end) {
-      const de = new Date(ev.end);
-      if (!isNaN(de.getTime())) {
-        eindTijd = `${String(de.getHours()).padStart(2,'0')}:${String(de.getMinutes()).padStart(2,'0')}`;
-      }
-    }
-  }
-  return {
-    id: 'icloud:' + ev.uid,
-    titel: ev.summary || '(geen titel)',
-    datum,
-    beginTijd,
-    eindTijd,
-    type: '__icloud__',
-    schoolId: '',
-    contactId: '',
-    bestuurId: '',
-    locatie: ev.location || '',
-    notitie: ev.description || '',
-    _isIcloud: true,
-  };
-}
-
 // Kleur-mapping: kleur-id → badge CSS class + event CSS class
 const AGENDA_KLEUREN = {
   navy:   { badge: 'badge-beslisser',   event: 'cal-event-afspraak' },
@@ -113,24 +33,9 @@ function agendaBadge(type) {
 }
 
 function agendaEventClass(type) {
-  if (type === '__icloud__') return 'cal-event-icloud';
   const t = getAgendaType(type);
   const k = AGENDA_KLEUREN[t.kleur] || AGENDA_KLEUREN.navy;
   return k.event;
-}
-
-// Click-handler voor agenda items: iCloud events zijn read-only
-function openAgendaItem(id) {
-  if (String(id).startsWith('icloud:')) {
-    const ev = _icloudEvents.find(e => e.id === id);
-    if (!ev) return;
-    const tijd = ev.beginTijd ? ` om ${ev.beginTijd}${ev.eindTijd ? ' – ' + ev.eindTijd : ''}` : ' (hele dag)';
-    const locatie = ev.locatie ? `\nLocatie: ${ev.locatie}` : '';
-    const notitie = ev.notitie ? `\n\n${ev.notitie}` : '';
-    alert(`📅 ${ev.titel}\n${ev.datum}${tijd}${locatie}${notitie}\n\n(iCloud agenda — alleen lezen)`);
-    return;
-  }
-  openAgendaModal(id);
 }
 
 function fmtTijd(t) {
@@ -218,16 +123,12 @@ function filterAgenda(v) { _agendaFilter = v; renderContent(); }
 
 // ── Items ophalen voor een datumreeks ────────────────────────────
 function getItemsForDate(iso) {
-  const crm = DB.agenda.filter(a => a.datum === iso);
-  const icloud = _icloudEvents.filter(a => a.datum === iso);
-  return [...crm, ...icloud]
+  return DB.agenda.filter(a => a.datum === iso)
     .sort((a, b) => (a.beginTijd || '').localeCompare(b.beginTijd || ''));
 }
 
 function getItemsForRange(startIso, endIso) {
-  const crm = DB.agenda.filter(a => a.datum >= startIso && a.datum <= endIso);
-  const icloud = _icloudEvents.filter(a => a.datum >= startIso && a.datum <= endIso);
-  return [...crm, ...icloud];
+  return DB.agenda.filter(a => a.datum >= startIso && a.datum <= endIso);
 }
 
 // ── Tijd → pixel positie ─────────────────────────────────────────
@@ -243,15 +144,6 @@ function minutesToPx(m) {
 
 // ── Hoofd render ─────────────────────────────────────────────────
 function renderAgendaPage() {
-  // iCloud events: eerste keer laden uit cache + achtergrond fetch
-  if (DB.caldavSettings?.appleId && !_icloudFetchedOnce && !_icloudLoading) {
-    if (_icloudEvents.length === 0) {
-      const cached = _loadIcloudCache();
-      if (cached) _icloudEvents = cached;
-    }
-    fetchIcloudEvents();
-  }
-
   if (_agendaView === 'lijst') return renderAgendaList();
 
   // Toolbar: titel berekenen
@@ -329,7 +221,7 @@ function renderWeekView() {
       const iso = dateStr(d);
       const items = getItemsForDate(iso).filter(a => !a.beginTijd);
       return `<div class="cal-allday-cell">
-        ${items.map(a => `<div class="cal-month-event ${agendaEventClass(a.type)}" onclick="openAgendaItem('${a.id}')" title="${esc(a.titel)}">${esc(a.titel)}</div>`).join('')}
+        ${items.map(a => `<div class="cal-month-event ${agendaEventClass(a.type)}" onclick="openAgendaModal('${a.id}')" title="${esc(a.titel)}">${esc(a.titel)}</div>`).join('')}
       </div>`;
     }).join('')}
   </div>`;
@@ -355,7 +247,7 @@ function renderWeekView() {
       const height = Math.max(((endMin - startMin) / 60) * 60, 20);
       const school = a.schoolId ? DB.scholen.find(s => s.id === a.schoolId) : null;
       const meta = [fmtTijd(a.beginTijd), a.locatie, school?.naam].filter(Boolean).join(' · ');
-      return `<div class="cal-event ${agendaEventClass(a.type)}" style="top:${top}px;height:${height}px" onclick="openAgendaItem('${a.id}')" title="${esc(a.titel)}">
+      return `<div class="cal-event ${agendaEventClass(a.type)}" style="top:${top}px;height:${height}px" onclick="openAgendaModal('${a.id}')" title="${esc(a.titel)}">
         <div class="cal-event-title">${esc(a.titel)}</div>
         ${height > 28 ? `<div class="cal-event-meta">${esc(meta)}</div>` : ''}
       </div>`;
@@ -425,7 +317,7 @@ function renderDayView() {
     const height = Math.max(((endMin - startMin) / 60) * 60, 20);
     const school = a.schoolId ? DB.scholen.find(s => s.id === a.schoolId) : null;
     const meta = [fmtTijd(a.beginTijd) + (a.eindTijd ? ` – ${fmtTijd(a.eindTijd)}` : ''), a.locatie, school?.naam].filter(Boolean).join(' · ');
-    return `<div class="cal-event ${agendaEventClass(a.type)}" style="top:${top}px;height:${height}px;right:20%" onclick="openAgendaItem('${a.id}')">
+    return `<div class="cal-event ${agendaEventClass(a.type)}" style="top:${top}px;height:${height}px;right:20%" onclick="openAgendaModal('${a.id}')">
       <div class="cal-event-title">${esc(a.titel)}</div>
       ${height > 28 ? `<div class="cal-event-meta">${esc(meta)}</div>` : ''}
     </div>`;
@@ -444,7 +336,7 @@ function renderDayView() {
   const allday = alldayItems.length > 0 ? `
     <div style="padding:8px 16px 8px 72px;background:var(--bg2);border-bottom:1px solid var(--bg3);font-size:12px">
       <span style="color:var(--navy4);font-weight:700;margin-right:8px">Hele dag:</span>
-      ${alldayItems.map(a => `<span class="cal-month-event ${agendaEventClass(a.type)}" style="display:inline-block;margin-right:6px" onclick="openAgendaItem('${a.id}')">${esc(a.titel)}</span>`).join('')}
+      ${alldayItems.map(a => `<span class="cal-month-event ${agendaEventClass(a.type)}" style="display:inline-block;margin-right:6px" onclick="openAgendaModal('${a.id}')">${esc(a.titel)}</span>`).join('')}
     </div>` : '';
 
   const totalHeight = (CAL_END_HOUR - CAL_START_HOUR) * 60;
@@ -501,7 +393,7 @@ function renderMonthView() {
 
     dayCells += `<div class="cal-month-day${isOther ? ' cal-other' : ''}${isToday ? ' cal-today' : ''}" onclick="_agendaDate=new Date('${iso}');setAgendaView('dag')">
       <div class="cal-month-num">${current.getDate()}</div>
-      ${dayItems.map(a => `<div class="cal-month-event ${agendaEventClass(a.type)}" onclick="event.stopPropagation();openAgendaItem('${a.id}')" title="${esc(a.titel)}">
+      ${dayItems.map(a => `<div class="cal-month-event ${agendaEventClass(a.type)}" onclick="event.stopPropagation();openAgendaModal('${a.id}')" title="${esc(a.titel)}">
         ${a.beginTijd ? fmtTijd(a.beginTijd) + ' ' : ''}${esc(a.titel)}
       </div>`).join('')}
       ${totalItems > 3 ? `<div class="cal-month-more" onclick="event.stopPropagation();_agendaDate=new Date('${iso}');setAgendaView('dag')">+${totalItems - 3} meer</div>` : ''}
