@@ -296,6 +296,16 @@ class ImapClient {
     return total;
   }
 
+  // Toggle een IMAP flag (bijv. \Seen) voor een bericht via UID
+  async setFlag(uid: number, flag: string, add: boolean): Promise<void> {
+    const op = add ? "+FLAGS" : "-FLAGS";
+    const res = await this.command(`UID STORE ${uid} ${op} (${flag})`);
+    const status = res[res.length - 1] || "";
+    if (/ (NO|BAD) /i.test(status)) {
+      throw new Error(`STORE mislukt voor UID ${uid}: ${status.trim()}`);
+    }
+  }
+
   // Probeer meerdere bekende Trash-map-namen (taal-afhankelijk bij Gmail)
   async selectTrash(): Promise<{ folder: string; total: number }> {
     const candidates = [
@@ -404,10 +414,28 @@ serve(async (req) => {
     const folder = url.searchParams.get("folder") || "INBOX";
     const limit = parseInt(url.searchParams.get("limit") || "30");
     const uid = url.searchParams.get("uid");
+    const action = url.searchParams.get("action");
 
     const client = new ImapClient();
     await client.connect(settings.imap_host, settings.imap_port || 993);
     await client.login(settings.email_user, settings.email_pass);
+
+    // ── Flag toggle (mark als gelezen / ongelezen) ──
+    if (action === "mark" && uid) {
+      const seenParam = url.searchParams.get("seen");
+      const add = seenParam === "true" || seenParam === "1";
+      console.log(`Marking UID ${uid} in ${folder} as ${add ? "read" : "unread"}`);
+      if (folder === "__trash__") {
+        await client.selectTrash();
+      } else {
+        await client.select(folder);
+      }
+      await client.setFlag(parseInt(uid), "\\Seen", add);
+      await client.logout();
+      return new Response(JSON.stringify({ ok: true }), {
+        headers: { ...corsHeaders, "Content-Type": "application/json" },
+      });
+    }
 
     // ── Enkel bericht ophalen met body ──
     if (uid) {

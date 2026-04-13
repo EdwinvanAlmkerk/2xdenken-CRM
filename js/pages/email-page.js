@@ -44,8 +44,22 @@ async function selectInboxEmail(uid) {
   const sourceArr = isTrash ? _trashMessages : _inboxMessages;
   const imapFolder = isTrash ? '__trash__' : 'INBOX';
 
-  // Check of we de body al hebben
   const msg = sourceArr.find(m => (m.uid || m.seq) == uid);
+
+  // Markeer als gelezen (zonder op response te wachten, optimistic update)
+  if (msg && !msg.read) {
+    msg.read = true;
+    if (imapFolder === 'INBOX') _saveMailCache(INBOX_CACHE_KEY, _inboxMessages);
+    else _saveMailCache(TRASH_CACHE_KEY, _trashMessages);
+    renderContent();
+    // Server-side synchroniseren (fire-and-forget, maar met rollback bij fout)
+    markMailSeen(uid, true, imapFolder).catch(() => {
+      msg.read = false;
+      renderContent();
+    });
+  }
+
+  // Check of we de body al hebben
   if (msg && msg._bodyLoaded) return;
 
   // Body ophalen via Edge Function
@@ -71,6 +85,38 @@ async function selectInboxEmail(uid) {
       msg.body = `[Kon berichtinhoud niet laden: ${e.message}]`;
       msg._bodyLoaded = true;
     }
+    renderContent();
+  }
+}
+
+// Markeer bericht als gelezen/ongelezen op de IMAP-server (via edge function)
+async function markMailSeen(uid, seen, imapFolder = 'INBOX') {
+  const res = await fetch(`${SUPA_URL}/functions/v1/fetch-emails?action=mark&folder=${encodeURIComponent(imapFolder)}&uid=${uid}&seen=${seen ? 'true' : 'false'}`, {
+    headers: {
+      'apikey': SUPA_KEY,
+      'Authorization': `Bearer ${currentSession?.access_token || SUPA_KEY}`,
+    },
+  });
+  const data = await res.json().catch(() => ({}));
+  if (!res.ok || data.error) throw new Error(data.error || `HTTP ${res.status}`);
+}
+
+// Toggle-functie voor de "Markeer als ongelezen/gelezen" knop in de detailweergave
+async function toggleMailRead(uid) {
+  const isTrash = _emailFolder === 'verwijderd';
+  const sourceArr = isTrash ? _trashMessages : _inboxMessages;
+  const imapFolder = isTrash ? '__trash__' : 'INBOX';
+  const msg = sourceArr.find(m => (m.uid || m.seq) == uid);
+  if (!msg) return;
+  const newState = !msg.read;
+  msg.read = newState;
+  _saveMailCache(isTrash ? TRASH_CACHE_KEY : INBOX_CACHE_KEY, sourceArr);
+  renderContent();
+  try {
+    await markMailSeen(uid, newState, imapFolder);
+  } catch (e) {
+    msg.read = !newState; // rollback
+    alert('Kon leesstatus niet wijzigen: ' + e.message);
     renderContent();
   }
 }
@@ -370,6 +416,7 @@ function renderEmailDetail(e) {
             : e.status === 'concept'
               ? `<button class="btn btn-primary btn-sm" onclick="openEmailFromDraft('${e.id}')">${svgIcon('edit', 12)} Bewerken</button>`
               : `<button class="btn btn-secondary btn-sm" onclick="forwardEmail('${e.id}')">${svgIcon('chevron', 12)} Doorsturen</button>`}
+          ${isInbox && _emailFolder === 'inbox' ? `<button class="btn btn-secondary btn-sm" onclick="toggleMailRead('${e.id}')" title="${e.read ? 'Markeer als ongelezen' : 'Markeer als gelezen'}">${svgIcon('mail', 12)} ${e.read ? 'Markeer ongelezen' : 'Markeer gelezen'}</button>` : ''}
           ${!isInbox ? `<button class="btn btn-ghost btn-icon btn-sm" title="Verwijderen" onclick="delEmailLog('${e.id}')" style="color:var(--s-rood)">${svgIcon('trash', 13)}</button>` : ''}
         </div>
       </div>
