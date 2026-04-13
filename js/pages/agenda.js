@@ -269,8 +269,10 @@ function renderWeekView() {
 
   const totalHeight = (CAL_END_HOUR - CAL_START_HOUR) * 60;
 
-  return `${header}${allday}
+  return `
     <div class="cal-grid">
+      ${header}
+      ${allday}
       <div class="cal-body-scroll" id="cal-scroll">
         <div class="cal-body" style="grid-template-columns:56px repeat(7, 1fr);height:${totalHeight}px">
           <div class="cal-time-col">${timeLabels}</div>
