@@ -8,10 +8,27 @@ let _emailFilter = 'alles'; // 'alles', 'ongelezen'
 let _inboxMessages = [];
 let _inboxLoading = false;
 let _inboxError = '';
+let _inboxFetchedOnce = false;
 let _trashMessages = [];
 let _trashLoading = false;
 let _trashError = '';
+let _trashFetchedOnce = false;
 let _foldersCollapsed = {};
+
+// ── LocalStorage cache helpers (stale-while-revalidate) ──────────
+const INBOX_CACHE_KEY = '_crm_inbox_cache_v1';
+const TRASH_CACHE_KEY = '_crm_trash_cache_v1';
+function _loadMailCache(key) {
+  try {
+    const raw = localStorage.getItem(key);
+    if (!raw) return null;
+    const parsed = JSON.parse(raw);
+    return Array.isArray(parsed) ? parsed : null;
+  } catch { return null; }
+}
+function _saveMailCache(key, messages) {
+  try { localStorage.setItem(key, JSON.stringify(messages)); } catch { /* quota of privacy mode */ }
+}
 
 function setEmailFolder(f) { _emailFolder = f; _emailSelected = null; _emailFilter = 'alles'; renderContent(); }
 function setEmailFilter(f) { _emailFilter = f; renderContent(); }
@@ -61,13 +78,14 @@ async function selectInboxEmail(uid) {
 async function fetchTrash() {
   if (!DB.emailSettings?.imapHost) {
     _trashError = 'Configureer eerst je e-mailserver in Instellingen';
+    _trashFetchedOnce = true;
     renderContent();
     return;
   }
   _trashLoading = true; _trashError = '';
-  renderContent();
+  if (_trashMessages.length === 0) renderContent();
   try {
-    const res = await fetch(`${SUPA_URL}/functions/v1/fetch-emails?folder=__trash__&limit=30`, {
+    const res = await fetch(`${SUPA_URL}/functions/v1/fetch-emails?folder=__trash__&limit=20`, {
       headers: {
         'apikey': SUPA_KEY,
         'Authorization': `Bearer ${currentSession?.access_token || SUPA_KEY}`,
@@ -77,24 +95,28 @@ async function fetchTrash() {
     if (!res.ok || data.error) throw new Error(data.error || `HTTP ${res.status}`);
     _trashMessages = data.messages || [];
     _trashError = '';
+    _saveMailCache(TRASH_CACHE_KEY, _trashMessages);
   } catch (e) {
     _trashError = e.message;
-    _trashMessages = [];
+    if (_trashMessages.length === 0) _trashMessages = [];
   }
   _trashLoading = false;
+  _trashFetchedOnce = true;
   renderContent();
 }
 
 async function fetchInbox() {
   if (!DB.emailSettings?.imapHost) {
     _inboxError = 'Configureer eerst je e-mailserver in Instellingen';
+    _inboxFetchedOnce = true;
     renderContent();
     return;
   }
   _inboxLoading = true; _inboxError = '';
-  renderContent();
+  // Alleen direct re-renderen als we nog niets te tonen hebben — anders laten we de cached content staan
+  if (_inboxMessages.length === 0) renderContent();
   try {
-    const res = await fetch(`${SUPA_URL}/functions/v1/fetch-emails?folder=INBOX&limit=30`, {
+    const res = await fetch(`${SUPA_URL}/functions/v1/fetch-emails?folder=INBOX&limit=20`, {
       headers: {
         'apikey': SUPA_KEY,
         'Authorization': `Bearer ${currentSession?.access_token || SUPA_KEY}`,
@@ -104,26 +126,35 @@ async function fetchInbox() {
     if (!res.ok || data.error) throw new Error(data.error || `HTTP ${res.status}`);
     _inboxMessages = data.messages || [];
     _inboxError = '';
+    _saveMailCache(INBOX_CACHE_KEY, _inboxMessages);
   } catch (e) {
     _inboxError = e.message;
-    _inboxMessages = [];
+    // Als we cached content hebben, laten we die staan — alleen leegmaken als er echt niets is
+    if (_inboxMessages.length === 0) _inboxMessages = [];
   }
   _inboxLoading = false;
+  _inboxFetchedOnce = true;
   renderContent();
 }
 
 function renderEmailPage() {
   const hasConfig = DB.emailSettings?.imapHost && DB.emailSettings?.emailUser && DB.emailSettings?.emailPass;
 
-  // Auto-load inbox bij eerste keer openen
-  if (hasConfig && _emailFolder === 'inbox' && _inboxMessages.length === 0 && !_inboxLoading && !_inboxError) {
-    fetchInbox();
-    return '<div style="text-align:center;padding:60px;color:var(--navy4)"><div class="spinner" style="margin:0 auto 16px"></div><p>Inbox laden...</p></div>';
+  // Inbox: eerste keer openen in deze sessie — cache laden + achtergrond fetch
+  if (hasConfig && _emailFolder === 'inbox' && !_inboxFetchedOnce && !_inboxLoading) {
+    if (_inboxMessages.length === 0) {
+      const cached = _loadMailCache(INBOX_CACHE_KEY);
+      if (cached) _inboxMessages = cached;
+    }
+    fetchInbox(); // achtergrond — laat cached content zichtbaar
   }
-  // Auto-load prullenbak bij eerste keer openen
-  if (hasConfig && _emailFolder === 'verwijderd' && _trashMessages.length === 0 && !_trashLoading && !_trashError) {
+  // Prullenbak: idem
+  if (hasConfig && _emailFolder === 'verwijderd' && !_trashFetchedOnce && !_trashLoading) {
+    if (_trashMessages.length === 0) {
+      const cached = _loadMailCache(TRASH_CACHE_KEY);
+      if (cached) _trashMessages = cached;
+    }
     fetchTrash();
-    return '<div style="text-align:center;padding:60px;color:var(--navy4)"><div class="spinner" style="margin:0 auto 16px"></div><p>Prullenbak laden...</p></div>';
   }
   const emailAddr = DB.emailSettings?.emailUser || 'E-mail';
   const conceptCount = DB.emailLog.filter(e => e.status === 'concept').length;
@@ -238,8 +269,8 @@ function renderEmailPage() {
             <span class="search-icon">${svgIcon('search', 13)}</span>
             <input type="text" placeholder="Zoeken..." value="${esc(_emailSearch)}" oninput="searchEmail(this.value)" style="padding-left:32px;font-size:12.5px;padding-top:6px;padding-bottom:6px"/>
           </div>
-          ${_emailFolder === 'inbox' ? `<button class="btn btn-ghost btn-icon btn-sm" onclick="fetchInbox()" title="Vernieuwen">${svgIcon('settings', 15)}</button>` : ''}
-          ${_emailFolder === 'verwijderd' ? `<button class="btn btn-ghost btn-icon btn-sm" onclick="fetchTrash()" title="Vernieuwen">${svgIcon('settings', 15)}</button>` : ''}
+          ${_emailFolder === 'inbox' ? `<button class="btn btn-ghost btn-icon btn-sm" onclick="fetchInbox()" title="Vernieuwen">${_inboxLoading ? '<div class="spinner" style="width:14px;height:14px;border-width:2px"></div>' : svgIcon('settings', 15)}</button>` : ''}
+          ${_emailFolder === 'verwijderd' ? `<button class="btn btn-ghost btn-icon btn-sm" onclick="fetchTrash()" title="Vernieuwen">${_trashLoading ? '<div class="spinner" style="width:14px;height:14px;border-width:2px"></div>' : svgIcon('settings', 15)}</button>` : ''}
         </div>
 
         <!-- Kolom-headers -->
@@ -251,22 +282,22 @@ function renderEmailPage() {
 
         <!-- Berichtenlijst -->
         <div style="flex:1;overflow-y:auto">
-          ${_emailFolder === 'inbox' && _inboxLoading
+          ${_emailFolder === 'inbox' && _inboxLoading && items.length === 0
             ? `<div style="text-align:center;padding:40px 20px;color:var(--navy4)">
                 <div class="spinner" style="margin:0 auto 12px;width:28px;height:28px;border-width:2px"></div>
                 <p style="font-size:13px">Inbox laden...</p>
               </div>`
-            : _emailFolder === 'inbox' && _inboxError
+            : _emailFolder === 'inbox' && _inboxError && items.length === 0
             ? `<div style="text-align:center;padding:40px 20px;color:var(--s-rood)">
                 <p style="font-size:13px">${esc(_inboxError)}</p>
                 <button class="btn btn-secondary btn-sm" style="margin-top:12px" onclick="fetchInbox()">Opnieuw</button>
               </div>`
-            : _emailFolder === 'verwijderd' && _trashLoading
+            : _emailFolder === 'verwijderd' && _trashLoading && items.length === 0
             ? `<div style="text-align:center;padding:40px 20px;color:var(--navy4)">
                 <div class="spinner" style="margin:0 auto 12px;width:28px;height:28px;border-width:2px"></div>
                 <p style="font-size:13px">Prullenbak laden...</p>
               </div>`
-            : _emailFolder === 'verwijderd' && _trashError
+            : _emailFolder === 'verwijderd' && _trashError && items.length === 0
             ? `<div style="text-align:center;padding:40px 20px;color:var(--s-rood)">
                 <p style="font-size:13px">${esc(_trashError)}</p>
                 <button class="btn btn-secondary btn-sm" style="margin-top:12px" onclick="fetchTrash()">Opnieuw</button>
