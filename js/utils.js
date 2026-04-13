@@ -206,9 +206,12 @@ function renderDossierItem(d, opts = {}) {
 
 // ── Globale zoekfunctie ──────────────────────────────────────────
 let _globalSearchTimeout = null;
+let _globalSearchItems = [];
+let _globalSearchIdx = 0;
+
 function globalSearch(q) {
   clearTimeout(_globalSearchTimeout);
-  _globalSearchTimeout = setTimeout(() => renderGlobalResults(q), 200);
+  _globalSearchTimeout = setTimeout(() => renderGlobalResults(q), 150);
 }
 
 function showGlobalResults() {
@@ -216,56 +219,178 @@ function showGlobalResults() {
   if (q.length >= 2) renderGlobalResults(q);
 }
 
+// Score: 0 = no match, hoger = betere match
+function _searchScore(text, lq) {
+  if (!text) return 0;
+  const lt = String(text).toLowerCase();
+  if (lt === lq) return 100;
+  if (lt.startsWith(lq)) return 60;
+  if (lt.split(/[\s\-_.]/).some(w => w.startsWith(lq))) return 40;
+  if (lt.includes(lq)) return 20;
+  return 0;
+}
+
+// Highlight de eerste match in de tekst
+function _highlightMatch(text, lq) {
+  if (!text) return '';
+  const e = esc(text);
+  if (!lq) return e;
+  const idx = e.toLowerCase().indexOf(lq);
+  if (idx === -1) return e;
+  return e.slice(0, idx) + '<mark class="gs-mark">' + e.slice(idx, idx + lq.length) + '</mark>' + e.slice(idx + lq.length);
+}
+
 function renderGlobalResults(q) {
   const el = document.getElementById('global-search-results');
   if (!el) return;
-  if (!q || q.length < 2) { el.style.display = 'none'; return; }
+  if (!q || q.length < 2) { el.style.display = 'none'; _globalSearchItems = []; return; }
 
-  const lq = q.toLowerCase();
-  const results = [];
-  const MAX = 8;
+  const lq = q.toLowerCase().trim();
+  const groups = {
+    scholen:    { label: 'Scholen',    items: [] },
+    besturen:   { label: 'Besturen',   items: [] },
+    contacten:  { label: 'Contacten',  items: [] },
+    facturen:   { label: 'Facturen',   items: [] },
+    trainingen: { label: 'Trainingen', items: [] },
+    agenda:     { label: 'Agenda',     items: [] },
+  };
 
-  // Scholen
-  DB.scholen.filter(s => s.naam.toLowerCase().includes(lq) || (s.plaats || '').toLowerCase().includes(lq)).slice(0, MAX).forEach(s => {
-    results.push({ icon: 'school', label: s.naam, sub: s.plaats || '', action: `navigate('school-detail','${s.id}')` });
+  DB.scholen.forEach(s => {
+    const sc = Math.max(_searchScore(s.naam, lq), _searchScore(s.plaats, lq));
+    if (sc > 0) groups.scholen.items.push({ icon: 'school', label: s.naam, sub: s.plaats || '', score: sc, action: () => navigate('school-detail', s.id) });
   });
 
-  // Besturen
-  DB.besturen.filter(b => b.naam.toLowerCase().includes(lq)).slice(0, MAX).forEach(b => {
-    results.push({ icon: 'board', label: b.naam, sub: 'Bestuur', action: `navigate('bestuur-detail','${b.id}')` });
+  DB.besturen.forEach(b => {
+    const sc = _searchScore(b.naam, lq);
+    if (sc > 0) groups.besturen.items.push({ icon: 'board', label: b.naam, sub: 'Bestuur', score: sc, action: () => navigate('bestuur-detail', b.id) });
   });
 
-  // Contacten
-  DB.contacten.filter(c => c.naam.toLowerCase().includes(lq) || (c.email || '').toLowerCase().includes(lq) || (c.functie || '').toLowerCase().includes(lq)).slice(0, MAX).forEach(c => {
-    const s = DB.scholen.find(x => x.id === c.schoolId);
-    results.push({ icon: 'contact', label: c.naam, sub: [c.functie, s?.naam].filter(Boolean).join(' — '), action: `navigateToContact('${c.schoolId}','${c.id}')` });
+  DB.contacten.forEach(c => {
+    const sc = Math.max(_searchScore(c.naam, lq), _searchScore(c.email, lq), _searchScore(c.functie, lq));
+    if (sc > 0) {
+      const s = DB.scholen.find(x => x.id === c.schoolId);
+      groups.contacten.items.push({ icon: 'contact', label: c.naam, sub: [c.functie, s?.naam].filter(Boolean).join(' — '), score: sc, action: () => navigateToContact(c.schoolId, c.id) });
+    }
   });
 
-  // Facturen
-  DB.facturen.filter(f => (f.nummer || '').toLowerCase().includes(lq) || (f.betreft || '').toLowerCase().includes(lq)).slice(0, MAX).forEach(f => {
-    const s = DB.scholen.find(x => x.id === f.schoolId);
-    results.push({ icon: 'invoice', label: `Factuur ${f.nummer}`, sub: [s?.naam, fmtEuro(f.totaal)].filter(Boolean).join(' — '), action: `openFactuurModal('${f.schoolId}','${f.id}')` });
+  DB.facturen.forEach(f => {
+    const sc = Math.max(_searchScore(f.nummer, lq), _searchScore(f.betreft, lq));
+    if (sc > 0) {
+      const s = DB.scholen.find(x => x.id === f.schoolId);
+      groups.facturen.items.push({ icon: 'invoice', label: `Factuur ${f.nummer || ''}`, sub: [s?.naam, fmtEuro(f.totaal)].filter(Boolean).join(' — '), score: sc, action: () => openFactuurModal(f.schoolId, f.id) });
+    }
   });
 
-  // Trainingen
-  DB.trainingen.filter(t => t.naam.toLowerCase().includes(lq)).slice(0, MAX).forEach(t => {
-    results.push({ icon: 'training', label: t.naam, sub: t.categorie || '', action: `navigate('training-detail','${t.id}')` });
+  DB.trainingen.forEach(t => {
+    const sc = Math.max(_searchScore(t.naam, lq), _searchScore(t.categorie, lq));
+    if (sc > 0) groups.trainingen.items.push({ icon: 'training', label: t.naam, sub: t.categorie || '', score: sc, action: () => navigate('training-detail', t.id) });
   });
 
-  if (results.length === 0) {
-    el.innerHTML = '<div style="padding:16px;text-align:center;color:var(--navy4);font-size:13px">Geen resultaten voor "' + esc(q) + '"</div>';
-  } else {
-    el.innerHTML = results.slice(0, 12).map(r => `
-      <div onclick="${r.action};document.getElementById('global-search').value='';document.getElementById('global-search-results').style.display='none'" style="display:flex;align-items:center;gap:10px;padding:10px 14px;cursor:pointer;border-bottom:1px solid rgba(0,0,0,0.04);transition:background .1s" onmouseover="this.style.background='var(--mint)'" onmouseout="this.style.background='transparent'">
-        ${svgIcon(r.icon, 16)}
-        <div style="flex:1;min-width:0">
-          <div style="font-size:13.5px;font-weight:600;color:var(--navy);white-space:nowrap;overflow:hidden;text-overflow:ellipsis">${esc(r.label)}</div>
-          ${r.sub ? `<div style="font-size:11.5px;color:var(--navy4);white-space:nowrap;overflow:hidden;text-overflow:ellipsis">${esc(r.sub)}</div>` : ''}
-        </div>
-      </div>`).join('');
+  (DB.agenda || []).forEach(a => {
+    const sc = Math.max(_searchScore(a.titel, lq), _searchScore(a.locatie, lq));
+    if (sc > 0) {
+      const tijd = a.beginTijd ? ' ' + fmtTijd(a.beginTijd) : '';
+      const sub = `${fmtDateShort(a.datum)}${tijd}${a.locatie ? ' · ' + a.locatie : ''}`;
+      groups.agenda.items.push({ icon: 'calendar', label: a.titel, sub, score: sc, action: () => { navigate('agenda'); setTimeout(() => openAgendaModal(a.id), 60); } });
+    }
+  });
+
+  // Per groep sorteren op score, cappen op 5
+  const MAX_PER_GROUP = 5;
+  _globalSearchItems = [];
+  const sections = [];
+  Object.values(groups).forEach(g => {
+    if (g.items.length === 0) return;
+    g.items.sort((a, b) => b.score - a.score);
+    const capped = g.items.slice(0, MAX_PER_GROUP);
+    sections.push({ label: g.label, items: capped });
+    _globalSearchItems.push(...capped);
+  });
+
+  _globalSearchIdx = 0;
+
+  if (_globalSearchItems.length === 0) {
+    el.innerHTML = '<div class="gs-empty">Geen resultaten voor "' + esc(q) + '"</div>';
+    el.style.display = 'block';
+    return;
   }
+
+  let idx = 0;
+  const html = sections.map(s => `
+    <div class="gs-group-label">${esc(s.label)}</div>
+    ${s.items.map(r => {
+      const myIdx = idx++;
+      return `<div class="gs-row" data-idx="${myIdx}" onclick="_execGlobalResult(${myIdx})">
+        <span class="gs-icon">${svgIcon(r.icon, 15)}</span>
+        <div class="gs-text">
+          <div class="gs-label">${_highlightMatch(r.label, lq)}</div>
+          ${r.sub ? `<div class="gs-sub">${_highlightMatch(r.sub, lq)}</div>` : ''}
+        </div>
+      </div>`;
+    }).join('')}
+  `).join('');
+
+  const footer = '<div class="gs-footer"><kbd>↑</kbd><kbd>↓</kbd> navigeren &nbsp;·&nbsp; <kbd>Enter</kbd> openen &nbsp;·&nbsp; <kbd>Esc</kbd> sluiten</div>';
+
+  el.innerHTML = html + footer;
   el.style.display = 'block';
+  _updateGlobalSearchHighlight();
 }
+
+function _updateGlobalSearchHighlight() {
+  const el = document.getElementById('global-search-results');
+  if (!el) return;
+  el.querySelectorAll('.gs-row').forEach((row, i) => {
+    row.classList.toggle('is-active', i === _globalSearchIdx);
+  });
+  const active = el.querySelector('.gs-row.is-active');
+  if (active) active.scrollIntoView({ block: 'nearest' });
+}
+
+function _execGlobalResult(idx) {
+  const item = _globalSearchItems[idx];
+  if (!item) return;
+  const input = document.getElementById('global-search');
+  const el = document.getElementById('global-search-results');
+  if (input) input.value = '';
+  if (el) el.style.display = 'none';
+  item.action();
+}
+
+// Globale toetsen: Ctrl/Cmd+K focust zoek, pijltjes/enter/esc in de resultaten
+document.addEventListener('keydown', (e) => {
+  const input = document.getElementById('global-search');
+
+  if ((e.ctrlKey || e.metaKey) && e.key.toLowerCase() === 'k') {
+    e.preventDefault();
+    if (input) { input.focus(); input.select(); }
+    return;
+  }
+
+  if (document.activeElement !== input) return;
+  const el = document.getElementById('global-search-results');
+
+  if (e.key === 'Escape') {
+    if (el) el.style.display = 'none';
+    input.blur();
+    return;
+  }
+
+  if (!el || el.style.display === 'none' || _globalSearchItems.length === 0) return;
+
+  if (e.key === 'ArrowDown') {
+    e.preventDefault();
+    _globalSearchIdx = (_globalSearchIdx + 1) % _globalSearchItems.length;
+    _updateGlobalSearchHighlight();
+  } else if (e.key === 'ArrowUp') {
+    e.preventDefault();
+    _globalSearchIdx = (_globalSearchIdx - 1 + _globalSearchItems.length) % _globalSearchItems.length;
+    _updateGlobalSearchHighlight();
+  } else if (e.key === 'Enter') {
+    e.preventDefault();
+    _execGlobalResult(_globalSearchIdx);
+  }
+});
 
 // Sluit zoekresultaten bij klik buiten
 document.addEventListener('click', (e) => {

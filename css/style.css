@@ -455,6 +455,59 @@ input:disabled, select:disabled { opacity: .5; cursor: not-allowed; }
 .search-wrap .search-icon { position: absolute; left: 12px; top: 50%; transform: translateY(-50%); color: var(--muted); pointer-events: none; }
 .search-wrap input { padding-left: 36px; }
 
+/* Global search dropdown */
+.gs-group-label {
+  padding: 8px 14px 4px; font-size: 10px; font-weight: 700;
+  text-transform: uppercase; letter-spacing: .6px; color: var(--muted);
+  background: rgba(30,45,74,0.035); border-top: 1px solid rgba(30,45,74,0.06);
+}
+.gs-group-label:first-child { border-top: none; }
+.gs-row {
+  display: flex; align-items: center; gap: 10px;
+  padding: 9px 14px; cursor: pointer;
+  border-left: 2px solid transparent;
+  transition: background .1s;
+}
+.gs-row .gs-icon { color: var(--navy4); display: flex; }
+.gs-row:hover { background: rgba(26,184,184,0.07); }
+.gs-row.is-active {
+  background: var(--mint);
+  border-left-color: var(--accent);
+}
+.gs-row.is-active .gs-icon { color: var(--accent); }
+.gs-text { flex: 1; min-width: 0; }
+.gs-label {
+  font-size: 13.5px; font-weight: 600; color: var(--navy);
+  white-space: nowrap; overflow: hidden; text-overflow: ellipsis;
+}
+.gs-sub {
+  font-size: 11.5px; color: var(--navy4);
+  white-space: nowrap; overflow: hidden; text-overflow: ellipsis;
+}
+.gs-mark {
+  background: rgba(26,184,184,0.22); color: var(--navy);
+  padding: 0 1px; border-radius: 2px; font-weight: 700;
+}
+.gs-empty { padding: 16px; text-align: center; color: var(--navy4); font-size: 13px; }
+.gs-footer {
+  padding: 8px 14px; font-size: 10.5px; color: var(--muted);
+  background: rgba(30,45,74,0.035); border-top: 1px solid rgba(30,45,74,0.06);
+  display: flex; align-items: center; gap: 4px; flex-wrap: wrap;
+}
+.gs-footer kbd {
+  display: inline-block; padding: 1px 5px; margin: 0 1px;
+  background: white; border: 1px solid rgba(30,45,74,0.18);
+  border-bottom-width: 2px; border-radius: 3px;
+  font-family: inherit; font-size: 10px; font-weight: 600;
+  color: var(--navy3); line-height: 1.4;
+}
+.gs-kbd-badge {
+  position: absolute; right: 8px; top: 50%; transform: translateY(-50%);
+  padding: 1px 6px; font-size: 10px; font-weight: 600; color: var(--muted);
+  background: rgba(30,45,74,0.06); border: 1px solid rgba(30,45,74,0.12);
+  border-radius: 3px; pointer-events: none; letter-spacing: .3px;
+}
+
 /* ═══ CONTACT CARDS ═══ */
 .contact-card {
   background: var(--card-bg); border-radius: var(--r2); padding: 18px;
