@@ -656,10 +656,8 @@ input:disabled, select:disabled { opacity: .5; cursor: not-allowed; }
 }
 .cal-header {
   display: grid; border-bottom: 1px solid rgba(30,45,74,0.42);
-  background: rgba(255,255,255,0.5);
-  overflow-y: auto; scrollbar-gutter: stable;
+  background: rgba(255,255,255,0.9);
 }
-.cal-header::-webkit-scrollbar { width: 0; height: 0; }
 .cal-header-cell {
   padding: 10px 6px; text-align: center; border-left: 1px solid rgba(30,45,74,0.38);
   font-size: 11px; font-weight: 600; text-transform: uppercase; letter-spacing: .5px; color: var(--muted);
@@ -674,13 +672,15 @@ input:disabled, select:disabled { opacity: .5; cursor: not-allowed; }
 }
 .cal-allday {
   display: grid; border-bottom: 1px solid rgba(30,45,74,0.42); min-height: 28px;
-  background: rgba(255,255,255,0.5);
-  overflow-y: auto; scrollbar-gutter: stable;
+  background: rgba(255,255,255,0.9);
 }
-.cal-allday::-webkit-scrollbar { width: 0; height: 0; }
 .cal-allday-cell { padding: 3px 4px; border-left: 1px solid rgba(30,45,74,0.38); font-size: 11px; }
 .cal-allday-cell:first-child { border-left: none; }
-.cal-body-scroll { overflow-y: auto; max-height: calc(100vh - 260px); position: relative; padding-top: 10px; scrollbar-gutter: stable; }
+.cal-body-scroll { overflow-y: auto; max-height: calc(100vh - 180px); position: relative; }
+.cal-sticky-top {
+  position: sticky; top: 0; z-index: 3;
+  background: var(--card-bg);
+}
 .cal-body { display: grid; position: relative; }
 .cal-time-col { border-right: 1px solid rgba(30,45,74,0.42); }
 .cal-time-label {

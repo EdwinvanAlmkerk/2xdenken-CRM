@@ -271,9 +271,11 @@ function renderWeekView() {
 
   return `
     <div class="cal-grid">
-      ${header}
-      ${allday}
       <div class="cal-body-scroll" id="cal-scroll">
+        <div class="cal-sticky-top">
+          ${header}
+          ${allday}
+        </div>
         <div class="cal-body" style="grid-template-columns:56px repeat(7, 1fr);height:${totalHeight}px">
           <div class="cal-time-col">${timeLabels}</div>
           ${dayColumns}
@@ -341,8 +343,8 @@ function renderDayView() {
 
   return `
     <div class="cal-grid">
-      ${allday}
       <div class="cal-body-scroll" id="cal-scroll">
+        ${allday ? `<div class="cal-sticky-top">${allday}</div>` : ''}
         <div class="cal-body" style="grid-template-columns:56px 1fr;height:${totalHeight}px">
           <div class="cal-time-col">${timeLabels}</div>
           <div class="cal-day-col">${hourLines}${events}${nowLine}</div>
