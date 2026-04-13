@@ -8,6 +8,9 @@ let _emailFilter = 'alles'; // 'alles', 'ongelezen'
 let _inboxMessages = [];
 let _inboxLoading = false;
 let _inboxError = '';
+let _trashMessages = [];
+let _trashLoading = false;
+let _trashError = '';
 let _foldersCollapsed = {};
 
 function setEmailFolder(f) { _emailFolder = f; _emailSelected = null; _emailFilter = 'alles'; renderContent(); }
@@ -19,13 +22,18 @@ async function selectInboxEmail(uid) {
   _emailSelected = uid;
   renderContent();
 
+  // Kies juiste array + IMAP-map op basis van huidige folder
+  const isTrash = _emailFolder === 'verwijderd';
+  const sourceArr = isTrash ? _trashMessages : _inboxMessages;
+  const imapFolder = isTrash ? '__trash__' : 'INBOX';
+
   // Check of we de body al hebben
-  const msg = _inboxMessages.find(m => (m.uid || m.seq) == uid);
+  const msg = sourceArr.find(m => (m.uid || m.seq) == uid);
   if (msg && msg._bodyLoaded) return;
 
   // Body ophalen via Edge Function
   try {
-    const res = await fetch(`${SUPA_URL}/functions/v1/fetch-emails?folder=INBOX&uid=${uid}`, {
+    const res = await fetch(`${SUPA_URL}/functions/v1/fetch-emails?folder=${encodeURIComponent(imapFolder)}&uid=${uid}`, {
       headers: {
         'apikey': SUPA_KEY,
         'Authorization': `Bearer ${currentSession?.access_token || SUPA_KEY}`,
@@ -48,6 +56,33 @@ async function selectInboxEmail(uid) {
     }
     renderContent();
   }
+}
+
+async function fetchTrash() {
+  if (!DB.emailSettings?.imapHost) {
+    _trashError = 'Configureer eerst je e-mailserver in Instellingen';
+    renderContent();
+    return;
+  }
+  _trashLoading = true; _trashError = '';
+  renderContent();
+  try {
+    const res = await fetch(`${SUPA_URL}/functions/v1/fetch-emails?folder=__trash__&limit=30`, {
+      headers: {
+        'apikey': SUPA_KEY,
+        'Authorization': `Bearer ${currentSession?.access_token || SUPA_KEY}`,
+      },
+    });
+    const data = await res.json();
+    if (!res.ok || data.error) throw new Error(data.error || `HTTP ${res.status}`);
+    _trashMessages = data.messages || [];
+    _trashError = '';
+  } catch (e) {
+    _trashError = e.message;
+    _trashMessages = [];
+  }
+  _trashLoading = false;
+  renderContent();
 }
 
 async function fetchInbox() {
@@ -85,6 +120,11 @@ function renderEmailPage() {
     fetchInbox();
     return '<div style="text-align:center;padding:60px;color:var(--navy4)"><div class="spinner" style="margin:0 auto 16px"></div><p>Inbox laden...</p></div>';
   }
+  // Auto-load prullenbak bij eerste keer openen
+  if (hasConfig && _emailFolder === 'verwijderd' && _trashMessages.length === 0 && !_trashLoading && !_trashError) {
+    fetchTrash();
+    return '<div style="text-align:center;padding:60px;color:var(--navy4)"><div class="spinner" style="margin:0 auto 16px"></div><p>Prullenbak laden...</p></div>';
+  }
   const emailAddr = DB.emailSettings?.emailUser || 'E-mail';
   const conceptCount = DB.emailLog.filter(e => e.status === 'concept').length;
   const verzondenCount = DB.emailLog.filter(e => e.status === 'verzonden').length;
@@ -102,6 +142,15 @@ function renderEmailPage() {
     }));
     // Filter ongelezen als dat actief is
     if (_emailFilter === 'ongelezen') items = items.filter(e => !e.read);
+  } else if (_emailFolder === 'verwijderd') {
+    items = _trashMessages.map(m => ({
+      id: m.uid || m.seq,
+      aanEmail: m.from?.email || '',
+      aanNaam: m.from?.name || m.from?.email || '',
+      onderwerp: m.subject || '(geen onderwerp)',
+      body: m.body || '', datum: m.date || '', status: 'verwijderd', _isInbox: true,
+      read: true, _bodyLoaded: m._bodyLoaded || false,
+    }));
   } else {
     items = DB.emailLog.filter(e => {
       if (_emailFolder === 'verzonden') return e.status === 'verzonden';
@@ -123,9 +172,9 @@ function renderEmailPage() {
 
   items.sort((a, b) => new Date(b.datum) - new Date(a.datum));
 
-  // Geselecteerd item (loose equality omdat inbox-id's numbers zijn)
+  // Geselecteerd item (loose equality omdat IMAP-id's numbers zijn)
   let selected = null;
-  if (_emailFolder === 'inbox') {
+  if (_emailFolder === 'inbox' || _emailFolder === 'verwijderd') {
     selected = _emailSelected ? items.find(e => String(e.id) === String(_emailSelected)) : null;
   } else {
     selected = _emailSelected ? DB.emailLog.find(e => e.id === _emailSelected) : null;
@@ -157,6 +206,7 @@ function renderEmailPage() {
             ${renderFolder('inbox', 'Postvak IN', 'mail', _inboxMessages.filter(m => !m.read).length)}
             ${renderFolder('verzonden', 'Verzonden items', 'chevron', verzondenCount)}
             ${renderFolder('concepten', 'Concepten', 'edit', conceptCount)}
+            ${renderFolder('verwijderd', 'Verwijderde items', 'trash', 0)}
           ` : ''}
           ` : `
           <!-- Zonder IMAP: alleen CRM-mappen -->
@@ -189,11 +239,12 @@ function renderEmailPage() {
             <input type="text" placeholder="Zoeken..." value="${esc(_emailSearch)}" oninput="searchEmail(this.value)" style="padding-left:32px;font-size:12.5px;padding-top:6px;padding-bottom:6px"/>
           </div>
           ${_emailFolder === 'inbox' ? `<button class="btn btn-ghost btn-icon btn-sm" onclick="fetchInbox()" title="Vernieuwen">${svgIcon('settings', 15)}</button>` : ''}
+          ${_emailFolder === 'verwijderd' ? `<button class="btn btn-ghost btn-icon btn-sm" onclick="fetchTrash()" title="Vernieuwen">${svgIcon('settings', 15)}</button>` : ''}
         </div>
 
         <!-- Kolom-headers -->
         <div style="display:grid;grid-template-columns:1fr 1.5fr 140px;padding:8px 16px;border-bottom:1px solid rgba(30,45,74,0.14);background:rgba(30,45,74,0.045);font-size:10.5px;font-weight:700;text-transform:uppercase;letter-spacing:.6px;color:var(--navy3)">
-          <span>${_emailFolder === 'inbox' ? 'Van' : 'Aan'}</span>
+          <span>${(_emailFolder === 'inbox' || _emailFolder === 'verwijderd') ? 'Van' : 'Aan'}</span>
           <span>Onderwerp</span>
           <span style="text-align:right">Ontvangen</span>
         </div>
@@ -209,6 +260,16 @@ function renderEmailPage() {
             ? `<div style="text-align:center;padding:40px 20px;color:var(--s-rood)">
                 <p style="font-size:13px">${esc(_inboxError)}</p>
                 <button class="btn btn-secondary btn-sm" style="margin-top:12px" onclick="fetchInbox()">Opnieuw</button>
+              </div>`
+            : _emailFolder === 'verwijderd' && _trashLoading
+            ? `<div style="text-align:center;padding:40px 20px;color:var(--navy4)">
+                <div class="spinner" style="margin:0 auto 12px;width:28px;height:28px;border-width:2px"></div>
+                <p style="font-size:13px">Prullenbak laden...</p>
+              </div>`
+            : _emailFolder === 'verwijderd' && _trashError
+            ? `<div style="text-align:center;padding:40px 20px;color:var(--s-rood)">
+                <p style="font-size:13px">${esc(_trashError)}</p>
+                <button class="btn btn-secondary btn-sm" style="margin-top:12px" onclick="fetchTrash()">Opnieuw</button>
               </div>`
             : items.length === 0
             ? `<div style="text-align:center;padding:40px 20px;color:var(--navy4)">

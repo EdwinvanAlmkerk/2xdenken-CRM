@@ -284,12 +284,36 @@ class ImapClient {
 
   async select(folder: string): Promise<number> {
     const res = await this.command(`SELECT "${folder}"`);
+    const status = res[res.length - 1] || "";
+    if (/ (NO|BAD) /i.test(status)) {
+      throw new Error(`Kan map niet openen: ${folder}`);
+    }
     let total = 0;
     for (const line of res) {
       const m = line.match(/\*\s+(\d+)\s+EXISTS/);
       if (m) total = parseInt(m[1]);
     }
     return total;
+  }
+
+  // Probeer meerdere bekende Trash-map-namen (taal-afhankelijk bij Gmail)
+  async selectTrash(): Promise<{ folder: string; total: number }> {
+    const candidates = [
+      "[Gmail]/Trash",
+      "[Gmail]/Prullenbak",
+      "[Gmail]/Bin",
+      "Trash",
+      "Prullenbak",
+      "Deleted Messages",
+      "Deleted Items",
+    ];
+    for (const f of candidates) {
+      try {
+        const total = await this.select(f);
+        return { folder: f, total };
+      } catch { /* probeer volgende */ }
+    }
+    throw new Error("Geen Prullenbak-map gevonden op IMAP-server");
   }
 
   async fetchList(startSeq: number, endSeq: number): Promise<any[]> {
@@ -388,7 +412,11 @@ serve(async (req) => {
     // ── Enkel bericht ophalen met body ──
     if (uid) {
       console.log(`Fetching email UID ${uid} from ${folder}`);
-      await client.select(folder);
+      if (folder === "__trash__") {
+        await client.selectTrash();
+      } else {
+        await client.select(folder);
+      }
       const rawMessage = await client.fetchSingle(parseInt(uid));
       await client.logout();
 
@@ -421,7 +449,16 @@ serve(async (req) => {
 
     // ── Lijst ophalen ──
     console.log(`Fetching ${limit} emails from ${folder} via ${settings.imap_host}`);
-    const total = await client.select(folder);
+    let resolvedFolder = folder;
+    let total: number;
+    if (folder === "__trash__") {
+      const res = await client.selectTrash();
+      resolvedFolder = res.folder;
+      total = res.total;
+      console.log(`Trash resolved to: ${resolvedFolder}`);
+    } else {
+      total = await client.select(folder);
+    }
     let messages: any[] = [];
 
     if (total > 0) {
