@@ -65,6 +65,7 @@ function fromDB_agendaType(r) { return { id: r.id, naam: r.naam, kleur: r.kleur 
 function fromDB_emailTemplate(r) { return { id: r.id, naam: r.naam, onderwerp: r.onderwerp || '', body: r.body || '', categorie: r.categorie || 'algemeen', createdAt: r.created_at }; }
 function fromDB_emailLog(r) { return { id: r.id, templateId: r.template_id || '', schoolId: r.school_id || '', contactId: r.contact_id || '', factuurId: r.factuur_id || '', aanEmail: r.aan_email || '', aanNaam: r.aan_naam || '', onderwerp: r.onderwerp || '', body: r.body || '', status: r.status || 'verzonden', datum: r.datum }; }
 function fromDB_emailSettings(r) { return { id: r.id, imapHost: r.imap_host || '', imapPort: r.imap_port || 993, smtpHost: r.smtp_host || '', smtpPort: r.smtp_port || 587, emailUser: r.email_user || '', emailPass: r.email_pass || '', emailFrom: r.email_from || '', signature: r.signature || '', updatedAt: r.updated_at }; }
+function fromDB_caldavSettings(r) { return { id: r.id, appleId: r.apple_id || '', appPassword: r.app_password || '', serverUrl: r.server_url || 'https://caldav.icloud.com', calendarName: r.calendar_name || '', updatedAt: r.updated_at }; }
 
 // ── camelCase → snake_case for writes ────────────────────────────
 function toDB_bestuur(d)  { return { naam: d.naam, website: d.website || null, adres: d.adres || null }; }
@@ -80,7 +81,7 @@ function toDB_agenda(d)   { return { titel: d.titel, datum: d.datum, begin_tijd:
 async function loadAllData() {
   showLoading();
   try {
-    const [besturen, scholen, contacten, dossiers, facturen, trainingen, uitvoeringen, agenda, agendaTypes, emailTemplates, emailLog, emailSettingsArr] = await Promise.all([
+    const [besturen, scholen, contacten, dossiers, facturen, trainingen, uitvoeringen, agenda, agendaTypes, emailTemplates, emailLog, emailSettingsArr, caldavSettingsArr] = await Promise.all([
       supa('/rest/v1/besturen?select=*&order=naam'),
       supa('/rest/v1/scholen?select=*&order=naam'),
       supa('/rest/v1/contacten?select=*&order=naam'),
@@ -93,6 +94,7 @@ async function loadAllData() {
       supa('/rest/v1/email_templates?select=*&order=naam'),
       supa('/rest/v1/email_log?select=*&order=datum.desc'),
       supa('/rest/v1/email_settings?select=*&id=eq.main'),
+      supa('/rest/v1/caldav_settings?select=*&id=eq.main').catch(() => []),
     ]);
     DB.besturen     = (besturen || []).map(fromDB_bestuur);
     DB.scholen      = (scholen || []).map(fromDB_school);
@@ -106,6 +108,7 @@ async function loadAllData() {
     DB.emailTemplates = (emailTemplates || []).map(fromDB_emailTemplate);
     DB.emailLog       = (emailLog || []).map(fromDB_emailLog);
     DB.emailSettings  = (emailSettingsArr || []).map(fromDB_emailSettings)[0] || null;
+    DB.caldavSettings = (caldavSettingsArr || []).map(fromDB_caldavSettings)[0] || null;
   } catch (e) {
     showToast('Fout bij laden data: ' + e.message, 'error');
   } finally {
