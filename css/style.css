@@ -602,11 +602,11 @@ input:disabled, select:disabled { opacity: .5; cursor: not-allowed; }
   box-shadow: var(--sh);
 }
 .cal-header {
-  display: grid; border-bottom: 1px solid rgba(30,45,74,0.06);
+  display: grid; border-bottom: 1px solid rgba(30,45,74,0.42);
   background: rgba(255,255,255,0.5);
 }
 .cal-header-cell {
-  padding: 10px 6px; text-align: center; border-left: 1px solid rgba(30,45,74,0.04);
+  padding: 10px 6px; text-align: center; border-left: 1px solid rgba(30,45,74,0.38);
   font-size: 11px; font-weight: 600; text-transform: uppercase; letter-spacing: .5px; color: var(--muted);
 }
 .cal-header-cell:first-child { border-left: none; }
@@ -618,21 +618,22 @@ input:disabled, select:disabled { opacity: .5; cursor: not-allowed; }
   width: 32px; height: 32px; line-height: 32px; margin: 2px auto 0; display: block;
 }
 .cal-allday {
-  display: grid; border-bottom: 1px solid rgba(30,45,74,0.04); min-height: 28px;
+  display: grid; border-bottom: 1px solid rgba(30,45,74,0.42); min-height: 28px;
   background: rgba(255,255,255,0.5);
 }
-.cal-allday-cell { padding: 3px 4px; border-left: 1px solid rgba(30,45,74,0.04); font-size: 11px; }
+.cal-allday-cell { padding: 3px 4px; border-left: 1px solid rgba(30,45,74,0.38); font-size: 11px; }
 .cal-allday-cell:first-child { border-left: none; }
-.cal-body-scroll { overflow-y: auto; max-height: calc(100vh - 260px); position: relative; }
+.cal-body-scroll { overflow-y: auto; max-height: calc(100vh - 260px); position: relative; padding-top: 10px; }
 .cal-body { display: grid; position: relative; }
-.cal-time-col { border-right: 1px solid rgba(30,45,74,0.06); }
+.cal-time-col { border-right: 1px solid rgba(30,45,74,0.42); }
 .cal-time-label {
   height: 60px; padding: 0 8px; font-size: 10px; font-weight: 600;
   color: var(--muted); text-align: right; position: relative; top: -7px;
 }
-.cal-day-col { position: relative; border-left: 1px solid rgba(30,45,74,0.06); }
-.cal-hour-line { height: 60px; border-bottom: 1px solid rgba(30,45,74,0.05); }
-.cal-hour-line-half { position: absolute; left: 0; right: 0; border-bottom: 1px dashed rgba(30,45,74,0.04); }
+.cal-time-label:first-child { top: 0; }
+.cal-day-col { position: relative; border-left: 1px solid rgba(30,45,74,0.42); }
+.cal-hour-line { height: 60px; border-bottom: 1px solid rgba(30,45,74,0.38); }
+.cal-hour-line-half { position: absolute; left: 0; right: 0; border-bottom: 1px dashed rgba(30,45,74,0.26); }
 .cal-now-line {
   position: absolute; left: 0; right: 0; height: 2px; background: var(--accent);
   z-index: 5; pointer-events: none;
