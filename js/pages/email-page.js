@@ -101,6 +101,47 @@ async function markMailSeen(uid, seen, imapFolder = 'INBOX') {
   if (!res.ok || data.error) throw new Error(data.error || `HTTP ${res.status}`);
 }
 
+// Verwijder een IMAP bericht: vanuit inbox → naar Trash, vanuit Trash → permanent
+async function deleteMail(uid) {
+  const isTrash = _emailFolder === 'verwijderd';
+  const confirmMsg = isTrash
+    ? 'Dit bericht wordt permanent verwijderd. Doorgaan?'
+    : 'Dit bericht verplaatsen naar Verwijderde items?';
+  if (!confirm(confirmMsg)) return;
+
+  const sourceArr = isTrash ? _trashMessages : _inboxMessages;
+  const imapFolder = isTrash ? '__trash__' : 'INBOX';
+  const idx = sourceArr.findIndex(m => (m.uid || m.seq) == uid);
+  if (idx === -1) return;
+
+  // Optimistisch: verwijder lokaal, sluit detailvenster
+  const removed = sourceArr.splice(idx, 1)[0];
+  _emailSelected = null;
+  _saveMailCache(isTrash ? TRASH_CACHE_KEY : INBOX_CACHE_KEY, sourceArr);
+  renderContent();
+
+  try {
+    const res = await fetch(`${SUPA_URL}/functions/v1/fetch-emails?action=delete&folder=${encodeURIComponent(imapFolder)}&uid=${uid}`, {
+      headers: {
+        'apikey': SUPA_KEY,
+        'Authorization': `Bearer ${currentSession?.access_token || SUPA_KEY}`,
+      },
+    });
+    const data = await res.json().catch(() => ({}));
+    if (!res.ok || data.error) throw new Error(data.error || `HTTP ${res.status}`);
+    // Als we uit de inbox verwijderden, is de trash-cache nu verouderd — forceer refresh bij volgende opening
+    if (!isTrash) {
+      _trashFetchedOnce = false;
+    }
+  } catch (e) {
+    // Rollback
+    sourceArr.splice(idx, 0, removed);
+    _saveMailCache(isTrash ? TRASH_CACHE_KEY : INBOX_CACHE_KEY, sourceArr);
+    alert('Verwijderen mislukt: ' + e.message);
+    renderContent();
+  }
+}
+
 // Toggle-functie voor de "Markeer als ongelezen/gelezen" knop in de detailweergave
 async function toggleMailRead(uid) {
   const isTrash = _emailFolder === 'verwijderd';
@@ -417,6 +458,7 @@ function renderEmailDetail(e) {
               ? `<button class="btn btn-primary btn-sm" onclick="openEmailFromDraft('${e.id}')">${svgIcon('edit', 12)} Bewerken</button>`
               : `<button class="btn btn-secondary btn-sm" onclick="forwardEmail('${e.id}')">${svgIcon('chevron', 12)} Doorsturen</button>`}
           ${isInbox && _emailFolder === 'inbox' ? `<button class="btn btn-secondary btn-sm" onclick="toggleMailRead('${e.id}')" title="${e.read ? 'Markeer als ongelezen' : 'Markeer als gelezen'}">${svgIcon('mail', 12)} ${e.read ? 'Markeer ongelezen' : 'Markeer gelezen'}</button>` : ''}
+          ${isInbox ? `<button class="btn btn-ghost btn-icon btn-sm" title="${_emailFolder === 'verwijderd' ? 'Permanent verwijderen' : 'Verwijderen (naar prullenbak)'}" onclick="deleteMail('${e.id}')" style="color:var(--s-rood)">${svgIcon('trash', 13)}</button>` : ''}
           ${!isInbox ? `<button class="btn btn-ghost btn-icon btn-sm" title="Verwijderen" onclick="delEmailLog('${e.id}')" style="color:var(--s-rood)">${svgIcon('trash', 13)}</button>` : ''}
         </div>
       </div>

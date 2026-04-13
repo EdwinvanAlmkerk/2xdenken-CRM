@@ -306,6 +306,53 @@ class ImapClient {
     }
   }
 
+  // Verplaats bericht naar target folder via UID MOVE (IMAP MOVE extension)
+  async moveMessage(uid: number, targetFolder: string): Promise<void> {
+    const res = await this.command(`UID MOVE ${uid} "${targetFolder}"`);
+    const status = res[res.length - 1] || "";
+    if (/ (NO|BAD) /i.test(status)) {
+      throw new Error(`MOVE mislukt voor UID ${uid} naar ${targetFolder}: ${status.trim()}`);
+    }
+  }
+
+  // Permanent verwijderen: STORE \Deleted + UID EXPUNGE (UIDPLUS)
+  async expungeMessage(uid: number): Promise<void> {
+    await this.setFlag(uid, "\\Deleted", true);
+    // Probeer UID EXPUNGE (UIDPLUS), val terug op EXPUNGE
+    let res = await this.command(`UID EXPUNGE ${uid}`);
+    let status = res[res.length - 1] || "";
+    if (/ (NO|BAD) /i.test(status)) {
+      res = await this.command(`EXPUNGE`);
+      status = res[res.length - 1] || "";
+      if (/ (NO|BAD) /i.test(status)) {
+        throw new Error(`EXPUNGE mislukt: ${status.trim()}`);
+      }
+    }
+  }
+
+  // Zoek de Trash-map naam via LIST (special-use flag \Trash)
+  async findTrashFolder(): Promise<string> {
+    const res = await this.command(`LIST "" "*"`);
+    // Zoek eerst op \Trash special-use flag
+    for (const line of res) {
+      if (line.startsWith("* LIST") && /\\Trash/i.test(line)) {
+        const quoted = line.match(/"([^"]*)"/g);
+        if (quoted && quoted.length >= 2) {
+          return quoted[quoted.length - 1].replace(/^"|"$/g, "");
+        }
+      }
+    }
+    // Fallback: bekende namen
+    const candidates = [
+      "[Gmail]/Trash", "[Gmail]/Prullenbak", "[Gmail]/Bin",
+      "Trash", "Prullenbak", "Deleted Messages", "Deleted Items",
+    ];
+    for (const c of candidates) {
+      if (res.some(l => l.includes(`"${c}"`))) return c;
+    }
+    throw new Error("Geen Prullenbak-map gevonden op IMAP-server");
+  }
+
   // Probeer meerdere bekende Trash-map-namen (taal-afhankelijk bij Gmail)
   async selectTrash(): Promise<{ folder: string; total: number }> {
     const candidates = [
@@ -431,6 +478,24 @@ serve(async (req) => {
         await client.select(folder);
       }
       await client.setFlag(parseInt(uid), "\\Seen", add);
+      await client.logout();
+      return new Response(JSON.stringify({ ok: true }), {
+        headers: { ...corsHeaders, "Content-Type": "application/json" },
+      });
+    }
+
+    // ── Verwijderen: inbox → verplaats naar Trash, trash → permanent delete ──
+    if (action === "delete" && uid) {
+      if (folder === "__trash__") {
+        console.log(`Permanent deleting UID ${uid} from trash`);
+        await client.selectTrash();
+        await client.expungeMessage(parseInt(uid));
+      } else {
+        console.log(`Moving UID ${uid} from ${folder} to trash`);
+        const trashFolder = await client.findTrashFolder();
+        await client.select(folder);
+        await client.moveMessage(parseInt(uid), trashFolder);
+      }
       await client.logout();
       return new Response(JSON.stringify({ ok: true }), {
         headers: { ...corsHeaders, "Content-Type": "application/json" },
