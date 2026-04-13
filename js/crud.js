@@ -512,6 +512,47 @@ async function saveEmailSettings() {
   } catch (e) { showToast('Fout: ' + e.message, 'error'); } finally { hideLoading(); }
 }
 
+// ── Outlook (.ics feed) instellingen ─────────────────────────────
+async function saveOutlookSettings() {
+  const data = {
+    ics_url: document.getElementById('f-outlook-url').value.trim(),
+    days_past: parseInt(document.getElementById('f-outlook-past').value) || 30,
+    days_future: parseInt(document.getElementById('f-outlook-future').value) || 180,
+    updated_at: new Date().toISOString(),
+  };
+  if (!data.ics_url) return alert('Vul de Outlook ICS URL in');
+  if (!/^https?:\/\/|^webcal:\/\//i.test(data.ics_url)) return alert('URL moet beginnen met https:// of webcal://');
+  showLoading();
+  try {
+    await supa('/rest/v1/outlook_settings?id=eq.main', { method: 'PATCH', body: JSON.stringify(data) });
+    DB.outlookSettings = fromDB_outlookSettings({ id: 'main', ...data });
+    try { localStorage.removeItem('_crm_outlook_cache_v1'); } catch {}
+    if (typeof _outlookFetchedOnce !== 'undefined') _outlookFetchedOnce = false;
+    showToast('Outlook-instellingen opgeslagen', 'success');
+    renderContent();
+  } catch (e) { showToast('Fout: ' + e.message, 'error'); } finally { hideLoading(); }
+}
+
+async function testOutlookConnection() {
+  showLoading();
+  try {
+    const res = await fetch(`${SUPA_URL}/functions/v1/fetch-outlook-ics?test=true`, {
+      headers: {
+        'apikey': SUPA_KEY,
+        'Authorization': `Bearer ${currentSession?.access_token || SUPA_KEY}`,
+      },
+    });
+    const data = await res.json();
+    if (!res.ok || data.error) throw new Error(data.error || `HTTP ${res.status}`);
+    showToast(`Verbonden! ${data.totalEvents} events in feed (${data.calendarName})`, 'success');
+    const fresh = await supa('/rest/v1/outlook_settings?select=*&id=eq.main');
+    DB.outlookSettings = (fresh || []).map(fromDB_outlookSettings)[0] || null;
+    renderContent();
+  } catch (e) {
+    showToast('Verbinding mislukt: ' + e.message, 'error');
+  } finally { hideLoading(); }
+}
+
 // ── EMAIL TEMPLATES ──────────────────────────────────────────────
 async function saveEmailTemplate(id) {
   const naam = document.getElementById('f-tpl-naam').value.trim();

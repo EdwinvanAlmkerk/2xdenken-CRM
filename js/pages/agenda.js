@@ -6,6 +6,84 @@ let _agendaDate   = new Date();
 let _agendaFilter = 'komend';
 let _agendaSearch = '';
 
+// ── Outlook agenda sync state ───────────────────────────────────
+let _outlookEvents = [];
+let _outlookLoading = false;
+let _outlookError = '';
+let _outlookFetchedOnce = false;
+const OUTLOOK_CACHE_KEY = '_crm_outlook_cache_v1';
+
+function _loadOutlookCache() {
+  try {
+    const raw = localStorage.getItem(OUTLOOK_CACHE_KEY);
+    if (!raw) return null;
+    const parsed = JSON.parse(raw);
+    return Array.isArray(parsed) ? parsed : null;
+  } catch { return null; }
+}
+function _saveOutlookCache(events) {
+  try { localStorage.setItem(OUTLOOK_CACHE_KEY, JSON.stringify(events)); } catch {}
+}
+
+async function fetchOutlookEvents() {
+  if (!DB.outlookSettings?.icsUrl) {
+    _outlookFetchedOnce = true;
+    return;
+  }
+  _outlookLoading = true; _outlookError = '';
+  try {
+    const res = await fetch(`${SUPA_URL}/functions/v1/fetch-outlook-ics`, {
+      headers: {
+        'apikey': SUPA_KEY,
+        'Authorization': `Bearer ${currentSession?.access_token || SUPA_KEY}`,
+      },
+    });
+    const data = await res.json();
+    if (!res.ok || data.error) throw new Error(data.error || `HTTP ${res.status}`);
+    _outlookEvents = (data.events || []).map(outlookEventToAgendaItem).filter(Boolean);
+    _saveOutlookCache(_outlookEvents);
+  } catch (e) {
+    _outlookError = e.message;
+    console.error('Outlook fetch mislukt:', e);
+  }
+  _outlookLoading = false;
+  _outlookFetchedOnce = true;
+  renderContent();
+}
+
+function outlookEventToAgendaItem(ev) {
+  if (!ev.start) return null;
+  let datum, beginTijd = '', eindTijd = '';
+  if (ev.allDay) {
+    datum = ev.start;
+  } else {
+    const d = new Date(ev.start);
+    if (isNaN(d.getTime())) return null;
+    datum = `${d.getFullYear()}-${String(d.getMonth()+1).padStart(2,'0')}-${String(d.getDate()).padStart(2,'0')}`;
+    beginTijd = `${String(d.getHours()).padStart(2,'0')}:${String(d.getMinutes()).padStart(2,'0')}`;
+    if (ev.end) {
+      const de = new Date(ev.end);
+      if (!isNaN(de.getTime())) {
+        eindTijd = `${String(de.getHours()).padStart(2,'0')}:${String(de.getMinutes()).padStart(2,'0')}`;
+      }
+    }
+  }
+  return {
+    id: 'outlook:' + ev.uid,
+    titel: ev.summary || '(geen titel)',
+    datum,
+    beginTijd,
+    eindTijd,
+    type: '__outlook__',
+    schoolId: '',
+    contactId: '',
+    bestuurId: '',
+    locatie: ev.location || '',
+    notitie: ev.description || '',
+    _isOutlook: true,
+  };
+}
+
 // Kleur-mapping: kleur-id → badge CSS class + event CSS class
 const AGENDA_KLEUREN = {
   navy:   { badge: 'badge-beslisser',   event: 'cal-event-afspraak' },
@@ -33,9 +111,24 @@ function agendaBadge(type) {
 }
 
 function agendaEventClass(type) {
+  if (type === '__outlook__') return 'cal-event-outlook';
   const t = getAgendaType(type);
   const k = AGENDA_KLEUREN[t.kleur] || AGENDA_KLEUREN.navy;
   return k.event;
+}
+
+// Click-handler voor agenda items: Outlook events zijn read-only
+function openAgendaItem(id) {
+  if (String(id).startsWith('outlook:')) {
+    const ev = _outlookEvents.find(e => e.id === id);
+    if (!ev) return;
+    const tijd = ev.beginTijd ? ` om ${ev.beginTijd}${ev.eindTijd ? ' – ' + ev.eindTijd : ''}` : ' (hele dag)';
+    const locatie = ev.locatie ? `\nLocatie: ${ev.locatie}` : '';
+    const notitie = ev.notitie ? `\n\n${ev.notitie}` : '';
+    alert(`📅 ${ev.titel}\n${ev.datum}${tijd}${locatie}${notitie}\n\n(Outlook agenda — alleen lezen)`);
+    return;
+  }
+  openAgendaModal(id);
 }
 
 function fmtTijd(t) {
@@ -123,12 +216,16 @@ function filterAgenda(v) { _agendaFilter = v; renderContent(); }
 
 // ── Items ophalen voor een datumreeks ────────────────────────────
 function getItemsForDate(iso) {
-  return DB.agenda.filter(a => a.datum === iso)
+  const crm = DB.agenda.filter(a => a.datum === iso);
+  const outlook = _outlookEvents.filter(a => a.datum === iso);
+  return [...crm, ...outlook]
     .sort((a, b) => (a.beginTijd || '').localeCompare(b.beginTijd || ''));
 }
 
 function getItemsForRange(startIso, endIso) {
-  return DB.agenda.filter(a => a.datum >= startIso && a.datum <= endIso);
+  const crm = DB.agenda.filter(a => a.datum >= startIso && a.datum <= endIso);
+  const outlook = _outlookEvents.filter(a => a.datum >= startIso && a.datum <= endIso);
+  return [...crm, ...outlook];
 }
 
 // ── Tijd → pixel positie ─────────────────────────────────────────
@@ -144,6 +241,15 @@ function minutesToPx(m) {
 
 // ── Hoofd render ─────────────────────────────────────────────────
 function renderAgendaPage() {
+  // Outlook: eerste keer laden uit cache + achtergrond fetch
+  if (DB.outlookSettings?.icsUrl && !_outlookFetchedOnce && !_outlookLoading) {
+    if (_outlookEvents.length === 0) {
+      const cached = _loadOutlookCache();
+      if (cached) _outlookEvents = cached;
+    }
+    fetchOutlookEvents();
+  }
+
   if (_agendaView === 'lijst') return renderAgendaList();
 
   // Toolbar: titel berekenen
@@ -221,7 +327,7 @@ function renderWeekView() {
       const iso = dateStr(d);
       const items = getItemsForDate(iso).filter(a => !a.beginTijd);
       return `<div class="cal-allday-cell">
-        ${items.map(a => `<div class="cal-month-event ${agendaEventClass(a.type)}" onclick="openAgendaModal('${a.id}')" title="${esc(a.titel)}">${esc(a.titel)}</div>`).join('')}
+        ${items.map(a => `<div class="cal-month-event ${agendaEventClass(a.type)}" onclick="openAgendaItem('${a.id}')" title="${esc(a.titel)}">${esc(a.titel)}</div>`).join('')}
       </div>`;
     }).join('')}
   </div>`;
@@ -247,7 +353,7 @@ function renderWeekView() {
       const height = Math.max(((endMin - startMin) / 60) * 60, 20);
       const school = a.schoolId ? DB.scholen.find(s => s.id === a.schoolId) : null;
       const meta = [fmtTijd(a.beginTijd), a.locatie, school?.naam].filter(Boolean).join(' · ');
-      return `<div class="cal-event ${agendaEventClass(a.type)}" style="top:${top}px;height:${height}px" onclick="openAgendaModal('${a.id}')" title="${esc(a.titel)}">
+      return `<div class="cal-event ${agendaEventClass(a.type)}" style="top:${top}px;height:${height}px" onclick="openAgendaItem('${a.id}')" title="${esc(a.titel)}">
         <div class="cal-event-title">${esc(a.titel)}</div>
         ${height > 28 ? `<div class="cal-event-meta">${esc(meta)}</div>` : ''}
       </div>`;
@@ -317,7 +423,7 @@ function renderDayView() {
     const height = Math.max(((endMin - startMin) / 60) * 60, 20);
     const school = a.schoolId ? DB.scholen.find(s => s.id === a.schoolId) : null;
     const meta = [fmtTijd(a.beginTijd) + (a.eindTijd ? ` – ${fmtTijd(a.eindTijd)}` : ''), a.locatie, school?.naam].filter(Boolean).join(' · ');
-    return `<div class="cal-event ${agendaEventClass(a.type)}" style="top:${top}px;height:${height}px;right:20%" onclick="openAgendaModal('${a.id}')">
+    return `<div class="cal-event ${agendaEventClass(a.type)}" style="top:${top}px;height:${height}px;right:20%" onclick="openAgendaItem('${a.id}')">
       <div class="cal-event-title">${esc(a.titel)}</div>
       ${height > 28 ? `<div class="cal-event-meta">${esc(meta)}</div>` : ''}
     </div>`;
@@ -336,7 +442,7 @@ function renderDayView() {
   const allday = alldayItems.length > 0 ? `
     <div style="padding:8px 16px 8px 72px;background:var(--bg2);border-bottom:1px solid var(--bg3);font-size:12px">
       <span style="color:var(--navy4);font-weight:700;margin-right:8px">Hele dag:</span>
-      ${alldayItems.map(a => `<span class="cal-month-event ${agendaEventClass(a.type)}" style="display:inline-block;margin-right:6px" onclick="openAgendaModal('${a.id}')">${esc(a.titel)}</span>`).join('')}
+      ${alldayItems.map(a => `<span class="cal-month-event ${agendaEventClass(a.type)}" style="display:inline-block;margin-right:6px" onclick="openAgendaItem('${a.id}')">${esc(a.titel)}</span>`).join('')}
     </div>` : '';
 
   const totalHeight = (CAL_END_HOUR - CAL_START_HOUR) * 60;
@@ -393,7 +499,7 @@ function renderMonthView() {
 
     dayCells += `<div class="cal-month-day${isOther ? ' cal-other' : ''}${isToday ? ' cal-today' : ''}" onclick="_agendaDate=new Date('${iso}');setAgendaView('dag')">
       <div class="cal-month-num">${current.getDate()}</div>
-      ${dayItems.map(a => `<div class="cal-month-event ${agendaEventClass(a.type)}" onclick="event.stopPropagation();openAgendaModal('${a.id}')" title="${esc(a.titel)}">
+      ${dayItems.map(a => `<div class="cal-month-event ${agendaEventClass(a.type)}" onclick="event.stopPropagation();openAgendaItem('${a.id}')" title="${esc(a.titel)}">
         ${a.beginTijd ? fmtTijd(a.beginTijd) + ' ' : ''}${esc(a.titel)}
       </div>`).join('')}
       ${totalItems > 3 ? `<div class="cal-month-more" onclick="event.stopPropagation();_agendaDate=new Date('${iso}');setAgendaView('dag')">+${totalItems - 3} meer</div>` : ''}

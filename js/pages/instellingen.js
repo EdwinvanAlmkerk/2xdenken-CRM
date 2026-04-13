@@ -97,6 +97,40 @@ function renderInstellingen() {
       </div>
 
       <div class="card">
+        <div class="card-header"><h3>${svgIcon('calendar', 16)} Outlook Agenda (gepubliceerde feed)</h3></div>
+        <div class="card-body">
+          ${DB.outlookSettings?.icsUrl ? `<div style="margin-bottom:16px;padding:10px 14px;background:var(--s-groen-s);border:1px solid rgba(22,163,74,0.2);border-radius:var(--r);font-size:13px;color:var(--groen);display:flex;align-items:center;gap:8px">
+            ${svgIcon('lightning', 14)} Gekoppeld${DB.outlookSettings.calendarName ? ` — kalender: <strong>${esc(DB.outlookSettings.calendarName)}</strong>` : ''}
+          </div>` : `<div style="margin-bottom:16px;padding:10px 14px;background:var(--s-goud-s);border:1px solid rgba(217,119,6,0.2);border-radius:var(--r);font-size:13px;color:var(--geel);display:flex;align-items:center;gap:8px">
+            ${svgIcon('lightning', 14)} Nog niet geconfigureerd — plak de gepubliceerde ICS-URL uit Outlook hieronder
+          </div>`}
+          <div class="form-group">
+            <label>Outlook ICS URL *</label>
+            <input type="url" id="f-outlook-url" value="${esc(DB.outlookSettings?.icsUrl || '')}" placeholder="https://outlook.live.com/owa/calendar/.../calendar.ics"/>
+          </div>
+          <div class="form-row">
+            <div class="form-group"><label>Dagen terug tonen</label><input type="number" inputmode="numeric" id="f-outlook-past" value="${DB.outlookSettings?.daysPast ?? 30}" min="0" max="3650"/></div>
+            <div class="form-group"><label>Dagen vooruit tonen</label><input type="number" inputmode="numeric" id="f-outlook-future" value="${DB.outlookSettings?.daysFuture ?? 180}" min="0" max="3650"/></div>
+          </div>
+          <div style="display:flex;gap:8px;margin-top:8px">
+            <button class="btn btn-primary" onclick="saveOutlookSettings()">${svgIcon('settings', 14)} Opslaan</button>
+            ${DB.outlookSettings?.icsUrl ? `<button class="btn btn-secondary" onclick="testOutlookConnection()">${svgIcon('lightning', 14)} Test verbinding</button>` : ''}
+          </div>
+          <div style="margin-top:14px;font-size:11.5px;color:var(--navy4);line-height:1.6">
+            <strong>ICS-URL ophalen in Outlook:</strong>
+            <ol style="margin:6px 0 0 18px;padding:0">
+              <li>Ga naar <a href="https://outlook.live.com" target="_blank" style="color:var(--accent)">outlook.live.com</a> of <a href="https://outlook.office.com" target="_blank" style="color:var(--accent)">outlook.office.com</a> → Agenda</li>
+              <li>Tandwiel rechtsboven → <em>Alle Outlook-instellingen weergeven</em> → <em>Agenda</em> → <em>Gedeelde agenda's</em></li>
+              <li>Onder "Een agenda publiceren": kies je agenda, selecteer <em>Alle details bekijken</em>, klik <em>Publiceren</em></li>
+              <li>Kopieer de <strong>ICS-link</strong> (eindigt op <code>.ics</code>) en plak hier</li>
+            </ol>
+            <br>
+            <strong>Beperkingen:</strong> Outlook ververst de gepubliceerde feed ongeveer elk uur, dus nieuwe afspraken kunnen een tijdje duren voor ze in de CRM verschijnen. Herhalende afspraken worden alleen op de originele datum getoond (geen RRULE expansion).
+          </div>
+        </div>
+      </div>
+
+      <div class="card">
         <div class="card-header"><h3>${svgIcon('invoice', 16)} Facturen</h3></div>
         <div class="card-body" style="display:flex;flex-direction:column;gap:0">
 
