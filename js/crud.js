@@ -520,7 +520,7 @@ async function saveOutlookSettings() {
     days_future: parseInt(document.getElementById('f-outlook-future').value) || 180,
     updated_at: new Date().toISOString(),
   };
-  if (!data.ics_url) return alert('Vul de Outlook ICS URL in');
+  if (!data.ics_url) return alert('Vul de ICS URL in');
   if (!/^https?:\/\/|^webcal:\/\//i.test(data.ics_url)) return alert('URL moet beginnen met https:// of webcal://');
   showLoading();
   try {
@@ -528,7 +528,7 @@ async function saveOutlookSettings() {
     DB.outlookSettings = fromDB_outlookSettings({ id: 'main', ...data });
     try { localStorage.removeItem('_crm_outlook_cache_v1'); } catch {}
     if (typeof _outlookFetchedOnce !== 'undefined') _outlookFetchedOnce = false;
-    showToast('Outlook-instellingen opgeslagen', 'success');
+    showToast('Agenda-instellingen opgeslagen', 'success');
     renderContent();
   } catch (e) { showToast('Fout: ' + e.message, 'error'); } finally { hideLoading(); }
 }

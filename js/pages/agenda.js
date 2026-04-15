@@ -125,7 +125,7 @@ function openAgendaItem(id) {
     const tijd = ev.beginTijd ? ` om ${ev.beginTijd}${ev.eindTijd ? ' – ' + ev.eindTijd : ''}` : ' (hele dag)';
     const locatie = ev.locatie ? `\nLocatie: ${ev.locatie}` : '';
     const notitie = ev.notitie ? `\n\n${ev.notitie}` : '';
-    alert(`📅 ${ev.titel}\n${ev.datum}${tijd}${locatie}${notitie}\n\n(Outlook agenda — alleen lezen)`);
+    alert(`📅 ${ev.titel}\n${ev.datum}${tijd}${locatie}${notitie}\n\n(Externe agenda — alleen lezen)`);
     return;
   }
   openAgendaModal(id);
@@ -291,6 +291,9 @@ function renderAgendaPage() {
           ${viewBtn('maand', 'Maand', 'calendar')}
           ${viewBtn('lijst', 'Lijst', 'list')}
         </div>
+        <button class="btn btn-secondary btn-sm" onclick="openAgendaExportModal()">
+          ${svgIcon('download', 14)} Export
+        </button>
         <button class="btn btn-primary btn-sm" onclick="openAgendaModal()">
           ${svgIcon('add', 14)} Nieuw
         </button>
@@ -566,6 +569,9 @@ function renderAgendaList() {
           ${viewBtn('maand', 'Maand', 'calendar')}
           ${viewBtn('lijst', 'Lijst', 'list')}
         </div>
+        <button class="btn btn-secondary btn-sm" onclick="openAgendaExportModal()">
+          ${svgIcon('download', 14)} Export
+        </button>
         <button class="btn btn-primary btn-sm" onclick="openAgendaModal()">
           ${svgIcon('add', 14)} Nieuw
         </button>
@@ -715,4 +721,115 @@ function openAgendaModal(id = '', prefillDate = '', prefillSchoolId = '', prefil
     `<button class="btn btn-secondary" onclick="closeModal()">Annuleren</button>
      ${a ? `<button class="btn" style="background:#FDE8E8;color:#C0392B;font-weight:700" onclick="delAgenda('${id}')">Verwijderen</button>` : ''}
      <button class="btn btn-primary" onclick="saveAgenda('${id}')">${a ? 'Opslaan' : 'Toevoegen'}</button>`);
+}
+
+// ═══════════════════════════════════════════════════════════════
+// EXCEL EXPORT — periode kiezen, afspraken + totaal uren
+// ═══════════════════════════════════════════════════════════════
+function openAgendaExportModal() {
+  const now = new Date();
+  const first = `${now.getFullYear()}-${String(now.getMonth()+1).padStart(2,'0')}-01`;
+  const lastD = new Date(now.getFullYear(), now.getMonth()+1, 0);
+  const last  = `${lastD.getFullYear()}-${String(lastD.getMonth()+1).padStart(2,'0')}-${String(lastD.getDate()).padStart(2,'0')}`;
+  const hasExtern = !!(DB.outlookSettings?.icsUrl && _outlookEvents.length);
+  showModal('Agenda exporteren naar Excel',
+    `<div class="form-row">
+       <div class="form-group"><label>Van</label><input type="date" id="f-export-van" value="${first}"/></div>
+       <div class="form-group"><label>Tot en met</label><input type="date" id="f-export-tot" value="${last}"/></div>
+     </div>
+     ${hasExtern ? `<div class="form-group" style="display:flex;align-items:center;gap:8px;margin-top:4px">
+       <input type="checkbox" id="f-export-extern" checked style="width:auto;margin:0"/>
+       <label for="f-export-extern" style="margin:0;cursor:pointer;font-weight:500">Externe agenda (iCloud/Outlook) meenemen</label>
+     </div>` : ''}
+     <div style="font-size:12px;color:var(--navy4);margin-top:10px;line-height:1.5">De export bevat alle afspraken in het gekozen bereik, gesorteerd op datum en begintijd, met onderaan een totaalregel van de geplande uren.</div>`,
+    `<button class="btn btn-secondary" onclick="closeModal()">Annuleren</button>
+     <button class="btn btn-primary" onclick="exportAgendaExcel()">${svgIcon('download', 14)} Exporteer</button>`);
+}
+
+function _exportDatumNL(iso) {
+  if (!iso || iso.length < 10) return iso || '';
+  return `${iso.slice(8,10)}-${iso.slice(5,7)}-${iso.slice(0,4)}`;
+}
+
+function exportAgendaExcel() {
+  if (typeof XLSX === 'undefined') {
+    alert('Excel-bibliotheek kon niet geladen worden. Controleer je internetverbinding en probeer het opnieuw.');
+    return;
+  }
+  const van = document.getElementById('f-export-van')?.value;
+  const tot = document.getElementById('f-export-tot')?.value;
+  if (!van || !tot) { alert('Vul zowel Van als Tot in.'); return; }
+  if (van > tot)    { alert('De Van-datum mag niet na de Tot-datum liggen.'); return; }
+  const inclExtern = document.getElementById('f-export-extern')?.checked || false;
+
+  const crmItems = DB.agenda
+    .filter(a => a.datum >= van && a.datum <= tot)
+    .map(a => ({ ...a, _bron: 'CRM' }));
+  const externItems = inclExtern
+    ? _outlookEvents.filter(a => a.datum >= van && a.datum <= tot).map(a => ({ ...a, _bron: 'Extern' }))
+    : [];
+  const items = [...crmItems, ...externItems].sort((a, b) =>
+    a.datum.localeCompare(b.datum) || (a.beginTijd || '').localeCompare(b.beginTijd || ''));
+
+  if (items.length === 0) {
+    alert('Geen afspraken gevonden in het gekozen bereik.');
+    return;
+  }
+
+  const dagNamen = ['Zo', 'Ma', 'Di', 'Wo', 'Do', 'Vr', 'Za'];
+  const header = ['Datum', 'Dag', 'Begin', 'Einde', 'Duur (uur)', 'Titel', 'Type', 'School', 'Bestuur', 'Contact', 'Locatie', 'Notitie', 'Bron'];
+  const rows = [header];
+  let totaalMin = 0;
+
+  for (const a of items) {
+    const d = new Date(a.datum);
+    const dagLabel = isNaN(d.getTime()) ? '' : dagNamen[d.getDay()];
+    const durMin = (a.beginTijd && a.eindTijd)
+      ? Math.max(0, timeToMinutes(a.eindTijd) - timeToMinutes(a.beginTijd))
+      : 0;
+    totaalMin += durMin;
+    const school  = a.schoolId  ? DB.scholen.find(s => s.id === a.schoolId)   : null;
+    const bestuur = a.bestuurId ? DB.besturen.find(b => b.id === a.bestuurId) : null;
+    const contact = a.contactId ? DB.contacten.find(c => c.id === a.contactId) : null;
+    const typeLabel = a._bron === 'Extern'
+      ? 'Externe agenda'
+      : (getAgendaType(a.type).naam || a.type || '');
+    rows.push([
+      _exportDatumNL(a.datum),
+      dagLabel,
+      a.beginTijd || '',
+      a.eindTijd || '',
+      durMin / 60,
+      a.titel || '',
+      typeLabel,
+      school?.naam || '',
+      bestuur?.naam || '',
+      contact?.naam || '',
+      a.locatie || '',
+      (a.notitie || '').replace(/\s+/g, ' ').trim(),
+      a._bron,
+    ]);
+  }
+  rows.push([]);
+  rows.push(['', '', '', 'Totaal:', totaalMin / 60, `${items.length} afspraken`, '', '', '', '', '', '', '']);
+
+  const ws = XLSX.utils.aoa_to_sheet(rows);
+  ws['!cols'] = [
+    { wch: 11 }, { wch: 5 }, { wch: 7 }, { wch: 7 }, { wch: 11 },
+    { wch: 40 }, { wch: 18 }, { wch: 26 }, { wch: 26 }, { wch: 22 },
+    { wch: 26 }, { wch: 40 }, { wch: 9 },
+  ];
+  const lastRow = rows.length;
+  for (let r = 2; r <= lastRow; r++) {
+    const cell = ws[XLSX.utils.encode_cell({ r: r - 1, c: 4 })];
+    if (cell && typeof cell.v === 'number') cell.z = '0.00';
+  }
+
+  const wb = XLSX.utils.book_new();
+  XLSX.utils.book_append_sheet(wb, ws, 'Agenda');
+  XLSX.writeFile(wb, `agenda-export_${van}_tot_${tot}.xlsx`);
+
+  closeModal();
+  const uurStr = (totaalMin / 60).toFixed(2).replace('.', ',');
+  showToast(`Export gelukt: ${items.length} afspraken · ${uurStr} uur`, 'success');
 }
