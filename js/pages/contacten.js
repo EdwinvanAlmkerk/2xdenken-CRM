@@ -84,6 +84,7 @@ function renderContactDetail(schoolId, contactId) {
   const agendaItems = DB.agenda.filter(a => a.contactId === contactId).sort((a, b) => a.datum.localeCompare(b.datum) || (a.beginTijd || '').localeCompare(b.beginTijd || ''));
   const vandaag = new Date().toISOString().slice(0, 10);
   const komendeAfspraken = agendaItems.filter(a => a.datum >= vandaag);
+  const uitvoeringen = [...(DB.uitvoeringen || []).filter(u => u.contactId === contactId)].sort((a, b) => new Date(b.datum) - new Date(a.datum));
 
   return `
     <div class="breadcrumb">
@@ -120,7 +121,7 @@ function renderContactDetail(schoolId, contactId) {
         <div class="card-header"><h3>Snel overzicht</h3></div>
         <div class="card-body">
           <div style="display:flex;gap:12px;flex-wrap:wrap">
-            ${[['Dossiernotities', dossiers.length], ['Afspraken', komendeAfspraken.length], ['Facturen', facturen.length]].map(([l, n]) => `
+            ${[['Dossiernotities', dossiers.length], ['Afspraken', komendeAfspraken.length], ['Facturen', facturen.length], ['Trainingen', uitvoeringen.length]].map(([l, n]) => `
               <div style="background:var(--bg);border-radius:8px;padding:14px 18px;flex:1;min-width:80px">
                 <div style="font-size:24px;font-weight:800">${n}</div>
                 <div style="font-size:12px;color:var(--navy4);margin-top:2px">${l}</div>
@@ -138,6 +139,30 @@ function renderContactDetail(schoolId, contactId) {
         ${agendaItems.length === 0
           ? `<div class="empty-state">${svgIcon('calendar', 36)}<p>Nog geen afspraken</p></div>`
           : `<table><tbody>${agendaItems.map(a => renderAgendaRow(a)).join('')}</tbody></table>`}
+      </div>
+    </div>
+    <div class="card" style="margin-bottom:16px">
+      <div class="card-header">
+        <h3>${svgIcon('training', 16)} Trainingen & methodes</h3>
+        ${c.schoolId ? `<button class="btn btn-primary btn-sm" onclick="openUitvoeringVanContactModal('${c.schoolId}','${contactId}')">${svgIcon('add', 14)} Uitvoering vastleggen</button>` : ''}
+      </div>
+      <div class="card-body"${uitvoeringen.length > 0 ? ' style="padding:0"' : ''}>
+        ${uitvoeringen.length === 0
+          ? `<div class="empty-state">${svgIcon('training', 36)}<p>Nog geen trainingen uitgevoerd met deze contactpersoon</p></div>`
+          : `<table>
+               <thead><tr><th>Training</th><th>Datum</th><th>Deelnemers</th><th>Score</th></tr></thead>
+               <tbody>
+                 ${uitvoeringen.map(u => {
+                   const t = DB.trainingen.find(x => x.id === u.trainingId);
+                   return `<tr class="clickable-row" onclick="navigate('training-detail','${u.trainingId}')">
+                     <td style="font-weight:500">${esc(t?.naam || '–')}${t?.categorie ? ' ' + catBadge(t.categorie) : ''}</td>
+                     <td>${fmtDateShort(u.datum)}</td>
+                     <td>${u.deelnemers || '–'}</td>
+                     <td>${u.score ? renderStars(u.score) : '–'}</td>
+                   </tr>`;
+                 }).join('')}
+               </tbody>
+             </table>`}
       </div>
     </div>
     <div class="card">

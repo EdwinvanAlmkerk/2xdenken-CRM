@@ -311,6 +311,7 @@ async function saveUitvoering(trainingId, uitvId) {
   if (!schoolId) return alert('Kies een school');
   const data = {
     trainingId, schoolId,
+    contactId:   document.getElementById('f-contact')?.value || null,
     datum:       document.getElementById('f-datum').value,
     deelnemers:  document.getElementById('f-deel').value || null,
     score:       _uitvScore || null,
@@ -333,7 +334,7 @@ async function saveUitvoering(trainingId, uitvId) {
         const scoreStr = data.score ? ` | Score: ${data.score}/5 ★` : '';
         const tekst = `Training uitgevoerd: "${t.naam}"${scoreStr}\n${data.evaluatie || ''}`.trim();
         const dosId = uid();
-        const dosItem = { id: dosId, schoolId, contactId: null, datum: new Date().toISOString(), type: 'notitie', onderwerp: `Training — ${t.naam}`, tekst, bronNaam: `Training — ${school.naam}`, bestanden: [], bijlagen: [] };
+        const dosItem = { id: dosId, schoolId, contactId: data.contactId || null, datum: new Date().toISOString(), type: 'notitie', onderwerp: `Training — ${t.naam}`, tekst, bronNaam: `Training — ${school.naam}`, bestanden: [], bijlagen: [] };
         await supa('/rest/v1/dossiers', { method: 'POST', body: JSON.stringify({ id: dosId, ...toDB_dossier(dosItem) }) });
         DB.dossiers.unshift(dosItem);
       }
@@ -357,6 +358,7 @@ async function saveUitvoeringVanSchool(schoolId) {
   if (!trainingId) return alert('Kies een training');
   const data = {
     trainingId, schoolId,
+    contactId:   document.getElementById('f-contact')?.value || null,
     datum:       document.getElementById('f-datum').value,
     deelnemers:  document.getElementById('f-deel').value || null,
     score:       _uitvScore || null,
@@ -375,7 +377,7 @@ async function saveUitvoeringVanSchool(schoolId) {
       const scoreStr = data.score ? ` | Score: ${data.score}/5 ★` : '';
       const tekst = `Training uitgevoerd: "${t.naam}"${scoreStr}\n${data.evaluatie || ''}`.trim();
       const dosId = uid();
-      const dosItem = { id: dosId, schoolId, contactId: null, datum: new Date().toISOString(), type: 'notitie', onderwerp: `Training — ${t.naam}`, tekst, bronNaam: `Training — ${school.naam}`, bestanden: [], bijlagen: [] };
+      const dosItem = { id: dosId, schoolId, contactId: data.contactId || null, datum: new Date().toISOString(), type: 'notitie', onderwerp: `Training — ${t.naam}`, tekst, bronNaam: `Training — ${school.naam}`, bestanden: [], bijlagen: [] };
       await supa('/rest/v1/dossiers', { method: 'POST', body: JSON.stringify({ id: dosId, ...toDB_dossier(dosItem) }) });
       DB.dossiers.unshift(dosItem);
     }

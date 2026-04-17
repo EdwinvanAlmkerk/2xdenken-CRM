@@ -257,12 +257,14 @@ function renderSchoolTrainingenTab(schoolId) {
     ${uitv.length === 0
       ? `<div class="card"><div class="empty-state">${svgIcon('training', 36)}<p>Nog geen trainingen uitgevoerd</p></div></div>`
       : `<div class="card"><div class="table-wrap"><table>
-           <thead><tr><th>Training</th><th>Datum</th><th>Deelnemers</th><th>Score</th><th></th></tr></thead>
+           <thead><tr><th>Training</th><th>Contactpersoon</th><th>Datum</th><th>Deelnemers</th><th>Score</th><th></th></tr></thead>
            <tbody>
              ${uitv.map(u => {
                const t = DB.trainingen.find(x => x.id === u.trainingId);
+               const contact = u.contactId ? DB.contacten.find(c => c.id === u.contactId) : null;
                return `<tr>
                  <td style="font-weight:500"><a onclick="navigate('training-detail','${u.trainingId}')" style="cursor:pointer;color:var(--navy)">${esc(t?.naam || '–')}</a></td>
+                 <td style="font-size:13px;color:var(--ink3)">${contact ? `<a onclick="navigateToContact('${schoolId}','${contact.id}')" style="cursor:pointer;color:var(--blue)">${esc(contact.naam)}</a>` : '–'}</td>
                  <td>${fmtDateShort(u.datum)}</td>
                  <td>${u.deelnemers || '–'}</td>
                  <td>${u.score ? renderStars(u.score) : '–'}</td>
@@ -278,17 +280,27 @@ function renderSchoolTrainingenTab(schoolId) {
          </table></div></div>`}`;
 }
 
-function openUitvoeringVanSchoolModal(schoolId) {
+function openUitvoeringVanContactModal(schoolId, contactId) {
+  openUitvoeringVanSchoolModal(schoolId, contactId);
+}
+
+function openUitvoeringVanSchoolModal(schoolId, preselectContactId = '') {
   _uitvScore = 0;
   const trainingOpts = DB.trainingen.map(t => `<option value="${t.id}">${esc(t.naam)}</option>`).join('');
+  const contactOpts = renderContactOptionsForSchool(schoolId, preselectContactId);
   showModal('Uitvoering vastleggen',
     `<div class="form-group"><label>Training *</label>
        <select id="f-training"><option value="">— Kies training —</option>${trainingOpts}</select>
      </div>
-     <div class="form-group"><label>Datum</label>
-       <input type="date" id="f-datum" value="${new Date().toISOString().slice(0, 10)}"/></div>
-     <div class="form-group"><label>Aantal deelnemers</label>
-       <input type="number" id="f-deel" placeholder="bijv. 12" min="1"/></div>
+     <div class="form-row">
+       <div class="form-group"><label>Datum</label>
+         <input type="date" id="f-datum" value="${new Date().toISOString().slice(0, 10)}"/></div>
+       <div class="form-group"><label>Aantal deelnemers</label>
+         <input type="number" id="f-deel" placeholder="bijv. 12" min="1"/></div>
+     </div>
+     <div class="form-group"><label>Contactpersoon (optioneel)</label>
+       <select id="f-contact">${contactOpts}</select>
+     </div>
      <div class="form-group">
        <label>Succescore (1–5 sterren)</label>
        <div id="star-picker" style="display:flex;gap:4px;margin-top:4px;align-items:center">

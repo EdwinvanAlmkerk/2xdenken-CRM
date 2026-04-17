@@ -143,6 +143,7 @@ function renderTrainingDetail(id) {
         ${uitv.map(u => {
           const school = DB.scholen.find(s => s.id === u.schoolId);
           const best   = school ? DB.besturen.find(b => b.id === school.bestuurId) : null;
+          const contact = u.contactId ? DB.contacten.find(c => c.id === u.contactId) : null;
           return `
           <div class="card">
             <div class="card-body" style="padding:18px 22px">
@@ -150,6 +151,7 @@ function renderTrainingDetail(id) {
                 <div>
                   <div style="font-size:15px;font-weight:800;color:var(--navy);cursor:pointer" onclick="navigate('school-detail','${school?.id}')">${esc(school?.naam || 'Onbekende school')}</div>
                   ${best ? `<div style="font-size:12px;color:var(--navy4);margin-top:2px">${esc(best.naam)}</div>` : ''}
+                  ${contact ? `<div style="font-size:12.5px;color:var(--navy3);margin-top:4px;display:inline-flex;align-items:center;gap:4px"><span style="color:var(--navy4)">${svgIcon('contact', 13)}</span><a onclick="event.stopPropagation();navigateToContact('${school?.id || ''}','${contact.id}')" style="color:var(--blue);cursor:pointer;font-weight:600">${esc(contact.naam)}</a>${contact.functie ? ` <span style="color:var(--navy4)">— ${esc(contact.functie)}</span>` : ''}</div>` : ''}
                 </div>
                 <div style="display:flex;align-items:center;gap:12px">
                   <div style="text-align:right">
@@ -241,13 +243,18 @@ function openUitvoeringModal(trainingId, uitvId = '') {
   const u = uitvId ? DB.uitvoeringen.find(x => x.id === uitvId) : null;
   _uitvScore = u?.score || 0;
   const schoolOpts = DB.scholen.map(s => `<option value="${s.id}"${u?.schoolId === s.id ? ' selected' : ''}>${esc(s.naam)}</option>`).join('');
+  const contactOpts = renderContactOptionsForSchool(u?.schoolId || '', u?.contactId || '');
 
   showModal(u ? 'Uitvoering bewerken' : 'Uitvoering vastleggen',
     `<div class="form-row">
        <div class="form-group"><label>School *</label>
-         <select id="f-school"><option value="">— Kies school —</option>${schoolOpts}</select></div>
+         <select id="f-school" onchange="onUitvSchoolChange(this.value)"><option value="">— Kies school —</option>${schoolOpts}</select></div>
        <div class="form-group"><label>Datum</label>
          <input type="date" id="f-datum" value="${esc(u?.datum?.slice(0, 10) || new Date().toISOString().slice(0, 10))}"/></div>
+     </div>
+     <div class="form-group"><label>Contactpersoon (optioneel)</label>
+       <select id="f-contact">${contactOpts}</select>
+       <div style="font-size:11px;color:var(--navy4);margin-top:4px">Kies een contactpersoon zodra je een school hebt geselecteerd.</div>
      </div>
      <div class="form-group"><label>Aantal deelnemers</label>
        <input type="number" id="f-deel" value="${esc(u?.deelnemers || '')}" placeholder="bijv. 12" min="1"/></div>
@@ -276,6 +283,21 @@ function openTipModal(trainingId) {
        <textarea id="f-tiptekst" rows="5" placeholder="Beschrijf de tip zo concreet mogelijk…"></textarea></div>`,
     `<button class="btn btn-secondary" onclick="closeModal()">Annuleren</button>
      <button class="btn btn-primary" onclick="saveTip('${trainingId}')">Opslaan</button>`);
+}
+
+function renderContactOptionsForSchool(schoolId, selectedContactId = '') {
+  const empty = `<option value="">— Geen contactpersoon —</option>`;
+  if (!schoolId) return empty;
+  const contacten = DB.contacten.filter(c => c.schoolId === schoolId);
+  if (!contacten.length) return empty;
+  return empty + contacten.map(c =>
+    `<option value="${c.id}"${selectedContactId === c.id ? ' selected' : ''}>${esc(c.naam)}${c.functie ? ' — ' + esc(c.functie) : ''}</option>`
+  ).join('');
+}
+
+function onUitvSchoolChange(schoolId) {
+  const sel = document.getElementById('f-contact');
+  if (sel) sel.innerHTML = renderContactOptionsForSchool(schoolId, '');
 }
 
 function pickStar(n) {
