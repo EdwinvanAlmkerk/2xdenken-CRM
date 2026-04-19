@@ -179,20 +179,22 @@ function renderTrainingenPage(search = '') {
   });
 
   return `
-    <div style="display:flex;gap:12px;margin-bottom:20px;flex-wrap:wrap">
+    <div style="display:flex;gap:12px;margin-bottom:20px;flex-wrap:wrap;align-items:center">
       <div class="search-wrap" style="flex:1;min-width:200px">
         <span class="search-icon">${svgIcon('search', 15)}</span>
         <input id="search-trainingen" type="text" placeholder="Zoek training of methode…" value="${esc(search)}"
           oninput="searchTrainingen(this.value)" style="padding-left:36px"/>
       </div>
-      <select onchange="setTrainingTypeFilter(this.value)" style="padding:9px 13px;border:2px solid var(--bg3);border-radius:var(--r);font-family:'Nunito',sans-serif;font-size:13.5px;font-weight:600;color:var(--navy);background:white;cursor:pointer;min-width:140px">
-        <option value="alle"${_trainingTypeFilter === 'alle' ? ' selected' : ''}>Alle types</option>
-        ${typeOptions.map(t => `<option value="${t.id}"${_trainingTypeFilter === t.id ? ' selected' : ''}>${esc(t.naam)}</option>`).join('')}
-      </select>
-      <select onchange="setTrainingCategoryFilter(this.value)" style="padding:9px 13px;border:2px solid var(--bg3);border-radius:var(--r);font-family:'Nunito',sans-serif;font-size:13.5px;font-weight:600;color:var(--navy);background:white;cursor:pointer;min-width:170px">
-        <option value="alle"${_trainingCategoryFilter === 'alle' ? ' selected' : ''}>Alle categorieën</option>
-        ${categoryOptions.map(t => `<option value="${t.id}"${_trainingCategoryFilter === t.id ? ' selected' : ''}>${esc(t.naam)}</option>`).join('')}
-      </select>
+      <div style="display:flex;gap:8px;flex-wrap:nowrap;align-items:center">
+        <select onchange="setTrainingTypeFilter(this.value)" style="padding:9px 13px;border:2px solid var(--bg3);border-radius:var(--r);font-family:'Nunito',sans-serif;font-size:13.5px;font-weight:600;color:var(--navy);background:white;cursor:pointer;min-width:140px">
+          <option value="alle"${_trainingTypeFilter === 'alle' ? ' selected' : ''}>Alle types</option>
+          ${typeOptions.map(t => `<option value="${t.id}"${_trainingTypeFilter === t.id ? ' selected' : ''}>${esc(t.naam)}</option>`).join('')}
+        </select>
+        <select onchange="setTrainingCategoryFilter(this.value)" style="padding:9px 13px;border:2px solid var(--bg3);border-radius:var(--r);font-family:'Nunito',sans-serif;font-size:13.5px;font-weight:600;color:var(--navy);background:white;cursor:pointer;min-width:170px">
+          <option value="alle"${_trainingCategoryFilter === 'alle' ? ' selected' : ''}>Alle categorieën</option>
+          ${categoryOptions.map(t => `<option value="${t.id}"${_trainingCategoryFilter === t.id ? ' selected' : ''}>${esc(t.naam)}</option>`).join('')}
+        </select>
+      </div>
       <button class="btn btn-primary" onclick="openTrainingModal()">${svgIcon('add')} Nieuwe training</button>
     </div>
 
