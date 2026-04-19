@@ -1,0 +1,22 @@
+<!DOCTYPE html>
+<html lang="nl">
+<head>
+  <meta charset="UTF-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+  <title>Doorsturen…</title>
+  <script>
+    (function () {
+      const rootPath = location.pathname.replace(/\/auth\/confirm\/?$/, '/');
+      const target = `${location.origin}${rootPath}${location.search}${location.hash}`;
+      location.replace(target);
+    })();
+  </script>
+  <style>
+    body { font-family: Arial, sans-serif; display:flex; align-items:center; justify-content:center; min-height:100vh; margin:0; background:#eef2f8; color:#1a2540; }
+    .box { background:white; padding:24px 28px; border-radius:12px; box-shadow:0 8px 24px rgba(30,45,74,.10); }
+  </style>
+</head>
+<body>
+  <div class="box">Je wordt doorgestuurd naar het CRM…</div>
+</body>
+</html>

@@ -29,7 +29,10 @@ function setLoginInfo(message = '') {
 }
 
 function getResetRedirectUrl() {
-  return window.location.href.split('#')[0].split('?')[0];
+  const isGitHubPages = window.location.hostname.endsWith('github.io');
+  return isGitHubPages
+    ? 'https://edwinvanalmkerk.github.io/2xdenken-CRM/'
+    : window.location.href.split('#')[0].split('?')[0];
 }
 
 function toggleResetMode(isRecovery = false) {
@@ -175,25 +178,42 @@ function showLoginMode() {
   setLoginError('');
 }
 
-function initPasswordRecoveryFromUrl() {
+async function initPasswordRecoveryFromUrl() {
   const hashParams = new URLSearchParams(window.location.hash.replace(/^#/, ''));
   const searchParams = new URLSearchParams(window.location.search);
   const type = hashParams.get('type') || searchParams.get('type');
   const accessToken = hashParams.get('access_token') || searchParams.get('access_token');
   const refreshToken = hashParams.get('refresh_token') || searchParams.get('refresh_token');
+  const tokenHash = hashParams.get('token_hash') || searchParams.get('token_hash');
   const error = hashParams.get('error_description') || searchParams.get('error_description') || hashParams.get('error') || searchParams.get('error');
-
-  if (type === 'recovery' && accessToken) {
-    passwordRecoverySession = { access_token: accessToken, refresh_token: refreshToken || null };
-    toggleResetMode(true);
-    setLoginInfo('Kies hieronder een nieuw wachtwoord.');
-    return;
-  }
 
   toggleResetMode(false);
 
   if (error) {
     setLoginError(decodeURIComponent(error));
+    return;
+  }
+
+  if (type !== 'recovery') return;
+
+  try {
+    setLoginInfo('Resetlink wordt verwerkt...');
+
+    if (accessToken) {
+      passwordRecoverySession = { access_token: accessToken, refresh_token: refreshToken || null };
+    } else if (tokenHash) {
+      const data = await supaAuth('/auth/v1/verify', { type: 'recovery', token_hash: tokenHash });
+      passwordRecoverySession = { access_token: data.access_token, refresh_token: data.refresh_token || null };
+    } else {
+      setLoginError('Deze resetlink mist de benodigde gegevens. Vraag een nieuwe resetmail aan.');
+      return;
+    }
+
+    toggleResetMode(true);
+    setLoginInfo('Kies hieronder een nieuw wachtwoord.');
+  } catch (e) {
+    console.error(e);
+    setLoginError('Deze resetlink is ongeldig of verlopen. Vraag een nieuwe resetmail aan.');
   }
 }
 

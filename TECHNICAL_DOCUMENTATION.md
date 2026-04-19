@@ -8,13 +8,16 @@ Browser-gebaseerde CRM-applicatie voor het beheren van besturen, scholen, contac
 
 ## Structuur
 
-- `index.html` — enige HTML-pagina; bevat het login-scherm, het wachtwoord-resetpaneel, de app-shell en laadt alle CSS- en JS-bestanden.
+- `index.html` — hoofdpagina van de app; bevat het login-scherm, het wachtwoord-resetpaneel, de app-shell en laadt alle CSS- en JS-bestanden.
+- `auth/`
+  - `confirm/`
+    - `index.html` — minimale doorstuurpagina voor live hosting op GitHub Pages; zet recovery-links op `/auth/confirm/` terug naar de app-root inclusief querystring en hash.
 - `css/`
   - `style.css` — fris licht thema met glaskaarten op lichte achtergrond; donkerblauwe sidebar. Font: Outfit. Subtiele mesh-achtergrond met radiale gradiënten. Glass-effecten met `backdrop-filter: blur()`.
 - `js/`
   - `config.js` — Supabase URL en anon key.
   - `db.js` — in-memory `DB`-object, `supa()`/`supaAuth()` fetch-helpers, mapping-functies tussen snake_case (Supabase) en camelCase (frontend), en `loadAllData()`.
-  - `auth.js` — login, logout, wachtwoord-reset via Supabase Auth en Enter-key handler. Automatisch sessie-herstel is uitgeschakeld.
+  - `auth.js` — login, logout en robuuste wachtwoord-resetflow via Supabase Auth, inclusief recovery-links met `token_hash` en afhandeling voor GitHub Pages. Automatisch sessie-herstel is uitgeschakeld.
   - `crud.js` — save- en delete-functies voor besturen, scholen, contacten, dossiers, facturen, trainingen, uitvoeringen, agenda-items, agendatypes en e-mailtemplates richting Supabase.
   - `email.js` — e-mail compose module: template-variabelen invullen (`resolveTemplateVars`), compose modal (`openEmailModal`), mailto-link genereren, concepten opslaan/bewerken, doorsturen, automatische dossiernotitie en email_log bij verzending.
   - `router.js` — navigatiestate (`page`, `pageParam`, `contactParam`), `navigate()`, `goBack()`, `renderNav()` en `renderContent()` dispatcher.
@@ -47,30 +50,39 @@ Browser-gebaseerde CRM-applicatie voor het beheren van besturen, scholen, contac
 
 ## Belangrijkste bestanden
 
-- `js/config.js` — Supabase-endpoint en anon key.
-- `js/db.js` — centrale datalaag, fetch-helpers en mapping tussen Supabase-rijen en frontend-objecten.
-- `js/auth.js` — afhandeling van login, logout en wachtwoord-reset via Supabase Auth; sessie wordt niet automatisch hersteld.
-- `js/crud.js` — alle schrijfacties (POST/PATCH/DELETE) naar Supabase en bijwerken van de in-memory `DB`.
-- `js/router.js` — bepaalt actieve pagina en roept de juiste `render*`-functie aan.
-- `js/utils.js` — iconen, datum- en bedragformatters, Supabase Storage-uploads voor dossier-bestanden en foutvertaling (`mapSupaError` / `toastError`). Wordt vóór `db.js` geladen in `index.html` omdat `db.js` de helper gebruikt.
-- `js/ui.js` — modals, toasts, loading-indicator en exports.
-- `js/pages/*.js` — per module de render- en interactielogica van een pagina.
+- `js/config.js` — bevat het Supabase-endpoint en de anon key.
+- `js/db.js` — laadt alle basisdata uit Supabase en mapt database-rijen naar frontend-objecten.
+- `js/auth.js` — handelt login, logout en de wachtwoord-resetflow af, inclusief verificatie van recovery-links met `token_hash`.
+- `js/crud.js` — voert alle schrijfacties naar Supabase uit en houdt het in-memory `DB`-object synchroon.
+- `js/router.js` — bewaakt de navigatiestate en dispatcht naar de juiste renderfunctie.
+- `js/utils.js` — levert gedeelde helpers voor iconen, formatters, zoekfunctionaliteit, uploads en foutvertaling.
+- `js/ui.js` — bevat modals, toasts, loading-overlays en exporthulpfuncties.
+- `js/email.js` — verzorgt de compose-logica, templatevervanging, conceptafhandeling en e-maillogging.
+- `js/pages/dashboard.js` — rendert het dashboard met kengetallen en komende afspraken.
+- `js/pages/email-page.js` — rendert de e-mailpagina met mappen, cache en IMAP-acties.
+- `js/pages/agenda.js` — rendert de agendaweergaven, externe ICS-events en Excel-export.
+- `js/pages/besturen.js` — bevat de lijst- en detailweergaven van besturen.
+- `js/pages/scholen.js` — bevat de lijst- en detailweergaven van scholen.
+- `js/pages/contacten.js` — bevat het contactenoverzicht en de contactdetailpagina.
+- `js/pages/facturen.js` — bevat het facturenoverzicht, filters en de factuurmodal.
+- `js/pages/trainingen.js` — bevat de lijst- en detailweergaven van trainingen en uitvoeringen.
+- `js/pages/instellingen.js` — bevat instellingen voor agendatypes, e-mailtemplates, mail/agenda-configuratie en database-onderhoud.
 
 ## Werking
 
-1. `index.html` toont eerst het login-scherm met ook een resetflow voor vergeten wachtwoorden; pas na een geslaagde `doLogin()` wordt de app-shell zichtbaar.
-2. `auth.js` stuurt credentials naar `/auth/v1/token?grant_type=password`, kan via `/auth/v1/recover` een resetlink aanvragen en zet via de recovery-link op dezelfde pagina een nieuw wachtwoord weg via Supabase Auth. Er is geen automatisch herstel bij paginalaad; oude sessies worden juist gewist.
-3. Na login roept `loadAllData()` in `db.js` parallel alle tabellen (inclusief `agenda`, `agenda_types` en `email_templates`) op via PostgREST en mapt de rijen naar camelCase-objecten in het globale `DB`-object.
-4. `router.js` beheert `page`, `pageParam` en `contactParam` en dispatcht naar de `render*`-functies in `js/pages/`. Navigatie verloopt via `navigate()` / `navigateToContact()` / `goBack()`.
-5. Pagina-scripts renderen HTML-strings op basis van `DB` en koppelen `onclick`-handlers aan CRUD-functies in `crud.js`.
-6. `crud.js` schrijft wijzigingen direct naar Supabase en werkt daarna `DB` bij, waarna `renderContent()` de UI ververst.
-7. `utils.js` en `ui.js` leveren gedeelde hulpfuncties (iconen, formatters, modals, toasts, Storage-uploads).
+1. `index.html` toont eerst het login-scherm met een paneel voor inloggen en een apart paneel voor het instellen van een nieuw wachtwoord; pas na een geslaagde `doLogin()` wordt de app-shell zichtbaar.
+2. Voor live hosting op GitHub Pages gebruikt de resetflow een extra doorstuurpagina op `/auth/confirm/`, die de querystring en hash van de recovery-link terugstuurt naar de app-root zodat de SPA de link correct kan verwerken.
+3. `auth.js` stuurt credentials naar `/auth/v1/token?grant_type=password`, vraagt via `/auth/v1/recover` een resetlink aan en leest bij terugkomst `type=recovery` uit hash of querystring. Als Supabase een directe `access_token` meestuurt wordt die meteen gebruikt; bij een `token_hash` volgt eerst verificatie via `/auth/v1/verify`.
+4. Na succesvolle verificatie zet `auth.js` het nieuwe wachtwoord weg via `PUT /auth/v1/user` met de tijdelijke bearer-token. Er is geen automatisch sessie-herstel bij paginalaad; oude sessies worden juist gewist om stille auto-login te voorkomen.
+5. Na login roept `loadAllData()` in `db.js` parallel alle tabellen (inclusief `agenda`, `agenda_types` en `email_templates`) op via PostgREST en mapt de rijen naar camelCase-objecten in het globale `DB`-object.
+6. `router.js` beheert `page`, `pageParam` en `contactParam` en dispatcht naar de `render*`-functies in `js/pages/`. Navigatie verloopt via `navigate()` / `navigateToContact()` / `goBack()`.
+7. Pagina-scripts renderen HTML-strings op basis van `DB`, terwijl `crud.js`, `utils.js` en `ui.js` respectievelijk schrijfacties, gedeelde helpers en interfacecomponenten leveren.
 
 ## Recente functionaliteit
 
 - **Dossier-items**: elk dossier-item heeft nu een `type` (`'notitie'` of `'bestand'`) en een verplicht `onderwerp`-veld. Optioneel kunnen er `bestanden` worden meegestuurd; deze worden geüpload naar de Supabase Storage-bucket `dossier-bestanden` (zie `js/utils.js`).
 - **Contact-detailpagina**: contactpersonen hebben een eigen detailpagina (`contact-detail`, `renderContactDetail()` in `js/pages/contacten.js`) met een dossier-overzicht, bereikbaar door in de contactentabel op een naam te klikken.
-- **Auth**: automatisch sessie-herstel is uitgeschakeld. Bij het laden van de pagina wordt een eventuele opgeslagen sessie uit `localStorage` verwijderd, zodat de gebruiker altijd expliciet op "Inloggen" moet klikken. Op het login-scherm is nu ook een wachtwoord-vergeten flow aanwezig: gebruiker vraagt via Supabase Auth een resetlink aan en kan na openen van de recovery-link op dezelfde pagina een nieuw wachtwoord instellen.
+- **Auth**: automatisch sessie-herstel is uitgeschakeld. Bij het laden van de pagina wordt een eventuele opgeslagen sessie uit `localStorage` verwijderd, zodat de gebruiker altijd expliciet op "Inloggen" moet klikken. De wachtwoord-resetflow is robuuster gemaakt voor live hosting op GitHub Pages: de app verstuurt resetmails met een passende `redirect_to`, ondersteunt recovery-links met zowel directe tokens als `token_hash`, verifieert die zo nodig via `/auth/v1/verify` en gebruikt de doorstuurpagina op `/auth/confirm/` om de recovery-parameters betrouwbaar terug in de SPA te krijgen voordat de gebruiker een nieuw wachtwoord opslaat.
 - **Agendamodule**: volledige agendafunctionaliteit met Supabase-tabel `agenda` (velden: `id`, `titel`, `datum`, `begin_tijd`, `eind_tijd`, `type`, `school_id`, `contact_id`, `bestuur_id`, `locatie`, `notitie`, `created_at`). Vier weergaven: dagview, weekview (Outlook-achtig tijdrooster met uurblokken 07:00–21:00), maandview (kalenderraster) en lijstview. Navigatie met vorige/volgende en vandaag-knop. Kleurcodering per afspraaktype. Huidige-tijdlijn in dag- en weekview. Hele-dag items in aparte rij. Dashboard toont de eerstvolgende 5 afspraken.
 - **Dynamische agendatypes**: agendatypes worden opgeslagen in Supabase-tabel `agenda_types` (velden: `id`, `naam`, `kleur`). Beheerbaar via Instellingen: aanmaken, bewerken en verwijderen met 7 kleuropties (navy, paars, blauw, groen, goud, rood, oranje). Standaard 5 types meegeleverd.
 - **E-mailmodule**: eigen pagina in sidebar met mappenstructuur (Inbox, Verzonden, Concepten, Verwijderde items). IMAP/SMTP-serverinstellingen configureerbaar via Instellingen (Supabase-tabel `email_settings`). Inbox en Verwijderde items worden opgehaald via de Edge Function `fetch-emails` (IMAP); Verwijderde items gebruikt de alias-folder `__trash__` die server-side via `ImapClient.selectTrash()` taal-afhankelijk wordt opgelost door een lijst kandidaat-mapnamen te proberen (`[Gmail]/Trash`, `[Gmail]/Prullenbak`, `[Gmail]/Bin`, `Trash`, `Prullenbak`, `Deleted Messages`, `Deleted Items`). `ImapClient.select()` gooit nu een error bij een NO/BAD response in plaats van stil te falen. Direct verzenden via SMTP Edge Function met fallback naar mailto. Factuur-PDF als bijlage bij factuur-emails via html2pdf.js. E-mailhandtekening configureerbaar via Opties. Supabase-tabellen `email_templates` en `email_log`. Templates ondersteunen variabelen (`{{contactnaam}}`, `{{factuurnummer}}`, etc.). Compose-modal met template-keuze, contactselectie, concept opslaan en mailto-verzending. Doorsturen van eerder verzonden berichten. Automatische dossiernotitie + email_log bij verzending. E-mail knoppen op contactdetail, schooldetail en factuuroverzicht.
@@ -103,4 +115,4 @@ Beide worden als `<script>` geladen in `index.html`; er is geen npm/build-step.
 
 ## Laatste update
 - Datum: 2026-04-19
-- Opmerking: de documentatie is bijgewerkt voor de nieuwe wachtwoord-vergeten functionaliteit op het login-scherm, inclusief resetlink via Supabase Auth en het instellen van een nieuw wachtwoord via de recovery-link op dezelfde pagina.
+- Opmerking: documentatie bijgewerkt voor de robuustere wachtwoord-resetflow op GitHub Pages, inclusief ondersteuning voor recovery-links met `token_hash` en de doorstuurpagina op `/auth/confirm/`.
