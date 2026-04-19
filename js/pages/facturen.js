@@ -402,7 +402,7 @@ function getFactuurHtml(fid) {
   .totaal-wrap{display:flex;justify-content:flex-end;margin-bottom:28px;margin-top:2px}
   .totaal-box{border:1.5px solid #222;padding:5px 14px;font-weight:bold;font-size:10pt;display:flex;gap:30px;justify-content:space-between;min-width:200px}
   .bottom-section{position:fixed;bottom:18mm;left:18mm;right:18mm}
-  .betaling{font-size:10pt;color:#555;line-height:1.75;margin-bottom:10px}
+  .btw-vrijstelling{font-size:9.5pt;color:#555;font-style:italic;margin-bottom:10px;padding-bottom:8px;border-bottom:1px dashed #ddd}
   .footer-bar{display:flex;justify-content:space-between;font-size:10pt;color:#888;padding-top:8px;border-top:1px solid #ddd}
   @media screen{.bottom-section{position:static;margin-top:40px}}
   .print-bar{margin-bottom:18px;display:flex;gap:10px}
@@ -457,6 +457,9 @@ function getFactuurHtml(fid) {
     <div class="totaal-box"><span>Totaal</span><span>${fmtEuro(totaal)}</span></div>
   </div>
   <div class="bottom-section">
+    <div class="btw-vrijstelling">
+      Vrijgesteld van btw op grond van artikel 11 lid 1 letter o Wet OB 1968 (CRKBO-geregistreerd).
+    </div>
     <div class="betaling">
       U wordt verzocht het vermelde bedrag binnen 14 dagen over te maken naar onderstaand rekeningnummer t.n.v.
       2xdenken. Het rekeningnummer is <strong>NL33INGB0007495489</strong>. Graag het factuurnummer vermelden.
