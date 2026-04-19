@@ -148,7 +148,12 @@ function renderStars(score, interactive = false, fid = '') {
   }).join('');
 }
 
+let _trainingTypeFilter = 'alle';
+let _trainingCategoryFilter = 'alle';
+
 function searchTrainingen(v) { smartRender(() => renderTrainingenPage(v)); }
+function setTrainingTypeFilter(v) { _trainingTypeFilter = v || 'alle'; smartRender(() => renderTrainingenPage(document.getElementById('search-trainingen')?.value || '')); }
+function setTrainingCategoryFilter(v) { _trainingCategoryFilter = v || 'alle'; smartRender(() => renderTrainingenPage(document.getElementById('search-trainingen')?.value || '')); }
 
 function renderTrainingenPage(search = '') {
   if (!DB.trainingen)   DB.trainingen   = [];
@@ -157,12 +162,21 @@ function renderTrainingenPage(search = '') {
   ensureTrainingTypes();
   ensureTrainingCategories();
 
-  const filtered = DB.trainingen.filter(t =>
-    t.naam.toLowerCase().includes(search.toLowerCase()) ||
-    trainingTypeLabel(t.type).toLowerCase().includes(search.toLowerCase()) ||
-    trainingCategoryLabel(t.categorie).toLowerCase().includes(search.toLowerCase()) ||
-    (t.omschrijving || '').toLowerCase().includes(search.toLowerCase())
-  );
+  const typeOptions = getTrainingTypeList();
+  const categoryOptions = getTrainingCategoryList();
+
+  const filtered = DB.trainingen.filter(t => {
+    const matchesSearch =
+      t.naam.toLowerCase().includes(search.toLowerCase()) ||
+      trainingTypeLabel(t.type).toLowerCase().includes(search.toLowerCase()) ||
+      trainingCategoryLabel(t.categorie).toLowerCase().includes(search.toLowerCase()) ||
+      (t.omschrijving || '').toLowerCase().includes(search.toLowerCase());
+
+    const matchesType = _trainingTypeFilter === 'alle' || (t.type || 'training') === _trainingTypeFilter;
+    const matchesCategory = _trainingCategoryFilter === 'alle' || (t.categorie || 'algemeen') === _trainingCategoryFilter;
+
+    return matchesSearch && matchesType && matchesCategory;
+  });
 
   return `
     <div style="display:flex;gap:12px;margin-bottom:20px;flex-wrap:wrap">
@@ -171,6 +185,14 @@ function renderTrainingenPage(search = '') {
         <input id="search-trainingen" type="text" placeholder="Zoek training of methode…" value="${esc(search)}"
           oninput="searchTrainingen(this.value)" style="padding-left:36px"/>
       </div>
+      <select onchange="setTrainingTypeFilter(this.value)" style="padding:9px 13px;border:2px solid var(--bg3);border-radius:var(--r);font-family:'Nunito',sans-serif;font-size:13.5px;font-weight:600;color:var(--navy);background:white;cursor:pointer;min-width:140px">
+        <option value="alle"${_trainingTypeFilter === 'alle' ? ' selected' : ''}>Alle types</option>
+        ${typeOptions.map(t => `<option value="${t.id}"${_trainingTypeFilter === t.id ? ' selected' : ''}>${esc(t.naam)}</option>`).join('')}
+      </select>
+      <select onchange="setTrainingCategoryFilter(this.value)" style="padding:9px 13px;border:2px solid var(--bg3);border-radius:var(--r);font-family:'Nunito',sans-serif;font-size:13.5px;font-weight:600;color:var(--navy);background:white;cursor:pointer;min-width:170px">
+        <option value="alle"${_trainingCategoryFilter === 'alle' ? ' selected' : ''}>Alle categorieën</option>
+        ${categoryOptions.map(t => `<option value="${t.id}"${_trainingCategoryFilter === t.id ? ' selected' : ''}>${esc(t.naam)}</option>`).join('')}
+      </select>
       <button class="btn btn-primary" onclick="openTrainingModal()">${svgIcon('add')} Nieuwe training</button>
     </div>
 
