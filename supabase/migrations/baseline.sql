@@ -143,6 +143,13 @@ CREATE TABLE IF NOT EXISTS training_types (
   created_at timestamptz DEFAULT now()
 );
 
+CREATE TABLE IF NOT EXISTS training_categories (
+  id         text PRIMARY KEY,
+  naam       text NOT NULL,
+  kleur      text DEFAULT 'navy'::text,
+  created_at timestamptz DEFAULT now()
+);
+
 -- ── EMAIL ─────────────────────────────────────────────────────────
 CREATE TABLE IF NOT EXISTS email_templates (
   id         text PRIMARY KEY,

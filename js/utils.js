@@ -311,9 +311,11 @@ function renderGlobalResults(q) {
   });
 
   DB.trainingen.forEach(t => {
-    const typeLabel = typeof trainingTypeLabel === 'function' ? trainingTypeLabel(t.categorie) : (t.categorie || '');
-    const sc = Math.max(_searchScore(t.naam, lq), _searchScore(typeLabel, lq));
-    if (sc > 0) groups.trainingen.items.push({ icon: 'training', label: t.naam, sub: typeLabel, score: sc, action: () => navigate('training-detail', t.id) });
+    const typeLabel = typeof trainingTypeLabel === 'function' ? trainingTypeLabel(t.type) : (t.type || '');
+    const categoryLabel = typeof trainingCategoryLabel === 'function' ? trainingCategoryLabel(t.categorie) : (t.categorie || '');
+    const sub = [typeLabel, categoryLabel].filter(Boolean).join(' — ');
+    const sc = Math.max(_searchScore(t.naam, lq), _searchScore(typeLabel, lq), _searchScore(categoryLabel, lq));
+    if (sc > 0) groups.trainingen.items.push({ icon: 'training', label: t.naam, sub, score: sc, action: () => navigate('training-detail', t.id) });
   });
 
   (DB.agenda || []).forEach(a => {

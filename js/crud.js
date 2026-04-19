@@ -269,7 +269,8 @@ async function saveTraining(id) {
   if (!naam) return alert('Naam is verplicht');
   const data = {
     naam,
-    categorie: document.getElementById('f-cat').value || 'training',
+    type: document.getElementById('f-type')?.value || 'training',
+    categorie: document.getElementById('f-cat')?.value || 'algemeen',
     duur: '',
     doelgroep: '',
     maxDeelnemers: '',
@@ -485,7 +486,7 @@ async function delTrainingType(id) {
   if (id === 'training') return alert('Het standaardtype Training kan niet worden verwijderd.');
   if ((DB.trainingTypes || []).length <= 1) return alert('Er moet minimaal één trainingtype overblijven.');
 
-  const inGebruik = DB.trainingen.filter(t => (t.categorie || 'training') === id).length;
+  const inGebruik = DB.trainingen.filter(t => (t.type || 'training') === id).length;
   const msg = inGebruik > 0
     ? `Dit type wordt gebruikt door ${inGebruik} training${inGebruik === 1 ? '' : 'en'}. Verwijderen? Bestaande trainingen vallen dan terug op "Training".`
     : 'Trainingtype verwijderen?';
@@ -494,8 +495,12 @@ async function delTrainingType(id) {
   showLoading();
   try {
     if (inGebruik > 0) {
-      await supa(`/rest/v1/trainingen?categorie=eq.${id}`, { method: 'PATCH', body: JSON.stringify({ categorie: 'training' }) });
-      DB.trainingen = DB.trainingen.map(t => (t.categorie || 'training') === id ? { ...t, categorie: 'training' } : t);
+      await Promise.all(
+        DB.trainingen
+          .filter(t => (t.type || 'training') === id)
+          .map(t => supa(`/rest/v1/trainingen?id=eq.${t.id}`, { method: 'PATCH', body: JSON.stringify({ categorie: 'training' }) }))
+      );
+      DB.trainingen = DB.trainingen.map(t => (t.type || 'training') === id ? { ...t, type: 'training' } : t);
     }
 
     if (HAS_TRAINING_TYPES_TABLE) {
@@ -509,6 +514,63 @@ async function delTrainingType(id) {
 }
 
 // ── AGENDA TYPES ─────────────────────────────────────────────────
+async function saveTrainingCategory(id) {
+  ensureTrainingCategories();
+  const naam = document.getElementById('f-trainingcategoryname').value.trim();
+  if (!naam) return alert('Naam is verplicht');
+  const kleur = document.getElementById('f-trainingcategorykleur').value || 'navy';
+  showLoading();
+  try {
+    if (id) {
+      if (HAS_TRAINING_CATEGORIES_TABLE) {
+        await supa(`/rest/v1/training_categories?id=eq.${id}`, { method: 'PATCH', body: JSON.stringify({ naam, kleur }) });
+      }
+      DB.trainingCategories = DB.trainingCategories.map(t => t.id === id ? { ...t, naam, kleur } : t);
+    } else {
+      const newId = normalizeTypeId(naam);
+      if (DB.trainingCategories.find(t => t.id === newId)) return alert('Er bestaat al een categorie met deze naam');
+      if (HAS_TRAINING_CATEGORIES_TABLE) {
+        await supa('/rest/v1/training_categories', { method: 'POST', body: JSON.stringify({ id: newId, naam, kleur }) });
+      }
+      DB.trainingCategories.push({ id: newId, naam, kleur });
+    }
+    persistTrainingCategoriesLocally();
+    closeModal(); renderContent();
+  } catch (e) { toastError(e); } finally { hideLoading(); }
+}
+
+async function delTrainingCategory(id) {
+  ensureTrainingCategories();
+  if (id === 'algemeen') return alert('De standaardcategorie Algemeen kan niet worden verwijderd.');
+  if ((DB.trainingCategories || []).length <= 1) return alert('Er moet minimaal één trainingscategorie overblijven.');
+
+  const inGebruik = DB.trainingen.filter(t => (t.categorie || 'algemeen') === id).length;
+  const msg = inGebruik > 0
+    ? `Deze categorie wordt gebruikt door ${inGebruik} training${inGebruik === 1 ? '' : 'en'}. Verwijderen? Bestaande trainingen vallen dan terug op "Algemeen".`
+    : 'Trainingscategorie verwijderen?';
+  if (!confirm(msg)) return;
+
+  showLoading();
+  try {
+    if (inGebruik > 0) {
+      await Promise.all(
+        DB.trainingen
+          .filter(t => (t.categorie || 'algemeen') === id)
+          .map(t => supa(`/rest/v1/trainingen?id=eq.${t.id}`, { method: 'PATCH', body: JSON.stringify({ doelgroep: 'cat:algemeen' }) }))
+      );
+      DB.trainingen = DB.trainingen.map(t => (t.categorie || 'algemeen') === id ? { ...t, categorie: 'algemeen' } : t);
+    }
+
+    if (HAS_TRAINING_CATEGORIES_TABLE) {
+      await supa(`/rest/v1/training_categories?id=eq.${id}`, { method: 'DELETE' });
+    }
+
+    DB.trainingCategories = DB.trainingCategories.filter(t => t.id !== id);
+    persistTrainingCategoriesLocally();
+    closeModal(); renderContent();
+  } catch (e) { toastError(e); } finally { hideLoading(); }
+}
+
 async function saveAgendaType(id) {
   const naam = document.getElementById('f-typename').value.trim();
   if (!naam) return alert('Naam is verplicht');

@@ -22,6 +22,15 @@ const DEFAULT_TRAINING_TYPES = [
   { id: 'anders', naam: 'Anders', kleur: 'paars' },
 ];
 
+const DEFAULT_TRAINING_CATEGORIES = [
+  { id: 'algemeen', naam: 'Algemeen', kleur: 'navy' },
+  { id: 'didactiek', naam: 'Didactiek', kleur: 'blauw' },
+  { id: 'gedrag', naam: 'Gedrag', kleur: 'oranje' },
+  { id: 'team', naam: 'Team', kleur: 'groen' },
+  { id: 'ouders', naam: 'Ouders', kleur: 'paars' },
+  { id: 'maatwerk', naam: 'Maatwerk', kleur: 'navy' },
+];
+
 function normalizeTypeId(value = '') {
   return String(value || '')
     .toLowerCase()
@@ -46,13 +55,37 @@ function ensureTrainingTypes() {
   DB.trainingTypes = DEFAULT_TRAINING_TYPES.map(t => ({ ...t }));
 }
 
+function ensureTrainingCategories() {
+  if (!Array.isArray(DB.trainingCategories)) DB.trainingCategories = [];
+  if (DB.trainingCategories.length) return;
+
+  try {
+    const stored = JSON.parse(localStorage.getItem('crm_training_categories') || '[]');
+    if (Array.isArray(stored) && stored.length) {
+      DB.trainingCategories = stored;
+      return;
+    }
+  } catch (e) {}
+
+  DB.trainingCategories = DEFAULT_TRAINING_CATEGORIES.map(t => ({ ...t }));
+}
+
 function persistTrainingTypesLocally() {
   try { localStorage.setItem('crm_training_types', JSON.stringify(DB.trainingTypes || [])); } catch (e) {}
+}
+
+function persistTrainingCategoriesLocally() {
+  try { localStorage.setItem('crm_training_categories', JSON.stringify(DB.trainingCategories || [])); } catch (e) {}
 }
 
 function getTrainingTypeList() {
   ensureTrainingTypes();
   return (DB.trainingTypes && DB.trainingTypes.length) ? DB.trainingTypes : DEFAULT_TRAINING_TYPES;
+}
+
+function getTrainingCategoryList() {
+  ensureTrainingCategories();
+  return (DB.trainingCategories && DB.trainingCategories.length) ? DB.trainingCategories : DEFAULT_TRAINING_CATEGORIES;
 }
 
 function getTrainingTypeInfo(typeId = '') {
@@ -62,13 +95,31 @@ function getTrainingTypeInfo(typeId = '') {
   return { ...found, label: found.naam || 'Anders', color: style.color, bg: style.bg };
 }
 
+function getTrainingCategoryInfo(categoryId = '') {
+  const list = getTrainingCategoryList();
+  const found = list.find(t => t.id === categoryId) || list.find(t => t.id === 'algemeen') || { id: categoryId || 'algemeen', naam: categoryId || 'Algemeen', kleur: 'navy' };
+  const style = TRAINING_TYPE_STYLES[found.kleur] || TRAINING_TYPE_STYLES.grijs;
+  return { ...found, label: found.naam || 'Algemeen', color: style.color, bg: style.bg };
+}
+
 function trainingTypeLabel(typeId = '') {
   return getTrainingTypeInfo(typeId).label;
 }
 
-function catBadge(cat) {
-  const c = getTrainingTypeInfo(cat);
-  return `<span style="display:inline-flex;align-items:center;padding:2px 10px;border-radius:20px;font-size:11.5px;font-weight:700;background:${c.bg};color:${c.color}">${c.label}</span>`;
+function trainingCategoryLabel(categoryId = '') {
+  return getTrainingCategoryInfo(categoryId).label;
+}
+
+function badgeFromInfo(info) {
+  return `<span style="display:inline-flex;align-items:center;padding:2px 10px;border-radius:20px;font-size:11.5px;font-weight:700;background:${info.bg};color:${info.color}">${info.label}</span>`;
+}
+
+function typeBadge(typeId = '') {
+  return badgeFromInfo(getTrainingTypeInfo(typeId));
+}
+
+function catBadge(categoryId = '') {
+  return badgeFromInfo(getTrainingCategoryInfo(categoryId));
 }
 
 function renderStars(score, interactive = false, fid = '') {
@@ -87,10 +138,12 @@ function renderTrainingenPage(search = '') {
   if (!DB.uitvoeringen) DB.uitvoeringen = [];
 
   ensureTrainingTypes();
+  ensureTrainingCategories();
 
   const filtered = DB.trainingen.filter(t =>
     t.naam.toLowerCase().includes(search.toLowerCase()) ||
-    trainingTypeLabel(t.categorie).toLowerCase().includes(search.toLowerCase()) ||
+    trainingTypeLabel(t.type).toLowerCase().includes(search.toLowerCase()) ||
+    trainingCategoryLabel(t.categorie).toLowerCase().includes(search.toLowerCase()) ||
     (t.omschrijving || '').toLowerCase().includes(search.toLowerCase())
   );
 
@@ -120,7 +173,7 @@ function renderTrainingenPage(search = '') {
           ? Math.round(uitv.filter(u => u.score).reduce((s, u) => s + u.score, 0) / uitv.filter(u => u.score).length * 10) / 10
           : null;
         return `
-        <div class="card" style="cursor:pointer;transition:box-shadow .15s;border-top:4px solid ${getTrainingTypeInfo(t.categorie).color};position:relative"
+        <div class="card" style="cursor:pointer;transition:box-shadow .15s;border-top:4px solid ${getTrainingTypeInfo(t.type).color};position:relative"
              onclick="navigate('training-detail','${t.id}')"
              onmouseover="this.style.boxShadow='var(--shl)'" onmouseout="this.style.boxShadow=''">
           <button class="btn btn-ghost btn-icon btn-sm" title="Training verwijderen"
@@ -129,7 +182,7 @@ function renderTrainingenPage(search = '') {
           <div class="card-body" style="padding:18px 20px">
             <div style="display:flex;justify-content:space-between;align-items:flex-start;gap:8px;margin-bottom:10px;padding-right:28px">
               <div style="font-size:15px;font-weight:800;color:var(--navy);line-height:1.3">${esc(t.naam)}</div>
-              ${catBadge(t.categorie)}
+              <div style="display:flex;gap:6px;flex-wrap:wrap;justify-content:flex-end">${typeBadge(t.type)}${catBadge(t.categorie)}</div>
             </div>
             ${t.omschrijving ? `<div style="font-size:13px;color:var(--navy3);line-height:1.55;margin-bottom:12px;display:-webkit-box;-webkit-line-clamp:2;-webkit-box-orient:vertical;overflow:hidden">${esc(t.omschrijving)}</div>` : ''}
             <div style="display:flex;align-items:center;justify-content:space-between;margin-top:8px;padding-top:10px;border-top:1px solid var(--bg3)">
@@ -162,7 +215,7 @@ function renderTrainingDetail(id) {
           </div>
           <div class="card-body">
             <table style="width:100%"><tbody>
-              ${[['Naam', t.naam], ['Type', catBadge(t.categorie)]].filter(([, v]) => v).map(([k, v]) => `
+              ${[['Naam', t.naam], ['Type', typeBadge(t.type)], ['Categorie', catBadge(t.categorie)]].filter(([, v]) => v).map(([k, v]) => `
                 <tr><td style="color:var(--navy4);font-size:12px;padding-right:16px;padding-bottom:10px;white-space:nowrap;vertical-align:top">${k}</td>
                     <td style="font-size:14px;padding-bottom:10px;color:var(--navy2)">${v}</td></tr>`).join('')}
             </tbody></table>
@@ -264,6 +317,7 @@ function renderTrainingDetail(id) {
       <div>
         <div style="display:flex;align-items:center;gap:12px;flex-wrap:wrap">
           <div class="detail-title">${esc(t.naam)}</div>
+          ${typeBadge(t.type)}
           ${catBadge(t.categorie)}
         </div>
         ${t.omschrijving ? `<div class="detail-subtitle" style="margin-top:6px;max-width:600px">${esc(t.omschrijving.slice(0, 120))}${t.omschrijving.length > 120 ? '…' : ''}</div>` : ''}
@@ -278,14 +332,20 @@ function renderTrainingDetail(id) {
 
 function openTrainingModal(id = '') {
   ensureTrainingTypes();
+  ensureTrainingCategories();
   const t = id ? DB.trainingen.find(x => x.id === id) : null;
-  const catOpts = getTrainingTypeList().map(tp =>
-    `<option value="${tp.id}"${(t?.categorie || 'training') === tp.id ? ' selected' : ''}>${esc(tp.naam)}</option>`).join('');
+  const typeOpts = getTrainingTypeList().map(tp =>
+    `<option value="${tp.id}"${(t?.type || 'training') === tp.id ? ' selected' : ''}>${esc(tp.naam)}</option>`).join('');
+  const catOpts = getTrainingCategoryList().map(tp =>
+    `<option value="${tp.id}"${(t?.categorie || 'algemeen') === tp.id ? ' selected' : ''}>${esc(tp.naam)}</option>`).join('');
 
   showModal(t ? 'Training bewerken' : 'Nieuwe training',
     `<div class="form-group"><label>Naam *</label>
        <input type="text" id="f-naam" value="${esc(t?.naam || '')}" placeholder="bijv. Groeimindset workshop"/></div>
-     <div class="form-group"><label>Type</label><select id="f-cat">${catOpts}</select></div>
+     <div class="form-row">
+       <div class="form-group"><label>Type</label><select id="f-type">${typeOpts}</select></div>
+       <div class="form-group"><label>Categorie</label><select id="f-cat">${catOpts}</select></div>
+     </div>
      <div class="form-group"><label>Omschrijving</label>
        <textarea id="f-omschr" rows="4" placeholder="Wat houdt deze training in?">${esc(t?.omschrijving || '')}</textarea></div>`,
     `<button class="btn btn-secondary" onclick="closeModal()">Annuleren</button>

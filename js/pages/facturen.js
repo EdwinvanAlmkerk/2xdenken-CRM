@@ -372,9 +372,12 @@ function getFactuurHtml(fid) {
 <head>
 <meta charset="UTF-8"/>
 <title>Factuur ${esc(f.nummer)}</title>
+<link rel="preconnect" href="https://fonts.googleapis.com">
+<link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+<link href="https://fonts.googleapis.com/css2?family=Nunito:wght@400;600;700;800&display=swap" rel="stylesheet">
 <style>
   *{box-sizing:border-box;margin:0;padding:0}
-  body{font-family:Arial,sans-serif;font-size:10pt;color:#222;background:#fff}
+  body{font-family:'Nunito',Arial,sans-serif;font-size:10pt;color:#222;background:#fff}
   @page{size:A4;margin:15mm 18mm 18mm 18mm}
   @media print{.no-print{display:none!important}}
   .page{max-width:800px;margin:0 auto;padding:24px 30px 30px}

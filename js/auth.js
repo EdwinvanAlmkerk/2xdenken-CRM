@@ -251,7 +251,7 @@ async function doLogout() {
   localStorage.removeItem('crm_session');
   DB = {
     besturen: [], scholen: [], contacten: [], dossiers: [], facturen: [], trainingen: [], uitvoeringen: [],
-    agenda: [], agendaTypes: [], trainingTypes: [], emailTemplates: [], emailLog: [], emailSettings: null, outlookSettings: null
+    agenda: [], agendaTypes: [], trainingTypes: [], trainingCategories: [], emailTemplates: [], emailLog: [], emailSettings: null, outlookSettings: null
   };
   document.getElementById('app').style.display = 'none';
   document.getElementById('login-screen').style.display = 'flex';

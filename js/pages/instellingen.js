@@ -5,6 +5,7 @@
 function renderInstellingen() {
   const aantalFacturen = DB.facturen.length;
   ensureTrainingTypes();
+  ensureTrainingCategories();
   return `
     <div style="max-width:720px;display:flex;flex-direction:column;gap:24px">
 
@@ -21,7 +22,7 @@ function renderInstellingen() {
                 ? `<tr><td colspan="4"><div class="empty-state" style="padding:20px"><p>Geen trainingtypes</p></div></td></tr>`
                 : getTrainingTypeList().map(t => {
                     const k = AGENDA_KLEUREN[t.kleur] || AGENDA_KLEUREN.navy;
-                    const aantal = DB.trainingen.filter(tr => (tr.categorie || 'training') === t.id).length;
+                    const aantal = DB.trainingen.filter(tr => (tr.type || 'training') === t.id).length;
                     return `<tr>
                       <td style="font-weight:600">${esc(t.naam)}</td>
                       <td><span class="badge ${k.badge}">${esc(AGENDA_KLEUR_LABELS[t.kleur] || t.kleur)}</span></td>
@@ -30,6 +31,37 @@ function renderInstellingen() {
                         <div class="row-actions">
                           <button class="btn btn-ghost btn-icon btn-sm" title="Bewerken" onclick="openTrainingTypeModal('${t.id}')">${svgIcon('edit', 14)}</button>
                           <button class="btn btn-ghost btn-icon btn-sm" title="Verwijderen" onclick="delTrainingType('${t.id}')" style="color:var(--s-rood)">${svgIcon('trash', 14)}</button>
+                        </div>
+                      </td>
+                    </tr>`;
+                  }).join('')}
+            </tbody>
+          </table>
+        </div>
+      </div>
+
+      <div class="card">
+        <div class="card-header">
+          <h3>${svgIcon('training', 16)} Trainingscategorieën</h3>
+          <button class="btn btn-primary btn-sm" onclick="openTrainingCategoryModal()">${svgIcon('add', 14)} Categorie toevoegen</button>
+        </div>
+        <div class="card-body" style="padding:0">
+          <table>
+            <thead><tr><th>Naam</th><th>Kleur</th><th style="width:60px">In gebruik</th><th style="width:80px"></th></tr></thead>
+            <tbody>
+              ${getTrainingCategoryList().length === 0
+                ? `<tr><td colspan="4"><div class="empty-state" style="padding:20px"><p>Geen trainingscategorieën</p></div></td></tr>`
+                : getTrainingCategoryList().map(t => {
+                    const k = AGENDA_KLEUREN[t.kleur] || AGENDA_KLEUREN.navy;
+                    const aantal = DB.trainingen.filter(tr => (tr.categorie || 'algemeen') === t.id).length;
+                    return `<tr>
+                      <td style="font-weight:600">${esc(t.naam)}</td>
+                      <td><span class="badge ${k.badge}">${esc(AGENDA_KLEUR_LABELS[t.kleur] || t.kleur)}</span></td>
+                      <td style="text-align:center;color:var(--navy3)">${aantal}</td>
+                      <td>
+                        <div class="row-actions">
+                          <button class="btn btn-ghost btn-icon btn-sm" title="Bewerken" onclick="openTrainingCategoryModal('${t.id}')">${svgIcon('edit', 14)}</button>
+                          <button class="btn btn-ghost btn-icon btn-sm" title="Verwijderen" onclick="delTrainingCategory('${t.id}')" style="color:var(--s-rood)">${svgIcon('trash', 14)}</button>
                         </div>
                       </td>
                     </tr>`;
@@ -235,6 +267,29 @@ function openTrainingTypeModal(id = '') {
     `<button class="btn btn-secondary" onclick="closeModal()">Annuleren</button>
      ${t ? `<button class="btn" style="background:#FDE8E8;color:#C0392B;font-weight:700" onclick="delTrainingType('${id}')">Verwijderen</button>` : ''}
      <button class="btn btn-primary" onclick="document.getElementById('f-trainingtypekleur').value=document.querySelector('input[name=trainingtypekleur]:checked')?.value||'navy';saveTrainingType('${id}')">${t ? 'Opslaan' : 'Toevoegen'}</button>`);
+}
+
+function openTrainingCategoryModal(id = '') {
+  ensureTrainingCategories();
+  const t = id ? getTrainingCategoryList().find(x => x.id === id) : null;
+  const kleurOpties = Object.entries(AGENDA_KLEUR_LABELS).map(([val, label]) => {
+    const k = AGENDA_KLEUREN[val];
+    return `<label style="display:flex;align-items:center;gap:8px;padding:6px 10px;border-radius:6px;cursor:pointer;border:2px solid ${(t?.kleur || 'navy') === val ? 'var(--navy)' : 'var(--bg3)'};background:${(t?.kleur || 'navy') === val ? 'var(--bg)' : 'white'}">
+      <input type="radio" name="trainingcategorykleur" value="${val}" ${(t?.kleur || 'navy') === val ? 'checked' : ''} style="display:none" onclick="document.querySelectorAll('#trainingcategory-kleur-grid label').forEach(l=>{l.style.borderColor='var(--bg3)';l.style.background='white'});this.closest('label').style.borderColor='var(--navy)';this.closest('label').style.background='var(--bg)'">
+      <span class="badge ${k.badge}">${esc(label)}</span>
+    </label>`;
+  }).join('');
+
+  showModal(t ? 'Trainingscategorie bewerken' : 'Nieuwe trainingscategorie',
+    `<div class="form-group"><label>Naam *</label><input type="text" id="f-trainingcategoryname" value="${esc(t?.naam || '')}" placeholder="Bijv. Gedrag, Rekenen, Teamontwikkeling…"/></div>
+     <div class="form-group">
+       <label>Kleur</label>
+       <div id="trainingcategory-kleur-grid" style="display:flex;gap:8px;flex-wrap:wrap">${kleurOpties}</div>
+       <select id="f-trainingcategorykleur" style="display:none"><option value="${esc(t?.kleur || 'navy')}">${esc(t?.kleur || 'navy')}</option></select>
+     </div>`,
+    `<button class="btn btn-secondary" onclick="closeModal()">Annuleren</button>
+     ${t ? `<button class="btn" style="background:#FDE8E8;color:#C0392B;font-weight:700" onclick="delTrainingCategory('${id}')">Verwijderen</button>` : ''}
+     <button class="btn btn-primary" onclick="document.getElementById('f-trainingcategorykleur').value=document.querySelector('input[name=trainingcategorykleur]:checked')?.value||'navy';saveTrainingCategory('${id}')">${t ? 'Opslaan' : 'Toevoegen'}</button>`);
 }
 
 function openAgendaTypeModal(id = '') {

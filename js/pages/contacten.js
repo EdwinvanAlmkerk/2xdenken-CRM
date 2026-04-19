@@ -155,7 +155,7 @@ function renderContactDetail(schoolId, contactId) {
                  ${uitvoeringen.map(u => {
                    const t = DB.trainingen.find(x => x.id === u.trainingId);
                    return `<tr class="clickable-row" onclick="navigate('training-detail','${u.trainingId}')">
-                     <td style="font-weight:500">${esc(t?.naam || '–')}${t?.categorie ? ' ' + catBadge(t.categorie) : ''}</td>
+                     <td style="font-weight:500">${esc(t?.naam || '–')}${t?.type ? ' ' + typeBadge(t.type) : ''}${t?.categorie ? ' ' + catBadge(t.categorie) : ''}</td>
                      <td>${fmtDateShort(u.datum)}</td>
                      <td>${u.deelnemers || '–'}</td>
                      <td>${u.score ? renderStars(u.score) : '–'}</td>
