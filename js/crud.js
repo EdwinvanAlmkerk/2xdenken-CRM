@@ -280,6 +280,9 @@ async function saveTraining(id) {
     omschrijving: document.getElementById('f-omschr').value.trim(),
     tips: bestaand?.tips || [],
     bestanden: [...(bestaand?.bestanden || [])],
+    links: (Array.isArray(_trainingLinksDraft) ? _trainingLinksDraft : [])
+      .map(link => ({ label: (link.label || '').trim(), url: (link.url || '').trim() }))
+      .filter(link => link.url),
   };
   showLoading();
   try {
@@ -294,6 +297,7 @@ async function saveTraining(id) {
       DB.trainingen.push({ id: recordId, ...data });
     }
     persistTrainingBestandenLocally();
+    persistTrainingLinksLocally();
     closeModal();
     if (id) renderContent(); else navigate('trainingen');
   } catch (e) { toastError(e); } finally { hideLoading(); }
@@ -311,6 +315,7 @@ async function delTraining(id) {
     DB.trainingen   = DB.trainingen.filter(t => t.id !== id);
     DB.uitvoeringen = DB.uitvoeringen.filter(u => u.trainingId !== id);
     persistTrainingBestandenLocally();
+    persistTrainingLinksLocally();
     closeModal(); navigate('trainingen');
   } catch (e) { toastError(e); } finally { hideLoading(); }
 }
@@ -327,6 +332,7 @@ async function delTrainingBestand(trainingId, idx) {
     await supa(`/rest/v1/trainingen?id=eq.${trainingId}`, { method: 'PATCH', body: JSON.stringify(toDB_training(next)) });
     DB.trainingen = DB.trainingen.map(item => item.id === trainingId ? next : item);
     persistTrainingBestandenLocally();
+    persistTrainingLinksLocally();
     closeModal();
     renderContent();
     openTrainingModal(trainingId);

@@ -85,6 +85,13 @@ function persistTrainingBestandenLocally() {
   } catch (e) {}
 }
 
+function persistTrainingLinksLocally() {
+  try {
+    const map = Object.fromEntries((DB.trainingen || []).filter(t => t?.id).map(t => [t.id, t.links || []]));
+    localStorage.setItem('crm_training_links', JSON.stringify(map));
+  } catch (e) {}
+}
+
 function getTrainingTypeList() {
   ensureTrainingTypes();
   return (DB.trainingTypes && DB.trainingTypes.length) ? DB.trainingTypes : DEFAULT_TRAINING_TYPES;
@@ -137,6 +144,59 @@ function renderTrainingBestanden(bestanden = [], trainingId = '', editable = fal
       ${b.grootte ? `<span style="color:var(--navy4)">(${fmtBytes(b.grootte)})</span>` : ''}
       ${editable ? `<span onclick="event.stopPropagation();delTrainingBestand('${trainingId}',${i})" title="Verwijderen" style="margin-left:2px;color:var(--s-rood);font-weight:800">×</span>` : ''}
     </span>`).join('')}</div>`;
+}
+
+function normalizeTrainingLink(url = '') {
+  const trimmed = String(url || '').trim();
+  if (!trimmed) return '';
+  return /^https?:\/\//i.test(trimmed) ? trimmed : `https://${trimmed}`;
+}
+
+function renderTrainingLinks(links = [], editable = false) {
+  if (!links || !links.length) return '';
+  return `<div style="display:flex;flex-direction:column;gap:8px;margin-top:8px">${links.map((link, i) => {
+    const href = normalizeTrainingLink(link.url || '');
+    return `<div style="display:flex;align-items:center;gap:8px;flex-wrap:wrap">
+      <a href="${esc(href)}" target="_blank" rel="noopener noreferrer" style="color:var(--blue);font-weight:600;word-break:break-all">${esc(link.label || link.url || href)}</a>
+      ${editable ? `<button class="btn btn-ghost btn-icon btn-sm" onclick="removeTrainingLinkRow(${i})" title="Verwijderen" style="color:var(--s-rood)">${svgIcon('trash', 13)}</button>` : ''}
+    </div>`;
+  }).join('')}</div>`;
+}
+
+function renderTrainingLinkRows(links = []) {
+  const rows = links.length ? links : [{ label: '', url: '' }];
+  return rows.map((link, i) => `
+    <div style="display:grid;grid-template-columns:1fr 1.4fr auto;gap:8px;align-items:center;margin-bottom:8px">
+      <input type="text" value="${esc(link.label || '')}" placeholder="Naam van de link" oninput="updateTrainingLinkRow(${i}, 'label', this.value)" />
+      <input type="url" value="${esc(link.url || '')}" placeholder="https://..." oninput="updateTrainingLinkRow(${i}, 'url', this.value)" />
+      <button class="btn btn-ghost btn-icon btn-sm" onclick="removeTrainingLinkRow(${i})" title="Verwijderen" style="color:var(--s-rood)">${svgIcon('trash', 13)}</button>
+    </div>`).join('');
+}
+
+let _trainingLinksDraft = [];
+
+function updateTrainingLinkRowsUi() {
+  const wrap = document.getElementById('training-links-wrap');
+  if (wrap) wrap.innerHTML = renderTrainingLinkRows(_trainingLinksDraft);
+}
+
+function updateTrainingLinkRow(i, key, value) {
+  if (!_trainingLinksDraft[i]) _trainingLinksDraft[i] = { label: '', url: '' };
+  _trainingLinksDraft[i][key] = value;
+}
+
+function addTrainingLinkRow() {
+  _trainingLinksDraft.push({ label: '', url: '' });
+  updateTrainingLinkRowsUi();
+}
+
+function removeTrainingLinkRow(i) {
+  if (_trainingLinksDraft.length <= 1) {
+    _trainingLinksDraft = [{ label: '', url: '' }];
+  } else {
+    _trainingLinksDraft.splice(i, 1);
+  }
+  updateTrainingLinkRowsUi();
 }
 
 function renderStars(score, interactive = false, fid = '') {
@@ -261,6 +321,7 @@ function renderTrainingDetail(id) {
                     <td style="font-size:14px;padding-bottom:10px;color:var(--navy2)">${v}</td></tr>`).join('')}
             </tbody></table>
             ${t.omschrijving ? `<div style="margin-top:4px"><div style="font-size:11px;font-weight:700;color:var(--navy4);text-transform:uppercase;letter-spacing:.6px;margin-bottom:6px">Omschrijving</div><div style="font-size:14px;color:var(--navy2);line-height:1.65;white-space:pre-wrap">${esc(t.omschrijving)}</div></div>` : ''}
+            ${t.links?.length ? `<div style="margin-top:14px"><div style="font-size:11px;font-weight:700;color:var(--navy4);text-transform:uppercase;letter-spacing:.6px;margin-bottom:6px">Links</div>${renderTrainingLinks(t.links, false)}</div>` : ''}
             ${t.bestanden?.length ? `<div style="margin-top:14px"><div style="font-size:11px;font-weight:700;color:var(--navy4);text-transform:uppercase;letter-spacing:.6px;margin-bottom:6px">Documenten</div>${renderTrainingBestanden(t.bestanden, id, false)}</div>` : ''}
           </div>
         </div>
@@ -376,6 +437,7 @@ function openTrainingModal(id = '') {
   ensureTrainingTypes();
   ensureTrainingCategories();
   const t = id ? DB.trainingen.find(x => x.id === id) : null;
+  _trainingLinksDraft = (t?.links && t.links.length ? t.links : [{ label: '', url: '' }]).map(link => ({ label: link.label || '', url: link.url || '' }));
   const typeOpts = getTrainingTypeList().map(tp =>
     `<option value="${tp.id}"${(t?.type || 'training') === tp.id ? ' selected' : ''}>${esc(tp.naam)}</option>`).join('');
   const catOpts = getTrainingCategoryList().map(tp =>
@@ -390,6 +452,11 @@ function openTrainingModal(id = '') {
      </div>
      <div class="form-group"><label>Omschrijving</label>
        <textarea id="f-omschr" rows="4" placeholder="Wat houdt deze training in?">${esc(t?.omschrijving || '')}</textarea></div>
+     <div class="form-group">
+       <label>Links</label>
+       <div id="training-links-wrap">${renderTrainingLinkRows(_trainingLinksDraft)}</div>
+       <button type="button" class="btn btn-secondary btn-sm" onclick="addTrainingLinkRow()" style="margin-top:4px">${svgIcon('add', 14)} Link toevoegen</button>
+     </div>
      <div class="form-group"><label>Document toevoegen</label>
        <input type="file" id="f-train-bestand" multiple />
        <div style="font-size:11px;color:var(--navy4);margin-top:4px">Je kunt meerdere documenten tegelijk toevoegen.</div>

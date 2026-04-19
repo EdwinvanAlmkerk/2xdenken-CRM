@@ -7,6 +7,7 @@ let currentUser = null;
 let HAS_TRAINING_TYPES_TABLE = false;
 let HAS_TRAINING_CATEGORIES_TABLE = false;
 let HAS_TRAINING_BESTANDEN_COLUMN = false;
+let HAS_TRAINING_LINKS_COLUMN = false;
 
 let DB = {
   besturen: [], scholen: [], contacten: [],
@@ -99,11 +100,15 @@ function fromDB_factuur(r)  { return { id: r.id, schoolId: r.school_id, contactI
 function getLocalTrainingDocsMap() {
   try { return JSON.parse(localStorage.getItem('crm_training_bestanden') || '{}'); } catch (e) { return {}; }
 }
+function getLocalTrainingLinksMap() {
+  try { return JSON.parse(localStorage.getItem('crm_training_links') || '{}'); } catch (e) { return {}; }
+}
 function fromDB_training(r) {
   const storedCategory = typeof r.doelgroep === 'string' && r.doelgroep.startsWith('cat:')
     ? r.doelgroep.slice(4)
     : 'algemeen';
   const localDocs = getLocalTrainingDocsMap()[r.id] || [];
+  const localLinks = getLocalTrainingLinksMap()[r.id] || [];
   return {
     id: r.id,
     naam: r.naam,
@@ -114,7 +119,8 @@ function fromDB_training(r) {
     maxDeelnemers: '',
     omschrijving: r.omschrijving || '',
     tips: r.tips || [],
-    bestanden: Array.isArray(r.bestanden) ? r.bestanden : localDocs
+    bestanden: Array.isArray(r.bestanden) ? r.bestanden : localDocs,
+    links: Array.isArray(r.tips_links) ? r.tips_links : localLinks
   };
 }
 function fromDB_uitv(r)     { return { id: r.id, trainingId: r.training_id, schoolId: r.school_id, contactId: r.contact_id || '', datum: r.datum, deelnemers: r.deelnemers, score: r.score, evaluatie: r.evaluatie || '', watGingGoed: r.wat_ging_goed || '', watKonBeter: r.wat_kon_beter || '' }; }
@@ -144,6 +150,7 @@ function toDB_training(d) {
     tips: d.tips || []
   };
   if (HAS_TRAINING_BESTANDEN_COLUMN) payload.bestanden = d.bestanden || [];
+  if (HAS_TRAINING_LINKS_COLUMN) payload.tips_links = d.links || [];
   return payload;
 }
 function toDB_uitv(d)     { return { training_id: d.trainingId, school_id: d.schoolId, contact_id: d.contactId || null, datum: d.datum || null, deelnemers: d.deelnemers ? parseInt(d.deelnemers) : null, score: d.score || null, evaluatie: d.evaluatie || null, wat_ging_goed: d.watGingGoed || null, wat_kon_beter: d.watKonBeter || null }; }
@@ -153,7 +160,7 @@ function toDB_agenda(d)   { return { titel: d.titel, datum: d.datum, begin_tijd:
 async function loadAllData() {
   showLoading();
   try {
-    const [besturen, scholen, contacten, dossiers, facturen, trainingen, uitvoeringen, agenda, agendaTypes, trainingTypes, trainingCategories, _trainingBestandenProbe, emailTemplates, emailLog, emailSettingsArr, outlookSettingsArr] = await Promise.all([
+    const [besturen, scholen, contacten, dossiers, facturen, trainingen, uitvoeringen, agenda, agendaTypes, trainingTypes, trainingCategories, _trainingBestandenProbe, _trainingLinksProbe, emailTemplates, emailLog, emailSettingsArr, outlookSettingsArr] = await Promise.all([
       supa('/rest/v1/besturen?select=*&order=naam'),
       supa('/rest/v1/scholen?select=*&order=naam'),
       supa('/rest/v1/contacten?select=*&order=naam'),
@@ -172,6 +179,9 @@ async function loadAllData() {
       supa('/rest/v1/trainingen?select=bestanden&limit=1')
         .then(r => { HAS_TRAINING_BESTANDEN_COLUMN = true; return r; })
         .catch(() => { HAS_TRAINING_BESTANDEN_COLUMN = false; return []; }),
+      supa('/rest/v1/trainingen?select=tips_links&limit=1')
+        .then(r => { HAS_TRAINING_LINKS_COLUMN = true; return r; })
+        .catch(() => { HAS_TRAINING_LINKS_COLUMN = false; return []; }),
       supa('/rest/v1/email_templates?select=*&order=naam'),
       supa('/rest/v1/email_log?select=*&order=datum.desc'),
       supa('/rest/v1/email_settings?select=*&id=eq.main'),
