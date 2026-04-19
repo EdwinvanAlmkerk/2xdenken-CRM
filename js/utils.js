@@ -123,10 +123,8 @@ async function uploadBestandToStorage(dossierId, file) {
   return { naam: file.name, pad: path, mimetype: file.type || '', grootte: file.size };
 }
 
-async function downloadBestand(dossierId, idx) {
-  const d = DB.dossiers.find(x => x.id === dossierId);
-  if (!d || !d.bestanden || !d.bestanden[idx]) return;
-  const b = d.bestanden[idx];
+async function downloadStorageBestand(b) {
+  if (!b?.pad) return;
   try {
     const res = await fetch(`${SUPA_URL}/storage/v1/object/sign/${STORAGE_BUCKET}/${encodeURI(b.pad)}`, {
       method: 'POST',
@@ -150,6 +148,18 @@ async function downloadBestand(dossierId, idx) {
   } catch (e) {
     showToast('Download mislukt: ' + e.message, 'error');
   }
+}
+
+async function downloadBestand(dossierId, idx) {
+  const d = DB.dossiers.find(x => x.id === dossierId);
+  if (!d || !d.bestanden || !d.bestanden[idx]) return;
+  await downloadStorageBestand(d.bestanden[idx]);
+}
+
+async function downloadTrainingBestand(trainingId, idx) {
+  const t = DB.trainingen.find(x => x.id === trainingId);
+  if (!t || !t.bestanden || !t.bestanden[idx]) return;
+  await downloadStorageBestand(t.bestanden[idx]);
 }
 
 async function deleteBestandFromStorage(path) {

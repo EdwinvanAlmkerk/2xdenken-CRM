@@ -267,6 +267,9 @@ async function delFactuurOverview(fid) { await delFactuur(fid, null); }
 async function saveTraining(id) {
   const naam = document.getElementById('f-naam').value.trim();
   if (!naam) return alert('Naam is verplicht');
+  const bestaand = id ? DB.trainingen.find(t => t.id === id) : null;
+  const fileInput = document.getElementById('f-train-bestand');
+  const files = fileInput ? [...fileInput.files] : [];
   const data = {
     naam,
     type: document.getElementById('f-type')?.value || 'training',
@@ -275,17 +278,22 @@ async function saveTraining(id) {
     doelgroep: '',
     maxDeelnemers: '',
     omschrijving: document.getElementById('f-omschr').value.trim(),
+    tips: bestaand?.tips || [],
+    bestanden: [...(bestaand?.bestanden || [])],
   };
   showLoading();
   try {
+    const recordId = id || uid();
+    for (const f of files) data.bestanden.push(await uploadBestandToStorage(recordId, f));
+
     if (id) {
       await supa(`/rest/v1/trainingen?id=eq.${id}`, { method: 'PATCH', body: JSON.stringify(toDB_training(data)) });
       DB.trainingen = DB.trainingen.map(t => t.id === id ? { ...t, ...data } : t);
     } else {
-      const newId = uid();
-      await supa('/rest/v1/trainingen', { method: 'POST', body: JSON.stringify({ id: newId, ...toDB_training(data), tips: [] }) });
-      DB.trainingen.push({ id: newId, tips: [], ...data });
+      await supa('/rest/v1/trainingen', { method: 'POST', body: JSON.stringify({ id: recordId, ...toDB_training(data) }) });
+      DB.trainingen.push({ id: recordId, ...data });
     }
+    persistTrainingBestandenLocally();
     closeModal();
     if (id) renderContent(); else navigate('trainingen');
   } catch (e) { toastError(e); } finally { hideLoading(); }
@@ -295,10 +303,33 @@ async function delTraining(id) {
   if (!confirm('Training verwijderen? Alle uitvoeringen worden ook verwijderd.')) return;
   showLoading();
   try {
+    const t = DB.trainingen.find(x => x.id === id);
+    if (t?.bestanden?.length) {
+      for (const b of t.bestanden) { try { await deleteBestandFromStorage(b.pad); } catch (e) {} }
+    }
     await supa(`/rest/v1/trainingen?id=eq.${id}`, { method: 'DELETE' });
     DB.trainingen   = DB.trainingen.filter(t => t.id !== id);
     DB.uitvoeringen = DB.uitvoeringen.filter(u => u.trainingId !== id);
+    persistTrainingBestandenLocally();
     closeModal(); navigate('trainingen');
+  } catch (e) { toastError(e); } finally { hideLoading(); }
+}
+
+async function delTrainingBestand(trainingId, idx) {
+  const t = DB.trainingen.find(x => x.id === trainingId);
+  if (!t || !t.bestanden || !t.bestanden[idx]) return;
+  if (!confirm('Document verwijderen?')) return;
+  showLoading();
+  try {
+    const verwijderd = t.bestanden[idx];
+    if (verwijderd?.pad) await deleteBestandFromStorage(verwijderd.pad);
+    const next = { ...t, bestanden: t.bestanden.filter((_, i) => i !== idx) };
+    await supa(`/rest/v1/trainingen?id=eq.${trainingId}`, { method: 'PATCH', body: JSON.stringify(toDB_training(next)) });
+    DB.trainingen = DB.trainingen.map(item => item.id === trainingId ? next : item);
+    persistTrainingBestandenLocally();
+    closeModal();
+    renderContent();
+    openTrainingModal(trainingId);
   } catch (e) { toastError(e); } finally { hideLoading(); }
 }
 

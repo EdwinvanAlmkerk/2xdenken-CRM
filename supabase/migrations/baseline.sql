@@ -63,6 +63,7 @@ CREATE TABLE IF NOT EXISTS trainingen (
   max_deelnemers text,
   omschrijving   text DEFAULT ''::text,
   tips           jsonb NOT NULL DEFAULT '[]'::jsonb,
+  bestanden      jsonb NOT NULL DEFAULT '[]'::jsonb,
   created_at     timestamptz DEFAULT now()
 );
 

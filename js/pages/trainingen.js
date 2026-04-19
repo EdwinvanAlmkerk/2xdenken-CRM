@@ -78,6 +78,13 @@ function persistTrainingCategoriesLocally() {
   try { localStorage.setItem('crm_training_categories', JSON.stringify(DB.trainingCategories || [])); } catch (e) {}
 }
 
+function persistTrainingBestandenLocally() {
+  try {
+    const map = Object.fromEntries((DB.trainingen || []).filter(t => t?.id).map(t => [t.id, t.bestanden || []]));
+    localStorage.setItem('crm_training_bestanden', JSON.stringify(map));
+  } catch (e) {}
+}
+
 function getTrainingTypeList() {
   ensureTrainingTypes();
   return (DB.trainingTypes && DB.trainingTypes.length) ? DB.trainingTypes : DEFAULT_TRAINING_TYPES;
@@ -120,6 +127,16 @@ function typeBadge(typeId = '') {
 
 function catBadge(categoryId = '') {
   return badgeFromInfo(getTrainingCategoryInfo(categoryId));
+}
+
+function renderTrainingBestanden(bestanden = [], trainingId = '', editable = false) {
+  if (!bestanden || !bestanden.length) return '';
+  return `<div style="display:flex;flex-wrap:wrap;gap:8px;margin-top:8px">${bestanden.map((b, i) => `
+    <span onclick="downloadTrainingBestand('${trainingId}',${i})" title="Klik om te downloaden" style="display:inline-flex;align-items:center;gap:6px;background:var(--bg);border:1px solid var(--bg3);border-radius:999px;padding:7px 10px;font-size:12px;color:var(--navy2);cursor:pointer;max-width:100%">
+      <span>${bijlageIcon(b.mimetype)} ${esc(b.naam)}</span>
+      ${b.grootte ? `<span style="color:var(--navy4)">(${fmtBytes(b.grootte)})</span>` : ''}
+      ${editable ? `<span onclick="event.stopPropagation();delTrainingBestand('${trainingId}',${i})" title="Verwijderen" style="margin-left:2px;color:var(--s-rood);font-weight:800">×</span>` : ''}
+    </span>`).join('')}</div>`;
 }
 
 function renderStars(score, interactive = false, fid = '') {
@@ -220,6 +237,7 @@ function renderTrainingDetail(id) {
                     <td style="font-size:14px;padding-bottom:10px;color:var(--navy2)">${v}</td></tr>`).join('')}
             </tbody></table>
             ${t.omschrijving ? `<div style="margin-top:4px"><div style="font-size:11px;font-weight:700;color:var(--navy4);text-transform:uppercase;letter-spacing:.6px;margin-bottom:6px">Omschrijving</div><div style="font-size:14px;color:var(--navy2);line-height:1.65;white-space:pre-wrap">${esc(t.omschrijving)}</div></div>` : ''}
+            ${t.bestanden?.length ? `<div style="margin-top:14px"><div style="font-size:11px;font-weight:700;color:var(--navy4);text-transform:uppercase;letter-spacing:.6px;margin-bottom:6px">Documenten</div>${renderTrainingBestanden(t.bestanden, id, false)}</div>` : ''}
           </div>
         </div>
         <div class="card">
@@ -347,7 +365,12 @@ function openTrainingModal(id = '') {
        <div class="form-group"><label>Categorie</label><select id="f-cat">${catOpts}</select></div>
      </div>
      <div class="form-group"><label>Omschrijving</label>
-       <textarea id="f-omschr" rows="4" placeholder="Wat houdt deze training in?">${esc(t?.omschrijving || '')}</textarea></div>`,
+       <textarea id="f-omschr" rows="4" placeholder="Wat houdt deze training in?">${esc(t?.omschrijving || '')}</textarea></div>
+     <div class="form-group"><label>Document toevoegen</label>
+       <input type="file" id="f-train-bestand" multiple />
+       <div style="font-size:11px;color:var(--navy4);margin-top:4px">Je kunt meerdere documenten tegelijk toevoegen.</div>
+       ${t?.bestanden?.length ? `<div style="margin-top:8px;font-size:11px;font-weight:700;color:var(--navy4);text-transform:uppercase;letter-spacing:.6px">Bestaande documenten</div>${renderTrainingBestanden(t.bestanden, id, true)}` : ''}
+     </div>`,
     `<button class="btn btn-secondary" onclick="closeModal()">Annuleren</button>
      ${t ? `<button class="btn" style="background:#FDE8E8;color:#C0392B;font-weight:700" onclick="delTraining('${id}')">Verwijderen</button>` : ''}
      <button class="btn btn-primary" onclick="saveTraining('${id}')">Opslaan</button>`);
