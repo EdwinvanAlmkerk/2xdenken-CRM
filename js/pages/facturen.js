@@ -245,6 +245,16 @@ async function openFactuurModal(schoolId, fid = '', prefillContactId = '') {
   renderRegels(regels);
 }
 
+function parseFactuurBedrag(val) {
+  return parseFloat(String(val || '').replace(',', '.').replace(/[^0-9.-]/g, '')) || 0;
+}
+
+function updateFactuurTotaal() {
+  const tot = Math.round((_regels || []).reduce((s, r) => s + (Math.round(parseFactuurBedrag(r.bedrag) * 100) / 100), 0) * 100) / 100;
+  const tw = document.getElementById('totaal-wrap');
+  if (tw) tw.innerHTML = `Totaal: ${fmtEuro(tot)}`;
+}
+
 function renderRegels(regels) {
   _regels = regels;
   const wrap = document.getElementById('regels-wrap');
@@ -264,20 +274,19 @@ function renderRegels(regels) {
         <td><input type="text" value="${esc(r.toelichting || '')}" oninput="updateRegel(${i},'toelichting',this.value)" placeholder="Nader te bepalen…"/></td>
         <td><input type="date" value="${esc(r.datum || '')}" oninput="updateRegel(${i},'datum',this.value)"/></td>
         <td><input type="text" value="${esc(r.uren || '')}" oninput="updateRegel(${i},'uren',this.value)" placeholder="2,5 uur"/></td>
-        <td><input type="text" inputmode="decimal" value="${r.bedrag || 0}" oninput="updateRegel(${i},'bedrag',this.value)" placeholder="0.00"/></td>
+        <td><input type="text" inputmode="decimal" value="${esc(r.bedrag || '')}" oninput="updateRegel(${i},'bedrag',this.value)" placeholder="0,00"/></td>
         <td><button class="btn btn-ghost btn-icon btn-sm" onclick="delRegel(${i})">${svgIcon('trash', 13)}</button></td>
       </tr>`).join('')}
     </tbody></table></div>`;
-  const tot = Math.round(regels.reduce((s, r) => s + (Math.round((parseFloat(r.bedrag) || 0) * 100) / 100), 0) * 100) / 100;
-  const tw = document.getElementById('totaal-wrap');
-  if (tw) tw.innerHTML = `Totaal: ${fmtEuro(tot)}`;
+  updateFactuurTotaal();
 }
 
 function updateRegel(i, key, val) {
-  _regels[i][key] = key === 'bedrag' ? parseFloat(val) || 0 : val;
-  renderRegels(_regels);
+  if (!_regels[i]) return;
+  _regels[i][key] = val;
+  updateFactuurTotaal();
 }
-function addRegel() { _regels.push({ id: uid(), omschrijving: '', toelichting: '', datum: '', uren: '', bedrag: 0 }); renderRegels(_regels); }
+function addRegel() { _regels.push({ id: uid(), omschrijving: '', toelichting: '', datum: '', uren: '', bedrag: '' }); renderRegels(_regels); }
 function delRegel(i) { _regels.splice(i, 1); renderRegels(_regels); }
 
 // ── Nieuwe factuur (vanuit facturenoverzicht) ────────────────────

@@ -222,7 +222,7 @@ async function saveFactuur(schoolId, fid) {
     toelichting:  r.toelichting || '',
     datum:        r.datum || '',
     uren:         r.uren || '',
-    bedrag:       parseFloat(r.bedrag) || 0,
+    bedrag:       typeof parseFactuurBedrag === 'function' ? parseFactuurBedrag(r.bedrag) : (parseFloat(String(r.bedrag || '').replace(',', '.')) || 0),
   }));
   const totaal = Math.round(regels.reduce((s, r) => s + (Math.round((r.bedrag || 0) * 100) / 100), 0) * 100) / 100;
   const tavVrij = document.getElementById('f-tav')?.value.trim() || '';
