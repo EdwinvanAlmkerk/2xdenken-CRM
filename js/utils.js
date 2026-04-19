@@ -59,6 +59,34 @@ function esc(s) {
   return String(s).replace(/&/g, '&amp;').replace(/</g, '&lt;').replace(/>/g, '&gt;').replace(/"/g, '&quot;');
 }
 
+// ── Foutmelding-vertaling ─────────────────────────────────────────
+// Zet rauwe Supabase/PostgREST-errors om in begrijpelijke NL-tekst.
+function mapSupaError(err) {
+  const raw = err?.message || String(err || '');
+  let code = '', detail = '', hint = '';
+  const m = raw.match(/\{.*\}/s);
+  if (m) {
+    try { const j = JSON.parse(m[0]); code = j.code || ''; detail = j.details || ''; hint = j.hint || ''; } catch {}
+  }
+
+  if (code === '23505' || /duplicate key/i.test(raw))       return 'Dit item bestaat al (dubbele waarde).';
+  if (code === '23503' || /foreign key/i.test(raw))         return 'Kan niet opslaan: verwijst naar iets dat (nog) niet bestaat.';
+  if (code === '23502' || /null value in column/i.test(raw))return 'Een verplicht veld is niet ingevuld.';
+  if (code === '23514' || /check constraint/i.test(raw))    return 'Waarde voldoet niet aan de regels van dit veld.';
+  if (code === 'PGRST204' || /schema cache/i.test(raw))     return 'De database mist een kolom die de app gebruikt. Ververs de pagina; neem contact op als dit blijft.';
+  if (code === 'PGRST116' || /0 rows/i.test(raw))           return 'Niets gevonden om te bewerken.';
+  if (code === '42501' || /permission denied/i.test(raw))   return 'Geen rechten voor deze actie.';
+  if (/^Supabase 401/.test(raw) || /JWT|invalid.*token/i.test(raw)) return 'Je sessie is verlopen. Log opnieuw in.';
+  if (/^Supabase 403/.test(raw))                             return 'Geen toegang tot deze gegevens.';
+  if (/^Supabase 404/.test(raw))                             return 'Niet gevonden.';
+  if (/^Supabase 409/.test(raw))                             return 'Conflict: iemand of iets anders wijzigde dit net.';
+  if (/^Supabase 5\d\d/.test(raw) || /fetch|NetworkError/i.test(raw)) return 'Server niet bereikbaar. Controleer je verbinding en probeer opnieuw.';
+
+  return detail || hint || 'Er ging iets mis. Probeer het opnieuw.';
+}
+
+function toastError(err) { showToast(mapSupaError(err), 'error'); console.error(err); }
+
 function badge(type) {
   const map = { beslisser: 'Beslisser', beinvloeder: 'Beïnvloeder', concept: 'Concept', verzonden: 'Verzonden', betaald: 'Betaald', vervallen: 'Vervallen' };
   return `<span class="badge badge-${esc(type)}">${esc(map[type] || type)}</span>`;
@@ -283,8 +311,9 @@ function renderGlobalResults(q) {
   });
 
   DB.trainingen.forEach(t => {
-    const sc = Math.max(_searchScore(t.naam, lq), _searchScore(t.categorie, lq));
-    if (sc > 0) groups.trainingen.items.push({ icon: 'training', label: t.naam, sub: t.categorie || '', score: sc, action: () => navigate('training-detail', t.id) });
+    const typeLabel = typeof trainingTypeLabel === 'function' ? trainingTypeLabel(t.categorie) : (t.categorie || '');
+    const sc = Math.max(_searchScore(t.naam, lq), _searchScore(typeLabel, lq));
+    if (sc > 0) groups.trainingen.items.push({ icon: 'training', label: t.naam, sub: typeLabel, score: sc, action: () => navigate('training-detail', t.id) });
   });
 
   (DB.agenda || []).forEach(a => {

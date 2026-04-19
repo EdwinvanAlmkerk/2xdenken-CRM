@@ -18,7 +18,7 @@ async function saveBestuur(id) {
       DB.besturen.push({ id: newId, ...data });
     }
     closeModal(); renderContent();
-  } catch (e) { showToast('Fout: ' + e.message, 'error'); } finally { hideLoading(); }
+  } catch (e) { toastError(e); } finally { hideLoading(); }
 }
 
 async function delBestuur(id) {
@@ -30,7 +30,7 @@ async function delBestuur(id) {
     DB.scholen  = DB.scholen.map(s => s.bestuurId === id ? { ...s, bestuurId: null } : s);
     await supa(`/rest/v1/scholen?bestuur_id=eq.${id}`, { method: 'PATCH', body: JSON.stringify({ bestuur_id: null }) });
     renderContent();
-  } catch (e) { showToast('Fout: ' + e.message, 'error'); } finally { hideLoading(); }
+  } catch (e) { toastError(e); } finally { hideLoading(); }
 }
 
 // ── SCHOLEN ───────────────────────────────────────────────────────
@@ -57,7 +57,7 @@ async function saveSchool(id) {
       DB.scholen.push({ id: newId, ...data });
     }
     closeModal(); renderContent();
-  } catch (e) { showToast('Fout: ' + e.message, 'error'); } finally { hideLoading(); }
+  } catch (e) { toastError(e); } finally { hideLoading(); }
 }
 
 async function delSchool(id) {
@@ -70,7 +70,7 @@ async function delSchool(id) {
     DB.dossiers  = DB.dossiers.filter(d => d.schoolId !== id);
     DB.facturen  = DB.facturen.filter(f => f.schoolId !== id);
     renderContent();
-  } catch (e) { showToast('Fout: ' + e.message, 'error'); } finally { hideLoading(); }
+  } catch (e) { toastError(e); } finally { hideLoading(); }
 }
 
 // ── CONTACTEN ─────────────────────────────────────────────────────
@@ -89,7 +89,7 @@ async function saveContact(schoolId, cid) {
       DB.contacten.push({ id: newId, ...data });
     }
     closeModal(); renderContent();
-  } catch (e) { showToast('Fout: ' + e.message, 'error'); } finally { hideLoading(); }
+  } catch (e) { toastError(e); } finally { hideLoading(); }
 }
 
 async function delContact(cid, schoolId) {
@@ -99,7 +99,7 @@ async function delContact(cid, schoolId) {
     await supa(`/rest/v1/contacten?id=eq.${cid}`, { method: 'DELETE' });
     DB.contacten = DB.contacten.filter(c => c.id !== cid);
     renderContent();
-  } catch (e) { showToast('Fout: ' + e.message, 'error'); } finally { hideLoading(); }
+  } catch (e) { toastError(e); } finally { hideLoading(); }
 }
 
 // ── DOSSIERS: NOTITIES ────────────────────────────────────────────
@@ -117,11 +117,10 @@ async function saveDossier(schoolId) {
   const item = { id: newId, schoolId, contactId: cid || null, datum: new Date().toISOString(), type: 'notitie', onderwerp, tekst, bronNaam, bestanden: [], bijlagen: [] };
   showLoading();
   try {
-    const payload = { id: newId, school_id: schoolId, datum: item.datum, type: 'notitie', onderwerp, tekst, bron_naam: bronNaam, bestanden: [] };
-    await supa('/rest/v1/dossiers', { method: 'POST', body: JSON.stringify(payload) });
+    await supa('/rest/v1/dossiers', { method: 'POST', body: JSON.stringify({ id: newId, ...toDB_dossier(item) }) });
     DB.dossiers.unshift(item);
     closeModal(); renderContent();
-  } catch (e) { showToast('Fout: ' + e.message, 'error'); } finally { hideLoading(); }
+  } catch (e) { toastError(e); } finally { hideLoading(); }
 }
 
 async function saveDossierBestuur(bestuurId) {
@@ -138,11 +137,10 @@ async function saveDossierBestuur(bestuurId) {
   const item = { id: newId, schoolId, contactId: null, datum: new Date().toISOString(), type: 'notitie', onderwerp, tekst, bronNaam, bestanden: [], bijlagen: [] };
   showLoading();
   try {
-    const payload = { id: newId, school_id: schoolId, datum: item.datum, type: 'notitie', onderwerp, tekst, bron_naam: bronNaam, bestanden: [] };
-    await supa('/rest/v1/dossiers', { method: 'POST', body: JSON.stringify(payload) });
+    await supa('/rest/v1/dossiers', { method: 'POST', body: JSON.stringify({ id: newId, ...toDB_dossier(item) }) });
     DB.dossiers.unshift(item);
     closeModal(); renderContent();
-  } catch (e) { showToast('Fout: ' + e.message, 'error'); } finally { hideLoading(); }
+  } catch (e) { toastError(e); } finally { hideLoading(); }
 }
 
 // ── DOSSIERS: BESTANDEN ───────────────────────────────────────────
@@ -164,11 +162,10 @@ async function saveBestand(schoolId) {
     const bestanden = [];
     for (const f of files) bestanden.push(await uploadBestandToStorage(newId, f));
     const item = { id: newId, schoolId, contactId: cid || null, datum: new Date().toISOString(), type: 'bestand', onderwerp, tekst: '', bronNaam, bestanden, bijlagen: [] };
-    const payload = { id: newId, school_id: schoolId, datum: item.datum, type: 'bestand', onderwerp, tekst: null, bron_naam: bronNaam, bestanden };
-    await supa('/rest/v1/dossiers', { method: 'POST', body: JSON.stringify(payload) });
+    await supa('/rest/v1/dossiers', { method: 'POST', body: JSON.stringify({ id: newId, ...toDB_dossier(item) }) });
     DB.dossiers.unshift(item);
     closeModal(); renderContent();
-  } catch (e) { showToast('Fout: ' + e.message, 'error'); } finally { hideLoading(); }
+  } catch (e) { toastError(e); } finally { hideLoading(); }
 }
 
 async function saveBestandBestuur(bestuurId) {
@@ -190,11 +187,10 @@ async function saveBestandBestuur(bestuurId) {
     const bestanden = [];
     for (const f of files) bestanden.push(await uploadBestandToStorage(newId, f));
     const item = { id: newId, schoolId, contactId: null, datum: new Date().toISOString(), type: 'bestand', onderwerp, tekst: '', bronNaam, bestanden, bijlagen: [] };
-    const payload = { id: newId, school_id: schoolId, datum: item.datum, type: 'bestand', onderwerp, tekst: null, bron_naam: bronNaam, bestanden };
-    await supa('/rest/v1/dossiers', { method: 'POST', body: JSON.stringify(payload) });
+    await supa('/rest/v1/dossiers', { method: 'POST', body: JSON.stringify({ id: newId, ...toDB_dossier(item) }) });
     DB.dossiers.unshift(item);
     closeModal(); renderContent();
-  } catch (e) { showToast('Fout: ' + e.message, 'error'); } finally { hideLoading(); }
+  } catch (e) { toastError(e); } finally { hideLoading(); }
 }
 
 async function delDossier(did, schoolId) {
@@ -209,7 +205,7 @@ async function delDossier(did, schoolId) {
     await supa(`/rest/v1/dossiers?id=eq.${did}`, { method: 'DELETE' });
     DB.dossiers = DB.dossiers.filter(x => x.id !== did);
     renderContent();
-  } catch (e) { showToast('Fout: ' + e.message, 'error'); } finally { hideLoading(); }
+  } catch (e) { toastError(e); } finally { hideLoading(); }
 }
 
 async function delDossierBestuur(did, bestuurId) {
@@ -252,7 +248,7 @@ async function saveFactuur(schoolId, fid) {
       DB.facturen.push({ id: newId, ...data });
     }
     closeModal(); renderContent();
-  } catch (e) { showToast('Fout: ' + e.message, 'error'); } finally { hideLoading(); }
+  } catch (e) { toastError(e); } finally { hideLoading(); }
 }
 
 async function delFactuur(fid, schoolId) {
@@ -262,7 +258,7 @@ async function delFactuur(fid, schoolId) {
     await supa(`/rest/v1/facturen?id=eq.${fid}`, { method: 'DELETE' });
     DB.facturen = DB.facturen.filter(f => f.id !== fid);
     renderContent();
-  } catch (e) { showToast('Fout: ' + e.message, 'error'); } finally { hideLoading(); }
+  } catch (e) { toastError(e); } finally { hideLoading(); }
 }
 
 async function delFactuurOverview(fid) { await delFactuur(fid, null); }
@@ -273,11 +269,11 @@ async function saveTraining(id) {
   if (!naam) return alert('Naam is verplicht');
   const data = {
     naam,
-    categorie:     document.getElementById('f-cat').value,
-    duur:          document.getElementById('f-duur').value.trim(),
-    doelgroep:     document.getElementById('f-doel').value.trim(),
-    maxDeelnemers: document.getElementById('f-max').value.trim(),
-    omschrijving:  document.getElementById('f-omschr').value.trim(),
+    categorie: document.getElementById('f-cat').value || 'training',
+    duur: '',
+    doelgroep: '',
+    maxDeelnemers: '',
+    omschrijving: document.getElementById('f-omschr').value.trim(),
   };
   showLoading();
   try {
@@ -291,7 +287,7 @@ async function saveTraining(id) {
     }
     closeModal();
     if (id) renderContent(); else navigate('trainingen');
-  } catch (e) { showToast('Fout: ' + e.message, 'error'); } finally { hideLoading(); }
+  } catch (e) { toastError(e); } finally { hideLoading(); }
 }
 
 async function delTraining(id) {
@@ -302,7 +298,7 @@ async function delTraining(id) {
     DB.trainingen   = DB.trainingen.filter(t => t.id !== id);
     DB.uitvoeringen = DB.uitvoeringen.filter(u => u.trainingId !== id);
     closeModal(); navigate('trainingen');
-  } catch (e) { showToast('Fout: ' + e.message, 'error'); } finally { hideLoading(); }
+  } catch (e) { toastError(e); } finally { hideLoading(); }
 }
 
 // ── UITVOERINGEN ──────────────────────────────────────────────────
@@ -340,7 +336,7 @@ async function saveUitvoering(trainingId, uitvId) {
       }
     }
     closeModal(); renderContent();
-  } catch (e) { showToast('Fout: ' + e.message, 'error'); } finally { hideLoading(); }
+  } catch (e) { toastError(e); } finally { hideLoading(); }
 }
 
 async function delUitvoering(uitvId, trainingId) {
@@ -350,7 +346,7 @@ async function delUitvoering(uitvId, trainingId) {
     await supa(`/rest/v1/uitvoeringen?id=eq.${uitvId}`, { method: 'DELETE' });
     DB.uitvoeringen = DB.uitvoeringen.filter(u => u.id !== uitvId);
     renderContent();
-  } catch (e) { showToast('Fout: ' + e.message, 'error'); } finally { hideLoading(); }
+  } catch (e) { toastError(e); } finally { hideLoading(); }
 }
 
 async function saveUitvoeringVanSchool(schoolId) {
@@ -382,7 +378,7 @@ async function saveUitvoeringVanSchool(schoolId) {
       DB.dossiers.unshift(dosItem);
     }
     closeModal(); renderContent();
-  } catch (e) { showToast('Fout: ' + e.message, 'error'); } finally { hideLoading(); }
+  } catch (e) { toastError(e); } finally { hideLoading(); }
 }
 
 // ── TIPS ──────────────────────────────────────────────────────────
@@ -398,7 +394,7 @@ async function saveTip(trainingId) {
     await supa(`/rest/v1/trainingen?id=eq.${trainingId}`, { method: 'PATCH', body: JSON.stringify({ tips: newTips }) });
     DB.trainingen = DB.trainingen.map(x => x.id === trainingId ? { ...x, tips: newTips } : x);
     closeModal(); renderContent();
-  } catch (e) { showToast('Fout: ' + e.message, 'error'); } finally { hideLoading(); }
+  } catch (e) { toastError(e); } finally { hideLoading(); }
 }
 
 async function delTip(trainingId, index) {
@@ -411,7 +407,7 @@ async function delTip(trainingId, index) {
     await supa(`/rest/v1/trainingen?id=eq.${trainingId}`, { method: 'PATCH', body: JSON.stringify({ tips: newTips }) });
     DB.trainingen = DB.trainingen.map(x => x.id === trainingId ? { ...x, tips: newTips } : x);
     renderContent();
-  } catch (e) { showToast('Fout: ' + e.message, 'error'); } finally { hideLoading(); }
+  } catch (e) { toastError(e); } finally { hideLoading(); }
 }
 
 // ── AGENDA ───────────────────────────────────────────────────────
@@ -444,7 +440,7 @@ async function saveAgenda(id) {
     }
     DB.agenda.sort((a, b) => a.datum.localeCompare(b.datum) || (a.beginTijd || '').localeCompare(b.beginTijd || ''));
     closeModal(); renderContent();
-  } catch (e) { showToast('Fout: ' + e.message, 'error'); } finally { hideLoading(); }
+  } catch (e) { toastError(e); } finally { hideLoading(); }
 }
 
 async function delAgenda(id) {
@@ -455,7 +451,61 @@ async function delAgenda(id) {
     DB.agenda = DB.agenda.filter(a => a.id !== id);
     closeModal();
     renderContent();
-  } catch (e) { showToast('Fout: ' + e.message, 'error'); } finally { hideLoading(); }
+  } catch (e) { toastError(e); } finally { hideLoading(); }
+}
+
+// ── TRAINING TYPES ───────────────────────────────────────────────
+async function saveTrainingType(id) {
+  ensureTrainingTypes();
+  const naam = document.getElementById('f-trainingtypename').value.trim();
+  if (!naam) return alert('Naam is verplicht');
+  const kleur = document.getElementById('f-trainingtypekleur').value || 'navy';
+  showLoading();
+  try {
+    if (id) {
+      if (HAS_TRAINING_TYPES_TABLE) {
+        await supa(`/rest/v1/training_types?id=eq.${id}`, { method: 'PATCH', body: JSON.stringify({ naam, kleur }) });
+      }
+      DB.trainingTypes = DB.trainingTypes.map(t => t.id === id ? { ...t, naam, kleur } : t);
+    } else {
+      const newId = normalizeTypeId(naam);
+      if (DB.trainingTypes.find(t => t.id === newId)) return alert('Er bestaat al een type met deze naam');
+      if (HAS_TRAINING_TYPES_TABLE) {
+        await supa('/rest/v1/training_types', { method: 'POST', body: JSON.stringify({ id: newId, naam, kleur }) });
+      }
+      DB.trainingTypes.push({ id: newId, naam, kleur });
+    }
+    persistTrainingTypesLocally();
+    closeModal(); renderContent();
+  } catch (e) { toastError(e); } finally { hideLoading(); }
+}
+
+async function delTrainingType(id) {
+  ensureTrainingTypes();
+  if (id === 'training') return alert('Het standaardtype Training kan niet worden verwijderd.');
+  if ((DB.trainingTypes || []).length <= 1) return alert('Er moet minimaal één trainingtype overblijven.');
+
+  const inGebruik = DB.trainingen.filter(t => (t.categorie || 'training') === id).length;
+  const msg = inGebruik > 0
+    ? `Dit type wordt gebruikt door ${inGebruik} training${inGebruik === 1 ? '' : 'en'}. Verwijderen? Bestaande trainingen vallen dan terug op "Training".`
+    : 'Trainingtype verwijderen?';
+  if (!confirm(msg)) return;
+
+  showLoading();
+  try {
+    if (inGebruik > 0) {
+      await supa(`/rest/v1/trainingen?categorie=eq.${id}`, { method: 'PATCH', body: JSON.stringify({ categorie: 'training' }) });
+      DB.trainingen = DB.trainingen.map(t => (t.categorie || 'training') === id ? { ...t, categorie: 'training' } : t);
+    }
+
+    if (HAS_TRAINING_TYPES_TABLE) {
+      await supa(`/rest/v1/training_types?id=eq.${id}`, { method: 'DELETE' });
+    }
+
+    DB.trainingTypes = DB.trainingTypes.filter(t => t.id !== id);
+    persistTrainingTypesLocally();
+    closeModal(); renderContent();
+  } catch (e) { toastError(e); } finally { hideLoading(); }
 }
 
 // ── AGENDA TYPES ─────────────────────────────────────────────────
@@ -475,7 +525,7 @@ async function saveAgendaType(id) {
       DB.agendaTypes.push({ id: newId, naam, kleur });
     }
     closeModal(); renderContent();
-  } catch (e) { showToast('Fout: ' + e.message, 'error'); } finally { hideLoading(); }
+  } catch (e) { toastError(e); } finally { hideLoading(); }
 }
 
 async function delAgendaType(id) {
@@ -489,7 +539,7 @@ async function delAgendaType(id) {
     await supa(`/rest/v1/agenda_types?id=eq.${id}`, { method: 'DELETE' });
     DB.agendaTypes = DB.agendaTypes.filter(t => t.id !== id);
     closeModal(); renderContent();
-  } catch (e) { showToast('Fout: ' + e.message, 'error'); } finally { hideLoading(); }
+  } catch (e) { toastError(e); } finally { hideLoading(); }
 }
 
 // ── EMAIL SETTINGS ──────────────────────────────────────────────
@@ -511,7 +561,7 @@ async function saveEmailSettings() {
     DB.emailSettings = fromDB_emailSettings({ id: 'main', ...data });
     showToast('E-mailinstellingen opgeslagen', 'success');
     renderContent();
-  } catch (e) { showToast('Fout: ' + e.message, 'error'); } finally { hideLoading(); }
+  } catch (e) { toastError(e); } finally { hideLoading(); }
 }
 
 // ── Outlook (.ics feed) instellingen ─────────────────────────────
@@ -532,7 +582,7 @@ async function saveOutlookSettings() {
     if (typeof _outlookFetchedOnce !== 'undefined') _outlookFetchedOnce = false;
     showToast('Agenda-instellingen opgeslagen', 'success');
     renderContent();
-  } catch (e) { showToast('Fout: ' + e.message, 'error'); } finally { hideLoading(); }
+  } catch (e) { toastError(e); } finally { hideLoading(); }
 }
 
 async function testOutlookConnection() {
@@ -551,7 +601,7 @@ async function testOutlookConnection() {
     DB.outlookSettings = (fresh || []).map(fromDB_outlookSettings)[0] || null;
     renderContent();
   } catch (e) {
-    showToast('Verbinding mislukt: ' + e.message, 'error');
+    showToast('Verbinding mislukt: ' + mapSupaError(e), 'error'); console.error(e);
   } finally { hideLoading(); }
 }
 
@@ -578,7 +628,7 @@ async function saveEmailTemplate(id) {
       DB.emailTemplates.push({ id: newId, ...data, createdAt: new Date().toISOString() });
     }
     closeModal(); renderContent();
-  } catch (e) { showToast('Fout: ' + e.message, 'error'); } finally { hideLoading(); }
+  } catch (e) { toastError(e); } finally { hideLoading(); }
 }
 
 async function delEmailTemplate(id) {
@@ -588,7 +638,7 @@ async function delEmailTemplate(id) {
     await supa(`/rest/v1/email_templates?id=eq.${id}`, { method: 'DELETE' });
     DB.emailTemplates = DB.emailTemplates.filter(t => t.id !== id);
     closeModal(); renderContent();
-  } catch (e) { showToast('Fout: ' + e.message, 'error'); } finally { hideLoading(); }
+  } catch (e) { toastError(e); } finally { hideLoading(); }
 }
 
 // ── INSTELLINGEN functies ─────────────────────────────────────────
@@ -604,7 +654,7 @@ async function delAlleFacturen() {
     DB.facturen = [];
     showToast(`Alle ${aantal} facturen zijn verwijderd.`, 'success');
     renderContent();
-  } catch (e) { showToast('Fout: ' + e.message, 'error'); } finally { hideLoading(); }
+  } catch (e) { toastError(e); } finally { hideLoading(); }
 }
 
 async function delAlleInhoud() {
@@ -632,7 +682,7 @@ async function delAlleInhoud() {
     DB.uitvoeringen = []; DB.agenda = [];
     showToast(`Alle ${totaal} items zijn verwijderd. Schone lei!`, 'success');
     renderContent();
-  } catch (e) { showToast('Fout: ' + e.message, 'error'); } finally { hideLoading(); }
+  } catch (e) { toastError(e); } finally { hideLoading(); }
 }
 
 async function herberekeningTotalen() {
@@ -650,5 +700,5 @@ async function herberekeningTotalen() {
     }
     showToast(`${bijgewerkt} factu${bijgewerkt === 1 ? 'ur' : 'ren'} gecorrigeerd.`, 'success');
     renderContent();
-  } catch (e) { showToast('Fout: ' + e.message, 'error'); } finally { hideLoading(); }
+  } catch (e) { toastError(e); } finally { hideLoading(); }
 }

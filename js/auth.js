@@ -28,11 +28,32 @@ function setLoginInfo(message = '') {
   infoEl.style.display = message ? 'block' : 'none';
 }
 
+function normalizeAppUrl(url = '') {
+  return url ? `${url.replace(/\/+$/, '')}/` : '';
+}
+
+function isLocalEnvironment() {
+  return ['localhost', '127.0.0.1'].includes(window.location.hostname) || window.location.protocol === 'file:';
+}
+
+function getBaseAppUrl({ preferPublic = false } = {}) {
+  const origin = window.location.origin;
+  const path = window.location.pathname;
+  const publicUrl = normalizeAppUrl(typeof APP_URL === 'string' ? APP_URL : '');
+
+  if (path.includes('/2xdenken-CRM/')) {
+    return `${origin}/2xdenken-CRM/`;
+  }
+
+  if (!preferPublic && !isLocalEnvironment()) {
+    return `${origin}/`;
+  }
+
+  return publicUrl || `${origin}/`;
+}
+
 function getResetRedirectUrl() {
-  const isGitHubPages = window.location.hostname.endsWith('github.io');
-  return isGitHubPages
-    ? 'https://edwinvanalmkerk.github.io/2xdenken-CRM/'
-    : window.location.href.split('#')[0].split('?')[0];
+  return `${getBaseAppUrl({ preferPublic: true })}auth/confirm/`;
 }
 
 function toggleResetMode(isRecovery = false) {
@@ -51,7 +72,7 @@ function toggleResetMode(isRecovery = false) {
 
 function clearRecoveryUrl() {
   if (window.location.hash || window.location.search) {
-    window.history.replaceState({}, document.title, getResetRedirectUrl());
+    window.history.replaceState({}, document.title, getBaseAppUrl());
   }
 }
 
@@ -65,12 +86,17 @@ async function requestPasswordReset() {
     return;
   }
 
+  const redirectUrl = getResetRedirectUrl();
+
   btnEl.disabled = true;
   setLoginError('');
-  setLoginInfo('');
+  setLoginInfo('Resetlink wordt verstuurd...');
 
   try {
-    await supaAuth(`/auth/v1/recover?redirect_to=${encodeURIComponent(getResetRedirectUrl())}`, { email });
+    await supaAuth(`/auth/v1/recover?redirect_to=${encodeURIComponent(redirectUrl)}`, {
+      email,
+      redirect_to: redirectUrl
+    });
     setLoginInfo('Als dit account bestaat, is er een resetlink naar je e-mailadres verstuurd.');
   } catch (e) {
     console.error(e);
@@ -223,7 +249,10 @@ async function doLogout() {
   currentUser = null;
   passwordRecoverySession = null;
   localStorage.removeItem('crm_session');
-  DB = { besturen: [], scholen: [], contacten: [], dossiers: [], facturen: [], trainingen: [], uitvoeringen: [] };
+  DB = {
+    besturen: [], scholen: [], contacten: [], dossiers: [], facturen: [], trainingen: [], uitvoeringen: [],
+    agenda: [], agendaTypes: [], trainingTypes: [], emailTemplates: [], emailLog: [], emailSettings: null, outlookSettings: null
+  };
   document.getElementById('app').style.display = 'none';
   document.getElementById('login-screen').style.display = 'flex';
   document.getElementById('login-email').value = '';

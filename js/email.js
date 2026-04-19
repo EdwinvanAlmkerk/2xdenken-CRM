@@ -273,7 +273,7 @@ async function sendEmail(schoolId, factuurId, draftId) {
     const naam = contact?.naam || email;
     showToast(sentViaSmtp ? `E-mail verzonden aan ${naam}` : `E-mail geopend voor ${naam}`, 'success');
   } catch (e) {
-    showToast('Loggen mislukt: ' + e.message, 'error');
+    showToast('E-maillog niet opgeslagen: ' + mapSupaError(e), 'error'); console.error(e);
   } finally { hideLoading(); }
 
   closeModal();
@@ -301,7 +301,7 @@ async function saveEmailDraft(schoolId, factuurId, draftId) {
       DB.emailLog.unshift({ id: logId, templateId: '', schoolId: schoolId || '', contactId: contactId || '', factuurId: factuurId || '', aanEmail: email, aanNaam: contact?.naam || '', onderwerp, body, status: 'concept', datum: now });
     }
     showToast('Concept opgeslagen', 'success');
-  } catch (e) { showToast('Fout: ' + e.message, 'error'); } finally { hideLoading(); }
+  } catch (e) { toastError(e); } finally { hideLoading(); }
   closeModal(); renderContent();
 }
 
@@ -329,7 +329,7 @@ async function delEmailLog(id) {
     DB.emailLog = DB.emailLog.filter(e => e.id !== id);
     _emailSelected = null;
     renderContent();
-  } catch (e) { showToast('Fout: ' + e.message, 'error'); } finally { hideLoading(); }
+  } catch (e) { toastError(e); } finally { hideLoading(); }
 }
 
 // ── E-mail opties modal (handtekening) ───────────────────────────
@@ -357,7 +357,7 @@ async function saveEmailSignature() {
     if (DB.emailSettings) DB.emailSettings.signature = sig;
     showToast('Handtekening opgeslagen', 'success');
     closeModal(); renderContent();
-  } catch (e) { showToast('Fout: ' + e.message, 'error'); } finally { hideLoading(); }
+  } catch (e) { toastError(e); } finally { hideLoading(); }
 }
 
 // ── Handtekening ophalen voor in compose ─────────────────────────

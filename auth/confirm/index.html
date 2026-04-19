@@ -6,8 +6,13 @@
   <title>Doorsturen…</title>
   <script>
     (function () {
+      const PUBLIC_APP_URL = 'https://edwinvanalmkerk.github.io/2xdenken-CRM/';
+      const isLocal = ['localhost', '127.0.0.1'].includes(location.hostname) || location.protocol === 'file:';
       const rootPath = location.pathname.replace(/\/auth\/confirm\/?$/, '/');
-      const target = `${location.origin}${rootPath}${location.search}${location.hash}`;
+      const baseUrl = !isLocal && rootPath.includes('/2xdenken-CRM/')
+        ? `${location.origin}${rootPath}`
+        : PUBLIC_APP_URL;
+      const target = `${baseUrl}${location.search}${location.hash}`;
       location.replace(target);
     })();
   </script>
