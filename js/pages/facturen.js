@@ -338,6 +338,7 @@ function startNieuweFactuur() {
 }
 
 // ── Factuur HTML genereren (herbruikbaar voor print + e-mail) ─────
+// ── Factuur HTML genereren (herbruikbaar voor print + e-mail) ─────
 function getFactuurHtml(fid) {
   const f = DB.facturen.find(x => x.id === fid);
   if (!f) return;
@@ -347,16 +348,15 @@ function getFactuurHtml(fid) {
   const fmtDutch = iso => {
     if (!iso) return '';
     const d = new Date(iso);
-    return `${String(d.getDate()).padStart(2, '0')}-${String(d.getMonth() + 1).padStart(2, '0')}-'${String(d.getFullYear()).slice(2)}`;
+    return `${String(d.getDate()).padStart(2, '0')}-${String(d.getMonth() + 1).padStart(2, '0')}-${String(d.getFullYear())}`;
   };
 
   const klantNaam = bestuur ? bestuur.naam : (school ? school.naam : '');
   const adresLines = [];
-  if (klantNaam) adresLines.push(`<strong>${esc(klantNaam)}</strong>`);
-  if (f.tav) adresLines.push(esc(f.tav));
+  if (f.tav) adresLines.push('t.a.v. ' + esc(f.tav));
   else {
     const contact = f.contactId ? DB.contacten.find(c => c.id === f.contactId) : null;
-    if (contact) adresLines.push(`t.a.v. ${esc(contact.naam)}`);
+    if (contact) adresLines.push('t.a.v. ' + esc(contact.naam));
   }
   if (school?.adres) adresLines.push(esc(school.adres));
   if (school?.postcode || school?.plaats)
@@ -364,7 +364,6 @@ function getFactuurHtml(fid) {
 
   const totaal = Math.round((f.regels || []).reduce((s, r) => s + (Math.round((parseFloat(r.bedrag) || 0) * 100) / 100), 0) * 100) / 100;
 
-  // Logo is ingebed in index.html — we gebruiken dezelfde base64
   const LOGO_SRC = document.querySelector('#app img')?.src || '';
 
   const html = `<!DOCTYPE html>
@@ -377,37 +376,61 @@ function getFactuurHtml(fid) {
 <link href="https://fonts.googleapis.com/css2?family=Nunito:wght@400;600;700;800&display=swap" rel="stylesheet">
 <style>
   *{box-sizing:border-box;margin:0;padding:0}
-  body{font-family:'Nunito',Arial,sans-serif;font-size:10pt;color:#222;background:#fff}
+  :root{
+    --teal:#2C8C8A;--teal-d:#1F6867;--teal-l:#E8F3F2;
+    --peach:#F4A896;
+    --ink:#2A2F3A;--ink-l:#5A6270;--ink-xl:#8B92A0;
+    --bg:#FAF7F2;--line:#E8E4DC;
+  }
+  body{font-family:'Nunito',Arial,sans-serif;font-size:10.5pt;color:var(--ink);background:#fff;line-height:1.5}
   @page{size:A4;margin:15mm 18mm 18mm 18mm}
   @media print{.no-print{display:none!important}}
-  .page{max-width:800px;margin:0 auto;padding:24px 30px 30px}
-  .header-grid{display:grid;grid-template-columns:1fr auto 1fr;align-items:start;margin-bottom:28px;gap:12px}
-  .h-left h1{font-size:20pt;font-weight:700;color:#222}
-  .h-center{display:flex;flex-direction:column;align-items:center}
-  .h-center img{height:60px;width:auto;object-fit:contain}
-  .h-right{text-align:right;font-size:10pt;line-height:1.8;color:#222}
-  .addr-meta{display:flex;justify-content:space-between;align-items:flex-start;margin-bottom:28px;gap:20px}
-  .addr-klant{font-size:10pt;line-height:1.85;color:#222;min-width:200px}
-  .meta-table{font-size:10pt;line-height:2;border-collapse:collapse;text-align:right}
-  .meta-table td:first-child{color:#555;padding-right:12px;white-space:nowrap}
-  .meta-table td:last-child{font-weight:bold;color:#222;text-align:right}
-  .betreft-bar{text-align:center;font-size:10pt;font-weight:bold;color:#2D3054;margin-bottom:14px;padding-bottom:8px;border-bottom:1px solid #ddd}
+  .page{max-width:800px;margin:0 auto;padding:28px 30px 30px;position:relative}
+  .page::before{content:'';position:absolute;top:0;left:30px;right:30px;height:4px;background:linear-gradient(90deg,var(--teal) 0%,var(--teal) 60%,var(--peach) 100%);border-radius:2px}
+
+  .header{display:flex;justify-content:space-between;align-items:flex-start;margin-top:22px;margin-bottom:32px;padding-bottom:22px;border-bottom:1px solid var(--line);gap:30px}
+  .brand-logo img{height:60px;width:auto;object-fit:contain;display:block}
+  .sender-info{text-align:right;font-size:9pt;color:var(--ink-l);line-height:1.7}
+  .sender-info strong{color:var(--ink);font-weight:700;display:block;margin-bottom:3px;font-size:10pt}
+
+  .meta-row{display:grid;grid-template-columns:1fr 1fr;gap:30px;margin-bottom:28px}
+  .meta-block-label{font-size:8.5pt;font-weight:700;color:var(--teal);text-transform:uppercase;letter-spacing:1px;margin-bottom:8px}
+  .meta-block-content{font-size:10pt;line-height:1.7;color:var(--ink)}
+  .meta-block-content .klant-naam{font-weight:700;font-size:11pt;color:var(--ink);margin-bottom:2px}
+  .meta-details{display:grid;grid-template-columns:auto 1fr;gap:6px 16px;font-size:10pt}
+  .meta-details .label{color:var(--ink-l);font-weight:600}
+  .meta-details .value{color:var(--ink);font-weight:700;text-align:right}
+
+  .betreft{background:var(--teal-l);border-left:3px solid var(--teal);padding:11px 15px;border-radius:0 6px 6px 0;margin-bottom:20px;font-size:10pt}
+  .betreft-label{font-size:8.5pt;font-weight:700;color:var(--teal-d);text-transform:uppercase;letter-spacing:1px;margin-bottom:2px}
+  .betreft-text{color:var(--ink);font-weight:600}
+
   .rt{width:100%;border-collapse:collapse;margin-bottom:4px;font-size:10pt}
-  .rt thead tr{background:#2D3054;color:white}
-  .rt th{padding:6px 9px;font-weight:bold;text-align:left}
-  .rt th.r{text-align:right}
-  .rt td{padding:7px 9px;vertical-align:top;line-height:1.5;border-bottom:1px solid #ebebeb}
-  .rt tr:last-child td{border-bottom:none}
-  .rt td.r{text-align:right;white-space:nowrap}
-  .totaal-wrap{display:flex;justify-content:flex-end;margin-bottom:28px;margin-top:2px}
-  .totaal-box{border:1.5px solid #222;padding:5px 14px;font-weight:bold;font-size:10pt;display:flex;gap:30px;justify-content:space-between;min-width:200px}
-  .bottom-section{position:fixed;bottom:18mm;left:18mm;right:18mm}
-  .btw-vrijstelling{font-size:9.5pt;color:#555;font-style:italic;margin-bottom:10px;padding-bottom:8px;border-bottom:1px dashed #ddd}
-  .footer-bar{display:flex;justify-content:space-between;font-size:10pt;color:#888;padding-top:8px;border-top:1px solid #ddd}
-  @media screen{.bottom-section{position:static;margin-top:40px}}
+  .rt thead th{font-size:8.5pt;font-weight:700;color:var(--ink-l);text-transform:uppercase;letter-spacing:0.8px;text-align:left;padding:10px 12px 10px 0;border-bottom:2px solid var(--line)}
+  .rt thead th.r{text-align:right;padding-right:0}
+  .rt tbody td{padding:13px 12px 13px 0;vertical-align:top;border-bottom:1px solid var(--line);line-height:1.55}
+  .rt tbody td.r{text-align:right;padding-right:0;white-space:nowrap;font-weight:700}
+  .rt tbody td.omschrijving{font-weight:700;color:var(--ink)}
+  .rt tbody td.toelichting{color:var(--ink-l);font-size:9.5pt}
+  .rt tbody td.datum,.rt tbody td.uren{color:var(--ink-l);white-space:nowrap;font-size:9.5pt}
+  .rt tbody tr:last-child td{border-bottom:none}
+
+  .totaal-row{display:flex;justify-content:flex-end;margin-top:14px;margin-bottom:28px}
+  .totaal-box{display:flex;align-items:center;gap:24px;background:var(--teal);color:white;padding:13px 22px;border-radius:8px;font-weight:800}
+  .totaal-label{font-size:9pt;text-transform:uppercase;letter-spacing:1px;opacity:0.9}
+  .totaal-bedrag{font-size:15pt;letter-spacing:-0.3px}
+
+  .payment-section{background:var(--bg);border-radius:8px;padding:16px 20px;margin-bottom:18px}
+  .payment-title{font-size:9pt;font-weight:700;color:var(--teal);text-transform:uppercase;letter-spacing:1px;margin-bottom:6px}
+  .payment-text{font-size:9.5pt;color:var(--ink-l);line-height:1.65}
+  .payment-text strong{color:var(--ink);font-weight:700}
+
+  .btw-notice{font-size:8.5pt;color:var(--ink-xl);font-style:italic;text-align:center;padding:8px 0;margin-bottom:14px}
+  .footer{display:flex;justify-content:space-between;padding-top:14px;border-top:1px solid var(--line);font-size:8.5pt;color:var(--ink-xl)}
+
   .print-bar{margin-bottom:18px;display:flex;gap:10px}
-  .pbtn{padding:9px 22px;border:none;border-radius:5px;font-size:13px;cursor:pointer;font-weight:bold}
-  .pb-p{background:#2D3054;color:white}.pb-p:hover{background:#1E2038}
+  .pbtn{padding:10px 22px;border:none;border-radius:6px;font-family:'Nunito',sans-serif;font-size:13px;cursor:pointer;font-weight:700}
+  .pb-p{background:var(--teal);color:white}.pb-p:hover{background:var(--teal-d)}
   .pb-s{background:#f0f0f0;color:#333;border:1px solid #ccc}
 </style>
 </head>
@@ -417,57 +440,89 @@ function getFactuurHtml(fid) {
     <button class="pbtn pb-p" onclick="window.print()">🖨&nbsp; Afdrukken / Opslaan als PDF</button>
     <button class="pbtn pb-s" onclick="window.close()">Sluiten</button>
   </div>
-  <div class="header-grid">
-    <div class="h-left"><h1>Factuur</h1></div>
-    <div class="h-center"><img src="${LOGO_SRC}" alt="2xDenken logo"/></div>
-    <div class="h-right">
-      2xdenken<br/>Zoete Campagnergaarde 5<br/>3824 AK Amersfoort<br/>Tel: 06-41548188<br/>
-      <a href="mailto:jorieke@2xdenken.nl">jorieke@2xdenken.nl</a>
+
+  <div class="header">
+    <div class="brand-logo">
+      ${LOGO_SRC ? `<img src="${LOGO_SRC}" alt="2xdenken logo"/>` : ''}
+    </div>
+    <div class="sender-info">
+      <strong>2xdenken</strong>
+      Zoete Campagnergaarde 5<br/>
+      3824 AK Amersfoort<br/>
+      06-41548188<br/>
+      jorieke@2xdenken.nl
     </div>
   </div>
-  <div class="addr-meta">
-    <div class="addr-klant">${adresLines.join('<br/>')}</div>
-    <table class="meta-table">
-      <tr><td>Factuurnummer:</td><td>${esc(f.nummer)}</td></tr>
-      <tr><td>Factuurdatum:</td><td>${fmtDutch(f.datum)}</td></tr>
-      ${f.debiteurnr ? `<tr><td>Debiteurnr:</td><td>${esc(f.debiteurnr)}</td></tr>` : ''}
-    </table>
+
+  <div class="meta-row">
+    <div>
+      <div class="meta-block-label">Factuur voor</div>
+      <div class="meta-block-content">
+        ${klantNaam ? `<div class="klant-naam">${esc(klantNaam)}</div>` : ''}
+        ${adresLines.join('<br/>')}
+      </div>
+    </div>
+    <div>
+      <div class="meta-block-label">Factuurgegevens</div>
+      <div class="meta-details">
+        <div class="label">Factuurnummer</div><div class="value">${esc(f.nummer)}</div>
+        <div class="label">Factuurdatum</div><div class="value">${fmtDutch(f.datum)}</div>
+        ${f.vervaldatum ? `<div class="label">Vervaldatum</div><div class="value">${fmtDutch(f.vervaldatum)}</div>` : ''}
+        ${f.debiteurnr ? `<div class="label">Debiteurnr</div><div class="value">${esc(f.debiteurnr)}</div>` : ''}
+      </div>
+    </div>
   </div>
-  ${f.betreft ? `<div class="betreft-bar">Betreft: ${esc(f.betreft)}</div>` : ''}
+
+  ${f.betreft ? `
+  <div class="betreft">
+    <div class="betreft-label">Betreft</div>
+    <div class="betreft-text">${esc(f.betreft)}</div>
+  </div>` : ''}
+
   <table class="rt">
-    <thead><tr>
-      <th style="width:17%">Omschrijving</th>
-      <th>Toelichting</th>
-      <th style="width:10%">Datum</th>
-      <th style="width:9%">Uren</th>
-      <th class="r" style="width:10%">Bedrag</th>
-    </tr></thead>
+    <thead>
+      <tr>
+        <th style="width:24%">Omschrijving</th>
+        <th>Toelichting</th>
+        <th style="width:12%">Datum</th>
+        <th style="width:10%">Uren</th>
+        <th class="r" style="width:13%">Bedrag</th>
+      </tr>
+    </thead>
     <tbody>
       ${(f.regels || []).map(r => `
         <tr>
-          <td>${esc(r.omschrijving || '')}</td>
-          <td>${esc(r.toelichting || '')}</td>
-          <td style="white-space:nowrap">${r.datum ? fmtDutch(r.datum) : ''}</td>
-          <td>${esc(r.uren || '')}</td>
-          <td class="r">${(parseFloat(r.bedrag) || 0) ? `<strong>${fmtEuro(parseFloat(r.bedrag))}</strong>` : ''}</td>
+          <td class="omschrijving">${esc(r.omschrijving || '')}</td>
+          <td class="toelichting">${esc(r.toelichting || '')}</td>
+          <td class="datum">${r.datum ? fmtDutch(r.datum) : ''}</td>
+          <td class="uren">${esc(r.uren || '')}</td>
+          <td class="r">${(parseFloat(r.bedrag) || 0) ? fmtEuro(parseFloat(r.bedrag)) : ''}</td>
         </tr>`).join('')}
     </tbody>
   </table>
-  <div class="totaal-wrap">
-    <div class="totaal-box"><span>Totaal</span><span>${fmtEuro(totaal)}</span></div>
+
+  <div class="totaal-row">
+    <div class="totaal-box">
+      <span class="totaal-label">Totaal</span>
+      <span class="totaal-bedrag">${fmtEuro(totaal)}</span>
+    </div>
   </div>
-  <div class="bottom-section">
-    <div class="btw-vrijstelling">
-      Vrijgesteld van btw op grond van artikel 11 lid 1 letter o Wet OB 1968 (CRKBO-geregistreerd).
+
+  <div class="payment-section">
+    <div class="payment-title">Betaalinformatie</div>
+    <div class="payment-text">
+      U wordt verzocht het vermelde bedrag binnen <strong>14 dagen</strong> over te maken naar
+      <strong>NL33INGB0007495489</strong> t.n.v. 2xdenken. Graag het factuurnummer <strong>${esc(f.nummer)}</strong> vermelden bij uw betaling.
     </div>
-    <div class="betaling">
-      U wordt verzocht het vermelde bedrag binnen 14 dagen over te maken naar onderstaand rekeningnummer t.n.v.
-      2xdenken. Het rekeningnummer is <strong>NL33INGB0007495489</strong>. Graag het factuurnummer vermelden.
-    </div>
-    <div class="footer-bar">
-      <span>KvK-nummer: 62379879</span>
-      <span>BTW-nummer: NL 172148169B01</span>
-    </div>
+  </div>
+
+  <div class="btw-notice">
+    Vrijgesteld van btw op grond van artikel 11 lid 1 letter o Wet OB 1968 (CRKBO-geregistreerd).
+  </div>
+
+  <div class="footer">
+    <span>KvK 62379879</span>
+    <span>BTW NL 172148169B01</span>
   </div>
 </div>
 </body>
