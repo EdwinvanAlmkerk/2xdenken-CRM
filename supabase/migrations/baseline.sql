@@ -53,7 +53,7 @@ CREATE TABLE IF NOT EXISTS dossiers (
 );
 CREATE INDEX IF NOT EXISTS idx_dossiers_contact_id ON dossiers(contact_id);
 
--- ── TRAININGEN / METHODES ─────────────────────────────────────────
+-- ── TRAININGEN / WERKVORMEN ───────────────────────────────────────
 CREATE TABLE IF NOT EXISTS trainingen (
   id             text PRIMARY KEY,
   naam           text NOT NULL,

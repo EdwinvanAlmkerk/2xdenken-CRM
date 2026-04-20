@@ -11,7 +11,7 @@ const PAGE_LABELS = {
   dashboard: 'Dashboard', agenda: 'Agenda', email: 'E-mail',
   besturen: 'Besturen', 'bestuur-detail': 'Bestuur',
   scholen: 'Scholen', 'school-detail': 'School', contacten: 'Alle contacten', 'contact-detail': 'Contactpersoon',
-  facturen: 'Facturen', trainingen: 'Trainingen & Methodes', 'training-detail': 'Training',
+  facturen: 'Facturen', trainingen: 'Trainingen & Werkvormen', 'training-detail': 'Training',
   instellingen: 'Instellingen'
 };
 
@@ -24,7 +24,7 @@ const NAV_ITEMS = [
   { id: 'scholen',      label: 'Scholen',                icon: 'school',   also: ['school-detail'] },
   { id: 'contacten',    label: 'Contacten',              icon: 'contact',  also: ['contact-detail'] },
   { section: 'Programma' },
-  { id: 'trainingen',   label: 'Trainingen & Methodes',  icon: 'training', also: ['training-detail'] },
+  { id: 'trainingen',   label: 'Trainingen & Werkvormen',  icon: 'training', also: ['training-detail'] },
   { section: 'Financieel' },
   { id: 'facturen',     label: 'Facturen',               icon: 'invoice' },
   { section: 'Beheer' },

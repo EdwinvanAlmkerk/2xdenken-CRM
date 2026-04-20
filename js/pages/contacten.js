@@ -143,7 +143,7 @@ function renderContactDetail(schoolId, contactId) {
     </div>
     <div class="card" style="margin-bottom:16px">
       <div class="card-header">
-        <h3>${svgIcon('training', 16)} Trainingen & methodes</h3>
+        <h3>${svgIcon('training', 16)} Trainingen & werkvormen</h3>
         ${c.schoolId ? `<button class="btn btn-primary btn-sm" onclick="openUitvoeringVanContactModal('${c.schoolId}','${contactId}')">${svgIcon('add', 14)} Uitvoering vastleggen</button>` : ''}
       </div>
       <div class="card-body"${uitvoeringen.length > 0 ? ' style="padding:0"' : ''}>

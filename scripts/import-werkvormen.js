@@ -144,7 +144,7 @@ const items = [
   },
   {
     title: 'GWAVE',
-    summary: 'Een methode om als team een plan van aanpak te maken via Goal, Why, Action, Visualisatie en Erbij halen. Gericht op concreet maken van teamdoelen en actie.',
+    summary: 'Een werkvorm om als team een plan van aanpak te maken via Goal, Why, Action, Visualisatie en Erbij halen. Gericht op concreet maken van teamdoelen en actie.',
     links: [
       { label: 'BeMotion', url: 'https://www.bemotion.nl/oefening-om-met-je-team-te-doen/' }
     ]
@@ -194,7 +194,7 @@ async function run() {
       const row = {
         id: crypto.randomUUID(),
         naam: item.title,
-        categorie: 'methode',
+        categorie: 'werkvorm',
         doelgroep: 'cat:team',
         omschrijving: buildOmschrijving(item, !supportsTipsLinks),
         tips: []

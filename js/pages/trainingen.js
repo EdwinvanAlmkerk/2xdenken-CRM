@@ -1,5 +1,5 @@
 // ════════════════════════════════════════════════════════════════
-// TRAININGEN & METHODES
+// TRAININGEN & WERKVORMEN
 // ════════════════════════════════════════════════════════════════
 
 const TRAINING_TYPE_STYLES = {
@@ -16,7 +16,7 @@ const TRAINING_TYPE_STYLES = {
 const DEFAULT_TRAINING_TYPES = [
   { id: 'training', naam: 'Training', kleur: 'oranje' },
   { id: 'coaching', naam: 'Coaching', kleur: 'navy' },
-  { id: 'methode', naam: 'Methode', kleur: 'groen' },
+  { id: 'werkvorm', naam: 'Werkvorm', kleur: 'groen' },
   { id: 'workshop', naam: 'Workshop', kleur: 'goud' },
   { id: 'advies', naam: 'Advies', kleur: 'blauw' },
   { id: 'anders', naam: 'Anders', kleur: 'paars' },
@@ -242,7 +242,7 @@ function renderTrainingenPage(search = '') {
     <div style="display:flex;gap:12px;margin-bottom:20px;flex-wrap:wrap;align-items:center">
       <div class="search-wrap" style="flex:1;min-width:200px">
         <span class="search-icon">${svgIcon('search', 15)}</span>
-        <input id="search-trainingen" type="text" placeholder="Zoek training of methode…" value="${esc(search)}"
+        <input id="search-trainingen" type="text" placeholder="Zoek training of werkvorm…" value="${esc(search)}"
           oninput="searchTrainingen(this.value)" style="padding-left:36px"/>
       </div>
       <div style="display:flex;gap:8px;flex-wrap:nowrap;align-items:center">
@@ -263,7 +263,7 @@ function renderTrainingenPage(search = '') {
         <div class="empty-state">
           ${svgIcon('training', 40)}
           <p style="margin-top:12px;font-size:15px;font-weight:600;color:var(--navy3)">Nog geen trainingen</p>
-          <p style="margin-top:6px">Voeg je eerste training of methode toe</p>
+          <p style="margin-top:6px">Voeg je eerste training of werkvorm toe</p>
           <button class="btn btn-primary" onclick="openTrainingModal()" style="margin-top:16px">${svgIcon('add')} Nieuwe training</button>
         </div>
       </div>` : `
@@ -413,7 +413,7 @@ function renderTrainingDetail(id) {
 
   return `
     <div class="breadcrumb">
-      <a onclick="navigate('trainingen')">Trainingen & Methodes</a>
+      <a onclick="navigate('trainingen')">Trainingen & Werkvormen</a>
       ${svgIcon('chevron', 14)} <span>${esc(t.naam)}</span>
     </div>
     <div class="detail-header">
