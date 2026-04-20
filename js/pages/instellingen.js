@@ -3,7 +3,6 @@
 // ════════════════════════════════════════════════════════════════
 
 function renderInstellingen() {
-  const aantalFacturen = DB.facturen.length;
   ensureTrainingTypes();
   ensureTrainingCategories();
   return `
@@ -192,53 +191,6 @@ function renderInstellingen() {
             <strong>Ook ondersteund:</strong> iedere openbare iCalendar-feed (Outlook, Google Agenda, etc.) die eindigt op <code>.ics</code> of begint met <code>webcal://</code>.
             <br><br>
             <strong>Beperkingen:</strong> de feed ververst afhankelijk van de bron elke ~1 uur, dus nieuwe afspraken kunnen een tijdje duren voor ze in de CRM verschijnen. Herhalende afspraken worden alleen op de originele datum getoond (geen RRULE expansion). De koppeling is <strong>alleen-lezen</strong> — wijzigingen in de CRM worden niet teruggeschreven.
-          </div>
-        </div>
-      </div>
-
-      <div class="card">
-        <div class="card-header"><h3>${svgIcon('invoice', 16)} Facturen</h3></div>
-        <div class="card-body" style="display:flex;flex-direction:column;gap:0">
-
-          <div style="display:flex;align-items:center;justify-content:space-between;gap:16px;padding:14px 0;border-bottom:1px solid var(--bg3)">
-            <div>
-              <div style="font-size:14px;font-weight:700;color:var(--navy)">Totalen herberekenen</div>
-              <div style="font-size:13px;color:var(--navy3);margin-top:2px">Corrigeert afrondingsfouten in opgeslagen factuurtotalen door ze opnieuw te berekenen vanuit de regelitems.</div>
-            </div>
-            <button class="btn btn-secondary" onclick="herberekeningTotalen()"
-              style="white-space:nowrap;border-color:var(--oranje);color:var(--oranje);font-weight:700;flex-shrink:0">
-              ${svgIcon('euro', 15)} Herberekenen
-            </button>
-          </div>
-
-          <div style="display:flex;align-items:center;justify-content:space-between;gap:16px;padding:14px 0">
-            <div>
-              <div style="font-size:14px;font-weight:700;color:#C0392B">Alle facturen verwijderen</div>
-              <div style="font-size:13px;color:var(--navy3);margin-top:2px">Verwijdert alle <strong>${aantalFacturen}</strong> facturen permanent. Besturen, scholen en contactpersonen blijven bewaard.</div>
-            </div>
-            <button class="btn" onclick="delAlleFacturen()"
-              style="white-space:nowrap;background:#FDE8E8;color:#C0392B;font-weight:700;flex-shrink:0">
-              ${svgIcon('trash', 15)} Verwijderen
-            </button>
-          </div>
-
-        </div>
-      </div>
-      <div class="card">
-        <div class="card-header"><h3>${svgIcon('trash', 16)} Alle inhoud verwijderen</h3></div>
-        <div class="card-body">
-          <div style="display:flex;align-items:center;justify-content:space-between;gap:16px">
-            <div>
-              <div style="font-size:14px;font-weight:700;color:#C0392B">Volledige database legen</div>
-              <div style="font-size:13px;color:var(--navy3);margin-top:2px">
-                Verwijdert <strong>alle</strong> besturen, scholen, contacten, dossiers, facturen, trainingen, uitvoeringen en agenda-items.
-                Agendatypes blijven bewaard. <strong>Dit kan niet ongedaan worden gemaakt.</strong>
-              </div>
-            </div>
-            <button class="btn" onclick="delAlleInhoud()"
-              style="white-space:nowrap;background:#FDE8E8;color:#C0392B;font-weight:700;flex-shrink:0">
-              ${svgIcon('trash', 15)} Alles verwijderen
-            </button>
           </div>
         </div>
       </div>

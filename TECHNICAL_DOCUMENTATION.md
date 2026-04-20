@@ -34,7 +34,7 @@ Browser-gebaseerde CRM-applicatie voor het beheren van besturen, scholen, contac
     - `contacten.js` — contactenoverzicht en `renderContactDetail()` met agenda-kaart en dossier-weergave.
     - `trainingen.js` — trainingen/methodes lijst, detailpagina en uitvoeringen met zoekbalk plus aparte filters voor type en categorie, kleurgecodeerde badges en ondersteuning voor één of meerdere links en trainingsdocumenten, inclusief lokale fallback-opslag zolang nieuwe databasekolommen nog ontbreken.
     - `facturen.js` — facturenoverzicht met status- en jaarfilters, standaard geopend op het lopende jaar maar met een pulldownmenu om naar andere jaren of alle jaren te wisselen, Excel-export, herbruikbare factuur-HTML voor print/PDF met het echte 2xDenken-logo uit de app-shell, robuustere datumweergave en gebruik van het officiële opgeslagen totaalbedrag, plus de factuurmodal met regelitems en live totaalberekening.
-    - `instellingen.js` — instellingenpagina met beheer van trainingtypes, trainingscategorieën, agendatypes en e-mailtemplates, plus mail/agenda-configuratie en database-onderhoud.
+    - `instellingen.js` — instellingenpagina met beheer van trainingtypes, trainingscategorieën, agendatypes en e-mailtemplates, plus mail/agenda-configuratie.
 - `supabase/`
   - `migrations/` — versie-gecontroleerde SQL-migraties (bron van waarheid voor het schema). Bevat `README.md` met het werkproces, `baseline.sql` als idempotente snapshot van het volledige schema (alle tabellen, kolommen, indexen en FK-delete-rules) en genummerde migratiebestanden volgens Supabase-CLI-conventie (`<timestamp>_<naam>.sql`): `20260417175454_uitvoeringen_add_contact_id.sql`, `20260417182743_trainingen_uitvoeringen_missing_columns.sql`, `20260417192736_dossiers_add_contact_id.sql`, `20260419143000_training_types_add_table.sql`, `20260419162000_training_categories_add_table.sql`, `20260419195000_trainingen_add_bestanden.sql` en `20260419233000_trainingen_add_tips_links.sql`.
   - `outlook_setup.sql` — SQL-script (handmatig te runnen in Supabase SQL Editor) dat de tabel `outlook_settings` aanmaakt met kolommen `id`, `ics_url`, `days_past` (default 30), `days_future` (default 180), `calendar_name` en `updated_at`.
@@ -55,7 +55,7 @@ Browser-gebaseerde CRM-applicatie voor het beheren van besturen, scholen, contac
 - `js/config.js` — bevat het Supabase-endpoint en de anon key.
 - `js/db.js` — laadt alle basisdata uit Supabase, mapt database-rijen naar frontend-objecten, detecteert of de tabellen `training_types` en `training_categories` én de kolommen `trainingen.bestanden` en `trainingen.tips_links` beschikbaar zijn en ververst bij een verlopen JWT automatisch de sessie voordat hetzelfde verzoek één keer opnieuw wordt geprobeerd.
 - `js/auth.js` — handelt login, logout en de wachtwoord-resetflow af, stuurt expliciet de publieke GitHub Pages redirect mee in recovery-aanvragen en verifieert recovery-links met sessietokens of `token_hash`.
-- `js/crud.js` — voert alle schrijfacties naar Supabase uit, inclusief beheer van trainingtypes en trainingscategorieën, opslag van trainingslinks, documentupload bij trainingen en synchronisatie van het in-memory `DB`-object.
+- `js/crud.js` — voert alle schrijfacties naar Supabase uit, inclusief beheer van trainingtypes en trainingscategorieën, opslag van trainingslinks, documentupload bij trainingen en synchronisatie van het in-memory `DB`-object. Bevat geen bulk-opschoon- of totaalherberekeningsfuncties meer.
 - `js/router.js` — bewaakt de navigatiestate en dispatcht naar de juiste renderfunctie.
 - `js/utils.js` — levert gedeelde helpers voor iconen, formatters, factuur-jaardetectie, zoekfunctionaliteit, upload/download via Supabase Storage en foutvertaling.
 - `js/ui.js` — bevat modals, toasts, loading-overlays en exporthulpfuncties.
@@ -68,7 +68,7 @@ Browser-gebaseerde CRM-applicatie voor het beheren van besturen, scholen, contac
 - `js/pages/contacten.js` — bevat het contactenoverzicht en de contactdetailpagina.
 - `js/pages/facturen.js` — bevat het facturenoverzicht met status- en jaarfilters, standaardselectie op het lopende jaar, Excel-export, de factuurmodal en de HTML-template voor print/PDF, inclusief robuuste datumopmaak en voorkeur voor het officiële opgeslagen factuurtotaal bij weergave.
 - `js/pages/trainingen.js` — bevat de lijst- en detailweergaven van trainingen en uitvoeringen, inclusief zoekbalk, aparte filters voor type en categorie, badges, beheer van meerdere links, documentupload/-download en lokale fallback-opslag voor trainingslinks en trainingsbestanden.
-- `js/pages/instellingen.js` — bevat instellingen voor trainingtypes, trainingscategorieën, agendatypes, e-mailtemplates, mail/agenda-configuratie en database-onderhoud.
+- `js/pages/instellingen.js` — bevat instellingen voor trainingtypes, trainingscategorieën, agendatypes, e-mailtemplates en mail/agenda-configuratie.
 - `scripts/import-werkvormen.js` — importeert werkvormen uit het bron-Word-document naar de tabel `trainingen`, slaat meerdere links per item mee op en valt bij een ontbrekende live kolom terug op opname in de omschrijving.
 
 ## Werking
@@ -129,4 +129,4 @@ Beide worden als `<script>` geladen in `index.html`; er is geen npm/build-step.
 
 ## Laatste update
 - Datum: 2026-04-20
-- Opmerking: dashboarddocumentatie bijgewerkt voor de nieuwe kaart "Afspraken vandaag", die uitsluitend agenda-items van de huidige dag toont met begintijd groot en eindtijd als "tot HH:MM" eronder op een mint-achtergrond.
+- Opmerking: drie database-onderhoudsfuncties uit Instellingen verwijderd: de kaarten "Facturen" (met knoppen voor totalen herberekenen en alle facturen verwijderen) en "Alle inhoud verwijderen" zijn uit `js/pages/instellingen.js` gehaald, en de bijbehorende functies `herberekeningTotalen()`, `delAlleFacturen()` en `delAlleInhoud()` zijn uit `js/crud.js` verwijderd.
