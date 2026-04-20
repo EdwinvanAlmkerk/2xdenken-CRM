@@ -78,6 +78,21 @@ function esc(s) {
   return String(s).replace(/&/g, '&amp;').replace(/</g, '&lt;').replace(/>/g, '&gt;').replace(/"/g, '&quot;');
 }
 
+// Zet platte tekst om naar veilige HTML, waarbij http(s)://… en www.…
+// URL's klikbaar worden. Input wordt eerst ge-escape't, zodat gebruikers
+// geen HTML kunnen injecteren.
+function linkify(s) {
+  if (s == null) return '';
+  const escaped = esc(s);
+  return escaped.replace(/\b(https?:\/\/|www\.)[^\s<]+/gi, match => {
+    const trailMatch = match.match(/[.,;:!?)\]]+$/);
+    const trailing = trailMatch ? trailMatch[0] : '';
+    const clean = trailing ? match.slice(0, -trailing.length) : match;
+    const href = /^https?:\/\//i.test(clean) ? clean : `https://${clean}`;
+    return `<a href="${href}" target="_blank" rel="noopener noreferrer" style="color:var(--blue);text-decoration:underline;word-break:break-all">${clean}</a>${trailing}`;
+  });
+}
+
 // ── Foutmelding-vertaling ─────────────────────────────────────────
 // Zet rauwe Supabase/PostgREST-errors om in begrijpelijke NL-tekst.
 function mapSupaError(err) {

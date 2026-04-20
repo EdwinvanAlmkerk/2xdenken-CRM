@@ -320,7 +320,7 @@ function renderTrainingDetail(id) {
                 <tr><td style="color:var(--navy4);font-size:12px;padding-right:16px;padding-bottom:10px;white-space:nowrap;vertical-align:top">${k}</td>
                     <td style="font-size:14px;padding-bottom:10px;color:var(--navy2)">${v}</td></tr>`).join('')}
             </tbody></table>
-            ${t.omschrijving ? `<div style="margin-top:4px"><div style="font-size:11px;font-weight:700;color:var(--navy4);text-transform:uppercase;letter-spacing:.6px;margin-bottom:6px">Omschrijving</div><div style="font-size:14px;color:var(--navy2);line-height:1.65;white-space:pre-wrap">${esc(t.omschrijving)}</div></div>` : ''}
+            ${t.omschrijving ? `<div style="margin-top:4px"><div style="font-size:11px;font-weight:700;color:var(--navy4);text-transform:uppercase;letter-spacing:.6px;margin-bottom:6px">Omschrijving</div><div style="font-size:14px;color:var(--navy2);line-height:1.65;white-space:pre-wrap">${linkify(t.omschrijving)}</div></div>` : ''}
             ${t.links?.length ? `<div style="margin-top:14px"><div style="font-size:11px;font-weight:700;color:var(--navy4);text-transform:uppercase;letter-spacing:.6px;margin-bottom:6px">Links</div>${renderTrainingLinks(t.links, false)}</div>` : ''}
             ${t.bestanden?.length ? `<div style="margin-top:14px"><div style="font-size:11px;font-weight:700;color:var(--navy4);text-transform:uppercase;letter-spacing:.6px;margin-bottom:6px">Documenten</div>${renderTrainingBestanden(t.bestanden, id, false)}</div>` : ''}
           </div>
@@ -381,9 +381,9 @@ function renderTrainingDetail(id) {
                 </div>
               </div>
               ${u.deelnemers ? `<div style="display:inline-flex;align-items:center;gap:5px;background:var(--bg);border-radius:6px;padding:3px 10px;font-size:12.5px;color:var(--navy3);margin-bottom:10px">${svgIcon('contact', 13)} ${esc(u.deelnemers)} deelnemer${u.deelnemers == 1 ? '' : 's'}</div>` : ''}
-              ${u.evaluatie ? `<div style="margin-bottom:8px"><div style="font-size:11px;font-weight:700;text-transform:uppercase;letter-spacing:.6px;color:var(--navy4);margin-bottom:5px">Evaluatie</div><div style="font-size:14px;color:var(--navy2);line-height:1.6;white-space:pre-wrap;background:var(--bg);border-radius:8px;padding:10px 14px">${esc(u.evaluatie)}</div></div>` : ''}
-              ${u.watGingGoed ? `<div style="margin-bottom:8px"><div style="font-size:11px;font-weight:700;text-transform:uppercase;letter-spacing:.6px;color:#2E7D52;margin-bottom:5px">✓ Wat ging goed</div><div style="font-size:13.5px;color:var(--navy2);line-height:1.6;white-space:pre-wrap;background:#E6F4EE;border-radius:8px;padding:10px 14px;border-left:3px solid #2E7D52">${esc(u.watGingGoed)}</div></div>` : ''}
-              ${u.watKonBeter ? `<div><div style="font-size:11px;font-weight:700;text-transform:uppercase;letter-spacing:.6px;color:#C0392B;margin-bottom:5px">↑ Wat kon beter</div><div style="font-size:13.5px;color:var(--navy2);line-height:1.6;white-space:pre-wrap;background:#FDE8E8;border-radius:8px;padding:10px 14px;border-left:3px solid #C0392B">${esc(u.watKonBeter)}</div></div>` : ''}
+              ${u.evaluatie ? `<div style="margin-bottom:8px"><div style="font-size:11px;font-weight:700;text-transform:uppercase;letter-spacing:.6px;color:var(--navy4);margin-bottom:5px">Evaluatie</div><div style="font-size:14px;color:var(--navy2);line-height:1.6;white-space:pre-wrap;background:var(--bg);border-radius:8px;padding:10px 14px">${linkify(u.evaluatie)}</div></div>` : ''}
+              ${u.watGingGoed ? `<div style="margin-bottom:8px"><div style="font-size:11px;font-weight:700;text-transform:uppercase;letter-spacing:.6px;color:#2E7D52;margin-bottom:5px">✓ Wat ging goed</div><div style="font-size:13.5px;color:var(--navy2);line-height:1.6;white-space:pre-wrap;background:#E6F4EE;border-radius:8px;padding:10px 14px;border-left:3px solid #2E7D52">${linkify(u.watGingGoed)}</div></div>` : ''}
+              ${u.watKonBeter ? `<div><div style="font-size:11px;font-weight:700;text-transform:uppercase;letter-spacing:.6px;color:#C0392B;margin-bottom:5px">↑ Wat kon beter</div><div style="font-size:13.5px;color:var(--navy2);line-height:1.6;white-space:pre-wrap;background:#FDE8E8;border-radius:8px;padding:10px 14px;border-left:3px solid #C0392B">${linkify(u.watKonBeter)}</div></div>` : ''}
             </div>
           </div>`;
         }).join('')}
@@ -402,7 +402,7 @@ function renderTrainingDetail(id) {
             <div style="display:flex;justify-content:space-between;align-items:flex-start;gap:10px">
               <div style="flex:1">
                 ${tip.titel ? `<div style="font-size:14px;font-weight:800;color:var(--navy);margin-bottom:6px">💡 ${esc(tip.titel)}</div>` : ''}
-                <div style="font-size:14px;color:var(--navy2);line-height:1.65;white-space:pre-wrap">${esc(tip.tekst)}</div>
+                <div style="font-size:14px;color:var(--navy2);line-height:1.65;white-space:pre-wrap">${linkify(tip.tekst)}</div>
                 <div style="font-size:11.5px;color:var(--navy4);margin-top:8px">${fmtDate(tip.datum)}</div>
               </div>
               <button class="btn btn-ghost btn-icon btn-sm" onclick="delTip('${id}',${i})">${svgIcon('trash', 13)}</button>
