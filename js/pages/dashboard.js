@@ -17,7 +17,7 @@ function renderDashboard() {
   const openFacturen   = facturenLopendJaar.filter(f => f.status === 'verzonden').length;
   const recentDossiers = [...DB.dossiers].sort((a, b) => new Date(b.datum) - new Date(a.datum)).slice(0, 6);
   const vandaag = new Date().toISOString().slice(0, 10);
-  const komendeAfspraken = DB.agenda.filter(a => a.datum >= vandaag).sort((a, b) => a.datum.localeCompare(b.datum) || (a.beginTijd || '').localeCompare(b.beginTijd || '')).slice(0, 5);
+  const afsprakenVandaag = DB.agenda.filter(a => a.datum === vandaag).sort((a, b) => (a.beginTijd || '').localeCompare(b.beginTijd || ''));
   const now     = new Date();
   const greeting = now.getHours() < 12 ? 'Goedemorgen' : now.getHours() < 17 ? 'Goedemiddag' : 'Goedenavond';
   const naam    = currentUser?.name || 'daar';
@@ -49,20 +49,20 @@ function renderDashboard() {
     <div class="grid-2" style="margin-bottom:24px">
       <div class="card">
         <div class="card-header">
-          <h3>${svgIcon('calendar', 16)} Komende afspraken</h3>
+          <h3>${svgIcon('calendar', 16)} Afspraken vandaag</h3>
           <button class="btn btn-secondary btn-sm" onclick="navigate('agenda')">Alle afspraken</button>
         </div>
         <div class="card-body">
-          ${komendeAfspraken.length === 0
-            ? `<div class="empty-state">${svgIcon('calendar', 36)}<p>Geen komende afspraken</p></div>`
-            : `<div style="display:flex;flex-direction:column;gap:10px">${komendeAfspraken.map(a => {
+          ${afsprakenVandaag.length === 0
+            ? `<div class="empty-state">${svgIcon('calendar', 36)}<p>Geen afspraken vandaag</p></div>`
+            : `<div style="display:flex;flex-direction:column;gap:10px">${afsprakenVandaag.map(a => {
                 const school = a.schoolId ? DB.scholen.find(s => s.id === a.schoolId) : null;
                 const tijdStr = a.beginTijd ? fmtTijd(a.beginTijd) : 'Hele dag';
-                const isVandaag = a.datum === vandaag;
-                return `<div style="display:flex;gap:12px;align-items:flex-start;padding:8px 12px;border-radius:8px;background:${isVandaag ? 'var(--mint1)' : 'var(--bg)'}; cursor:pointer" onclick="openAgendaModal('${a.id}')">
-                  <div style="min-width:60px;text-align:center">
-                    <div style="font-size:11px;color:var(--ink3)">${isVandaag ? 'Vandaag' : fmtDateShort(a.datum)}</div>
+                const eindStr = a.eindTijd ? fmtTijd(a.eindTijd) : '';
+                return `<div style="display:flex;gap:12px;align-items:flex-start;padding:8px 12px;border-radius:8px;background:var(--mint1); cursor:pointer" onclick="openAgendaModal('${a.id}')">
+                  <div style="min-width:70px;text-align:center">
                     <div style="font-size:13px;font-weight:700;color:var(--navy)">${tijdStr}</div>
+                    ${eindStr ? `<div style="font-size:11px;color:var(--ink3)">tot ${eindStr}</div>` : ''}
                   </div>
                   <div style="flex:1">
                     <div style="font-weight:600;font-size:14px">${esc(a.titel)}</div>
