@@ -2,7 +2,7 @@
 // FACTUREN
 // ════════════════════════════════════════════════════════════════
 let _factuurFilter  = 'alle';
-let _factuurJaar    = 'alle';
+let _factuurJaar    = String(new Date().getFullYear());
 let _factuurSearch  = '';
 let _factuurSortCol = 'datum';
 let _factuurSortDir = 'desc';
@@ -20,11 +20,12 @@ function setFactuurFilter(f) { _factuurFilter = f; smartRender(() => renderFactu
 function setFactuurJaar(j)   { _factuurJaar   = j; smartRender(() => renderFacturenPage(_factuurSearch)); }
 
 function renderFacturenPage(search = '') {
-  const jaren = [...new Set(DB.facturen.map(f => {
-    const m = (f.nummer || '').match(/^(20\d{2})/);
-    if (m) return m[1];
-    return f.datum ? f.datum.slice(0, 4) : null;
-  }).filter(Boolean))].sort().reverse();
+  const jaren = [...new Set(DB.facturen.map(f => getFactuurJaar(f)).filter(Boolean))].sort().reverse();
+
+  const huidigJaar = String(new Date().getFullYear());
+  if (!jaren.includes(_factuurJaar) && _factuurJaar !== 'alle') {
+    _factuurJaar = jaren.includes(huidigJaar) ? huidigJaar : (jaren[0] || 'alle');
+  }
 
   const filtered = DB.facturen.filter(f => {
     const s  = DB.scholen.find(x => x.id === f.schoolId);
@@ -32,8 +33,8 @@ function renderFacturenPage(search = '') {
             || (s?.naam || '').toLowerCase().includes(search.toLowerCase())
             || (f.betreft || '').toLowerCase().includes(search.toLowerCase());
     const mf = _factuurFilter === 'alle' || f.status === _factuurFilter;
-    const fnrYear = ((f.nummer || '').match(/^(20\d{2})/) || [])[1] || '';
-    const mj = _factuurJaar === 'alle' || fnrYear === _factuurJaar || (!fnrYear && (f.datum || '').startsWith(_factuurJaar));
+    const factuurJaar = getFactuurJaar(f);
+    const mj = _factuurJaar === 'alle' || factuurJaar === _factuurJaar;
     return ms && mf && mj;
   });
 
@@ -359,10 +360,19 @@ function getFactuurHtml(fid) {
   const school  = DB.scholen.find(x => x.id === f.schoolId);
   const bestuur = school ? DB.besturen.find(b => b.id === school.bestuurId) : null;
 
-  const fmtDutch = iso => {
-    if (!iso) return '';
-    const d = new Date(iso);
-    return `${String(d.getDate()).padStart(2, '0')}-${String(d.getMonth() + 1).padStart(2, '0')}-${String(d.getFullYear())}`;
+  const fmtDutch = value => {
+    if (!value) return '';
+    const str = String(value).trim();
+    const simple = str.match(/^(\d{1,2})-(\d{1,2})-'?(\d{2}|\d{4})$/);
+    if (simple) {
+      const year = simple[3].length === 2 ? `20${simple[3]}` : simple[3];
+      return `${String(simple[1]).padStart(2, '0')}-${String(simple[2]).padStart(2, '0')}-${year}`;
+    }
+    const d = new Date(str);
+    if (!Number.isNaN(d.getTime())) {
+      return `${String(d.getDate()).padStart(2, '0')}-${String(d.getMonth() + 1).padStart(2, '0')}-${String(d.getFullYear())}`;
+    }
+    return str.replace(/'/g, '');
   };
 
   const klantNaam = bestuur ? bestuur.naam : (school ? school.naam : '');
@@ -376,7 +386,9 @@ function getFactuurHtml(fid) {
   if (school?.postcode || school?.plaats)
     adresLines.push([school.postcode, school.plaats].filter(Boolean).map(esc).join(' '));
 
-  const totaal = Math.round((f.regels || []).reduce((s, r) => s + (Math.round((parseFloat(r.bedrag) || 0) * 100) / 100), 0) * 100) / 100;
+  const totaal = Number.isFinite(Number(f.totaal))
+    ? Math.round(Number(f.totaal) * 100) / 100
+    : Math.round((f.regels || []).reduce((s, r) => s + (Math.round((parseFloat(r.bedrag) || 0) * 100) / 100), 0) * 100) / 100;
 
   const html = `<!DOCTYPE html>
 <html lang="nl">

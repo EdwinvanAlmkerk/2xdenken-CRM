@@ -11,8 +11,10 @@ function renderDashboard() {
   if (!DB.facturen)     DB.facturen     = [];
   if (!DB.agenda)       DB.agenda       = [];
 
-  const totaalBetaald  = DB.facturen.filter(f => f.status === 'betaald').reduce((s, f) => s + (f.totaal || 0), 0);
-  const openFacturen   = DB.facturen.filter(f => f.status === 'verzonden').length;
+  const huidigJaar = String(new Date().getFullYear());
+  const facturenLopendJaar = DB.facturen.filter(f => getFactuurJaar(f) === huidigJaar);
+  const totaalFacturenLopendJaar = facturenLopendJaar.reduce((s, f) => s + (Number(f.totaal) || 0), 0);
+  const openFacturen   = facturenLopendJaar.filter(f => f.status === 'verzonden').length;
   const recentDossiers = [...DB.dossiers].sort((a, b) => new Date(b.datum) - new Date(a.datum)).slice(0, 6);
   const vandaag = new Date().toISOString().slice(0, 10);
   const komendeAfspraken = DB.agenda.filter(a => a.datum >= vandaag).sort((a, b) => a.datum.localeCompare(b.datum) || (a.beginTijd || '').localeCompare(b.beginTijd || '')).slice(0, 5);
@@ -25,7 +27,7 @@ function renderDashboard() {
     ['si-blue',   'school',   DB.scholen.length,    'Scholen'],
     ['si-green',  'contact',  DB.contacten.length,  'Contactpersonen'],
     ['si-gold',   'training', DB.trainingen.length, 'Trainingen'],
-    ['si-green',  'euro',     fmtEuro(totaalBetaald), 'Ontvangen'],
+    ['si-green',  'euro',     fmtEuro(totaalFacturenLopendJaar), `Facturen ${huidigJaar}`],
     ['si-orange', 'invoice',  openFacturen,         'Open facturen'],
   ];
 

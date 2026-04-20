@@ -54,6 +54,25 @@ function fmtEuro(n) {
   return new Intl.NumberFormat('nl-NL', { style: 'currency', currency: 'EUR' }).format(n || 0);
 }
 
+function getFactuurJaar(factuur) {
+  if (!factuur) return '';
+
+  const nummer = String(factuur.nummer || '');
+  const datum = String(factuur.datum || '').trim();
+  const nummerMatch = nummer.match(/(20\d{2})/);
+  if (nummerMatch) return nummerMatch[1];
+
+  if (/^\d{4}-\d{2}-\d{2}$/.test(datum)) return datum.slice(0, 4);
+
+  const datumMatch = datum.match(/(?:^|\D)(20\d{2})(?:\D|$)/);
+  if (datumMatch) return datumMatch[1];
+
+  const delen = datum.split(/[\-\/\.]/).map(x => x.trim()).filter(Boolean);
+  if (delen.length === 3 && /^\d{4}$/.test(delen[2])) return delen[2];
+
+  return '';
+}
+
 function esc(s) {
   if (s == null) return '';
   return String(s).replace(/&/g, '&amp;').replace(/</g, '&lt;').replace(/>/g, '&gt;').replace(/"/g, '&quot;');
