@@ -83,9 +83,10 @@ function renderScholen(search = '') {
     </div>`;
 }
 
-function openSchoolModal(id = '') {
+function openSchoolModal(id = '', defaultBestuurId = '') {
   const s = getSchool(id);
-  const opts = DB.besturen.map(b => `<option value="${b.id}"${s?.bestuurId === b.id ? ' selected' : ''}>${esc(b.naam)}</option>`).join('');
+  const huidigBestuurId = s?.bestuurId || defaultBestuurId || '';
+  const opts = DB.besturen.map(b => `<option value="${b.id}"${huidigBestuurId === b.id ? ' selected' : ''}>${esc(b.naam)}</option>`).join('');
   showModal(s ? 'School bewerken' : 'Nieuwe school',
     `<div class="form-group"><label>Naam school *</label><input type="text" id="f-naam" value="${esc(s?.naam || '')}" placeholder="OBS De Regenboog"/></div>
      <div class="form-row">

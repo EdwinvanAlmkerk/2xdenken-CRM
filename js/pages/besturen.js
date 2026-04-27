@@ -104,6 +104,10 @@ function renderBestuurDetail(id) {
 
   if (bestuurTab === 'scholen') {
     tabContent = `
+      <div style="display:flex;justify-content:flex-end;gap:8px;margin-bottom:16px">
+        <button class="btn btn-secondary" onclick="openLinkSchoolModal('${id}')">${svgIcon('add')} Bestaande school koppelen</button>
+        <button class="btn btn-primary" onclick="openSchoolModal('','${id}')">${svgIcon('add')} Nieuwe school</button>
+      </div>
       <div class="card">
         <div class="table-wrap">
           <table>
@@ -179,6 +183,46 @@ function renderBestuurDetail(id) {
       ${tabs.map(([k, l]) => `<div class="tab${bestuurTab === k ? ' active' : ''}" onclick="setBestuurTab('${id}','${k}')">${l}</div>`).join('')}
     </div>
     ${tabContent}`;
+}
+
+function openLinkSchoolModal(bestuurId) {
+  const b = getBestuur(bestuurId);
+  if (!b) return;
+  const beschikbaar = DB.scholen
+    .filter(s => s.bestuurId !== bestuurId)
+    .sort((a, b) => a.naam.localeCompare(b.naam, 'nl'));
+
+  if (beschikbaar.length === 0) {
+    showToast('Alle scholen zijn al aan dit bestuur gekoppeld.');
+    return;
+  }
+
+  const opts = beschikbaar.map(s => {
+    const huidig = getBestuur(s.bestuurId);
+    const suffix = huidig ? ` — nu bij ${huidig.naam}` : ' — nog zonder bestuur';
+    return `<option value="${s.id}">${esc(s.naam)}${esc(suffix)}</option>`;
+  }).join('');
+
+  showModal('School koppelen aan ' + esc(b.naam),
+    `<div class="form-group"><label>School *</label>
+       <select id="f-school-link"><option value="">— Kies school —</option>${opts}</select>
+     </div>
+     <div style="font-size:12px;color:var(--navy4);margin-top:-6px">Een school die al bij een ander bestuur staat, wordt na koppelen daar weggehaald.</div>`,
+    `<button class="btn btn-secondary" onclick="closeModal()">Annuleren</button>
+     <button class="btn btn-primary" onclick="linkSchoolAanBestuur('${bestuurId}')">Koppelen</button>`);
+}
+
+async function linkSchoolAanBestuur(bestuurId) {
+  const schoolId = document.getElementById('f-school-link').value;
+  if (!schoolId) return alert('Kies een school');
+  showLoading();
+  try {
+    await supa(`/rest/v1/scholen?id=eq.${schoolId}`, { method: 'PATCH', body: JSON.stringify({ bestuur_id: bestuurId }) });
+    DB.scholen = DB.scholen.map(s => s.id === schoolId ? { ...s, bestuurId } : s);
+    closeModal();
+    renderContent();
+    showToast('School gekoppeld');
+  } catch (e) { toastError(e); } finally { hideLoading(); }
 }
 
 function openBestuurDossierModal(bestuurId) {
