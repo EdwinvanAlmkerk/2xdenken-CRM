@@ -15,7 +15,7 @@ function renderDashboard() {
   const facturenLopendJaar = DB.facturen.filter(f => getFactuurJaar(f) === huidigJaar);
   const totaalFacturenLopendJaar = facturenLopendJaar.reduce((s, f) => s + (Number(f.totaal) || 0), 0);
   const openFacturen   = facturenLopendJaar.filter(f => f.status === 'verzonden').length;
-  const recentDossiers = [...DB.dossiers].sort((a, b) => new Date(b.datum) - new Date(a.datum)).slice(0, 6);
+  const recentDossiers = DB.dossiers.filter(d => !isFactuurDossier(d)).sort((a, b) => new Date(b.datum) - new Date(a.datum)).slice(0, 6);
   const vandaag = new Date().toISOString().slice(0, 10);
   if (DB.outlookSettings?.icsUrl && !_outlookFetchedOnce && !_outlookLoading) {
     if (_outlookEvents.length === 0) {

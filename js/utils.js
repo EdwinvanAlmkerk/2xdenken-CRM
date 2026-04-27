@@ -280,15 +280,25 @@ function renderDossierItem(d, opts = {}) {
     </div>`;
 }
 
-// Als een dossiernotitie hoort bij een factuur (onderwerp "Factuur {nummer}"
-// en zelfde school), retourneer een knop die de factuur opent.
-function renderFactuurLinkVoorDossier(d) {
-  if (!d || !d.onderwerp || !d.schoolId) return '';
+// Vind de factuur die hoort bij een dossiernotitie (onderwerp "Factuur {nummer}"
+// en zelfde school) of null als er geen match is.
+function findFactuurVoorDossier(d) {
+  if (!d || !d.onderwerp || !d.schoolId) return null;
   const m = String(d.onderwerp).match(/^\s*factuur\s+(\S.*?)\s*$/i);
-  if (!m) return '';
+  if (!m) return null;
   const nummer = m[1].trim();
-  const factuur = (typeof facturenVanSchool === 'function' ? facturenVanSchool(d.schoolId) : [])
-    .find(f => String(f.nummer || '').trim() === nummer);
+  if (typeof facturenVanSchool !== 'function') return null;
+  return facturenVanSchool(d.schoolId).find(f => String(f.nummer || '').trim() === nummer) || null;
+}
+
+// Dossier-items die een factuur weerspiegelen worden niet onder Dossier
+// getoond; die zijn al zichtbaar onder de Facturen-tab.
+function isFactuurDossier(d) {
+  return !!findFactuurVoorDossier(d);
+}
+
+function renderFactuurLinkVoorDossier(d) {
+  const factuur = findFactuurVoorDossier(d);
   if (!factuur) return '';
   return `
     <div style="margin-top:10px;display:flex;gap:6px;flex-wrap:wrap">

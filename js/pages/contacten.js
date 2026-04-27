@@ -90,7 +90,7 @@ function renderContactDetail(schoolId, contactId) {
   if (!c) return '<p>Contactpersoon niet gevonden</p>';
   const s = getSchool(c.schoolId);
   const best = s ? getBestuur(s.bestuurId) : null;
-  const dossiers = [...dossiersVanContact(contactId)].sort((a, b) => new Date(b.datum) - new Date(a.datum));
+  const dossiers = dossiersVanContact(contactId).filter(d => !isFactuurDossier(d)).sort((a, b) => new Date(b.datum) - new Date(a.datum));
   const facturen = facturenVanContact(contactId);
   const agendaItems = [...agendaVanContact(contactId)].sort((a, b) => a.datum.localeCompare(b.datum) || (a.beginTijd || '').localeCompare(b.beginTijd || ''));
   const vandaag = new Date().toISOString().slice(0, 10);

@@ -97,7 +97,7 @@ function renderBestuurDetail(id) {
   const b = getBestuur(id);
   if (!b) return '<p>Niet gevonden</p>';
   const scholen  = scholenVanBestuur(id);
-  const dossiers = scholen.flatMap(s => dossiersVanSchool(s.id)).sort((a, b) => new Date(b.datum) - new Date(a.datum));
+  const dossiers = scholen.flatMap(s => dossiersVanSchool(s.id)).filter(d => !isFactuurDossier(d)).sort((a, b) => new Date(b.datum) - new Date(a.datum));
 
   const tabs = [['scholen', 'Scholen'], ['dossier', 'Dossier'], ['agenda', 'Agenda']];
   let tabContent = '';
@@ -120,7 +120,7 @@ function renderBestuurDetail(id) {
                     <td style="font-weight:500">${esc(s.naam)}</td>
                     <td>${esc(s.plaats || '–')}</td>
                     <td>${contactenVanSchool(s.id).length}</td>
-                    <td>${dossiersVanSchool(s.id).length}</td>
+                    <td>${dossiersVanSchool(s.id).filter(d => !isFactuurDossier(d)).length}</td>
                   </tr>`).join('')}
             </tbody>
           </table>
