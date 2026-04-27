@@ -39,8 +39,9 @@ function renderBesturen(search = '') {
   };
   const dir = _bestuurSortDir === 'asc' ? 1 : -1;
   filtered = [...filtered].sort((a, b) => {
-    if (_bestuurSortCol === 'naam')    return dir * a.naam.localeCompare(b.naam, 'nl');
-    if (_bestuurSortCol === 'scholen') return dir * (countFor(a.id) - countFor(b.id));
+    if (_bestuurSortCol === 'naam')      return dir * a.naam.localeCompare(b.naam, 'nl');
+    if (_bestuurSortCol === 'debiteur')  return dir * (a.debiteurnr || '').localeCompare(b.debiteurnr || '', 'nl');
+    if (_bestuurSortCol === 'scholen')   return dir * (countFor(a.id) - countFor(b.id));
     return 0;
   });
 
@@ -59,14 +60,15 @@ function renderBesturen(search = '') {
     <div class="card">
       <div class="table-wrap">
         <table>
-          <thead><tr>${th('naam', 'Naam bestuur')}${th('scholen', 'Scholen')}<th>Website</th><th></th></tr></thead>
+          <thead><tr>${th('naam', 'Naam bestuur')}${th('debiteur', 'Debiteurnr')}${th('scholen', 'Scholen')}<th>Website</th><th></th></tr></thead>
           <tbody>
             ${filtered.length === 0
-              ? `<tr><td colspan="4"><div class="empty-state"><p>Geen besturen gevonden</p></div></td></tr>`
+              ? `<tr><td colspan="5"><div class="empty-state"><p>Geen besturen gevonden</p></div></td></tr>`
               : pageSlice.map(b => {
                   const cnt = countFor(b.id);
                   return `<tr class="clickable-row" onclick="navigate('bestuur-detail','${b.id}')">
                     <td style="font-weight:500">${esc(b.naam)}</td>
+                    <td style="font-size:13px;color:var(--ink3)">${esc(b.debiteurnr || '–')}</td>
                     <td style="color:var(--ink3);font-size:13px">${cnt} ${cnt === 1 ? 'school' : 'scholen'}</td>
                     <td>${b.website ? `<a href="${esc(b.website)}" target="_blank" onclick="event.stopPropagation()" style="color:var(--blue);font-size:13px">${esc(b.website)}</a>` : '–'}</td>
                     <td onclick="event.stopPropagation()" style="width:50px">
@@ -93,17 +95,17 @@ function exportBesturenExcel() {
   const titel = 'Besturenoverzicht 2xDenken';
 
   const rows = [
-    [Q(titel), '', '', '', '', ''],
-    ['', '', '', '', '', ''],
-    [Q('Naam bestuur'), Q('Adres'), Q('Website'), Q('Aantal scholen'), Q('Aantal contacten'), Q('Aantal facturen')],
+    [Q(titel), '', '', '', '', '', ''],
+    ['', '', '', '', '', '', ''],
+    [Q('Naam bestuur'), Q('Debiteurnummer'), Q('Adres'), Q('Website'), Q('Aantal scholen'), Q('Aantal contacten'), Q('Aantal facturen')],
     ...filtered.map(b => {
       const scholen = scholenVanBestuur(b.id);
       const aantContact = scholen.reduce((n, s) => n + contactenVanSchool(s.id).length, 0);
       const aantFact    = scholen.reduce((n, s) => n + facturenVanSchool(s.id).length, 0);
-      return [Q(b.naam), Q(b.adres), Q(b.website), scholen.length, aantContact, aantFact];
+      return [Q(b.naam), Q(b.debiteurnr), Q(b.adres), Q(b.website), scholen.length, aantContact, aantFact];
     }),
-    ['', '', '', '', '', ''],
-    [Q(`Geëxporteerd op: ${new Date().toLocaleDateString('nl-NL')} | Aantal besturen: ${filtered.length}`), '', '', '', '', ''],
+    ['', '', '', '', '', '', ''],
+    [Q(`Geëxporteerd op: ${new Date().toLocaleDateString('nl-NL')} | Aantal besturen: ${filtered.length}`), '', '', '', '', '', ''],
   ];
 
   const csv  = '\uFEFF' + rows.map(r => r.join(';')).join('\r\n');
@@ -122,6 +124,7 @@ function openBestuurModal(id = '') {
   const b = getBestuur(id);
   showModal(b ? 'Bestuur bewerken' : 'Nieuw bestuur',
     `<div class="form-group"><label>Naam bestuur *</label><input type="text" id="f-naam" value="${esc(b?.naam || '')}" placeholder="Stichting Primair Onderwijs…"/></div>
+     <div class="form-group"><label>Debiteurnummer</label><input type="text" id="f-debnr-bestuur" value="${esc(b?.debiteurnr || '')}" placeholder="DB01"/></div>
      <div class="form-group"><label>Website</label><input type="url" id="f-web" value="${esc(b?.website || '')}" placeholder="https://…"/></div>
      <div class="form-group"><label>Adres</label><input type="text" id="f-adres" value="${esc(b?.adres || '')}" placeholder="Straat en huisnummer"/></div>`,
     `<button class="btn btn-secondary" onclick="closeModal()">Annuleren</button>

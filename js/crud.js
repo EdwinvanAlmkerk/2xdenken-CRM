@@ -6,7 +6,7 @@
 async function saveBestuur(id) {
   const naam = document.getElementById('f-naam').value.trim();
   if (!naam) return alert('Naam is verplicht');
-  const data = { naam, website: document.getElementById('f-web').value.trim(), adres: document.getElementById('f-adres').value.trim() };
+  const data = { naam, website: document.getElementById('f-web').value.trim(), adres: document.getElementById('f-adres').value.trim(), debiteurnr: document.getElementById('f-debnr-bestuur').value.trim() };
   showLoading();
   try {
     if (id) {

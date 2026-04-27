@@ -10,6 +10,7 @@ CREATE TABLE IF NOT EXISTS besturen (
   naam       text NOT NULL,
   website    text DEFAULT ''::text,
   adres      text DEFAULT ''::text,
+  debiteurnr text,
   created_at timestamptz DEFAULT now()
 );
 
