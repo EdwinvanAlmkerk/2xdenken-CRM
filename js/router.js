@@ -73,6 +73,7 @@ function renderNav() {
 }
 
 function renderContent() {
+  ensureIndexes();
   const c = document.getElementById('content');
   if      (page === 'dashboard')       c.innerHTML = renderDashboard();
   else if (page === 'agenda')          c.innerHTML = renderAgendaPage();

@@ -4,14 +4,19 @@
 let _contactenSearch  = '';
 let _contactenSortCol = 'naam';
 let _contactenSortDir = 'asc';
+let _contactenPage    = 1;
 
 function sortContacten(col) {
   if (_contactenSortCol === col) { _contactenSortDir = _contactenSortDir === 'asc' ? 'desc' : 'asc'; }
   else { _contactenSortCol = col; _contactenSortDir = 'asc'; }
+  _contactenPage = 1;
   renderContent();
 }
 
-function searchContacten(v) { _contactenSearch = v; smartRender(() => renderContacten(v)); }
+function gotoContactenPage(p) { _contactenPage = p; smartRender(() => renderContacten(_contactenSearch)); }
+
+const _renderContactenDeb = debounce(() => smartRender(() => renderContacten(_contactenSearch)), 140);
+function searchContacten(v) { _contactenSearch = v; _contactenPage = 1; _renderContactenDeb(); }
 
 function renderContacten(search = '') {
   const thStyle = `cursor:pointer;user-select:none;white-space:nowrap;`;
@@ -22,20 +27,25 @@ function renderContacten(search = '') {
       : `<span style="margin-left:4px;font-size:10px;color:var(--navy)">▼</span>`;
   const th = (col, label) => `<th style="${thStyle}" onclick="sortContacten('${col}')">${label}${arrow(col)}</th>`;
 
+  const q = search.toLowerCase();
   let filtered = DB.contacten.filter(c =>
-    c.naam.toLowerCase().includes(search.toLowerCase()) ||
-    (c.functie || '').toLowerCase().includes(search.toLowerCase()) ||
-    (c.email || '').toLowerCase().includes(search.toLowerCase()));
+    !q ||
+    c.naam.toLowerCase().includes(q) ||
+    (c.functie || '').toLowerCase().includes(q) ||
+    (c.email || '').toLowerCase().includes(q));
   const dir = _contactenSortDir === 'asc' ? 1 : -1;
   filtered = [...filtered].sort((a, b) => {
-    const sa = DB.scholen.find(x => x.id === a.schoolId);
-    const sb = DB.scholen.find(x => x.id === b.schoolId);
+    const sa = getSchool(a.schoolId);
+    const sb = getSchool(b.schoolId);
     if (_contactenSortCol === 'naam')    return dir * a.naam.localeCompare(b.naam, 'nl');
     if (_contactenSortCol === 'functie') return dir * (a.functie || '').localeCompare(b.functie || '', 'nl');
     if (_contactenSortCol === 'type')    return dir * (a.type || '').localeCompare(b.type || '', 'nl');
     if (_contactenSortCol === 'school')  return dir * (sa?.naam || '').localeCompare(sb?.naam || '', 'nl');
     return 0;
   });
+
+  const pageInfo = paginate(filtered, _contactenPage);
+  const pageSlice = pageInfo.slice;
 
   return `
     <div style="margin-bottom:20px">
@@ -51,8 +61,8 @@ function renderContacten(search = '') {
           <tbody>
             ${filtered.length === 0
               ? `<tr><td colspan="7"><div class="empty-state"><p>Geen contacten gevonden</p></div></td></tr>`
-              : filtered.map(c => {
-                  const s = DB.scholen.find(x => x.id === c.schoolId);
+              : pageSlice.map(c => {
+                  const s = getSchool(c.schoolId);
                   return `<tr class="clickable-row" onclick="navigateToContact('${s?.id || ''}','${c.id}')">
                     <td style="font-weight:500">${esc(c.naam)}</td>
                     <td>${esc(c.functie || '—')}</td>
@@ -70,21 +80,22 @@ function renderContacten(search = '') {
           </tbody>
         </table>
       </div>
+      ${renderPagination(pageInfo, 'gotoContactenPage')}
     </div>`;
 }
 
 // ── Contact detail pagina ──────────────────────────────────────────────
 function renderContactDetail(schoolId, contactId) {
-  const c = DB.contacten.find(x => x.id === contactId);
+  const c = getContact(contactId);
   if (!c) return '<p>Contactpersoon niet gevonden</p>';
-  const s = DB.scholen.find(x => x.id === c.schoolId);
-  const best = s ? DB.besturen.find(b => b.id === s.bestuurId) : null;
-  const dossiers = [...DB.dossiers.filter(d => d.contactId === contactId)].sort((a, b) => new Date(b.datum) - new Date(a.datum));
-  const facturen = DB.facturen.filter(f => f.contactId === contactId);
-  const agendaItems = DB.agenda.filter(a => a.contactId === contactId).sort((a, b) => a.datum.localeCompare(b.datum) || (a.beginTijd || '').localeCompare(b.beginTijd || ''));
+  const s = getSchool(c.schoolId);
+  const best = s ? getBestuur(s.bestuurId) : null;
+  const dossiers = [...dossiersVanContact(contactId)].sort((a, b) => new Date(b.datum) - new Date(a.datum));
+  const facturen = facturenVanContact(contactId);
+  const agendaItems = [...agendaVanContact(contactId)].sort((a, b) => a.datum.localeCompare(b.datum) || (a.beginTijd || '').localeCompare(b.beginTijd || ''));
   const vandaag = new Date().toISOString().slice(0, 10);
   const komendeAfspraken = agendaItems.filter(a => a.datum >= vandaag);
-  const uitvoeringen = [...(DB.uitvoeringen || []).filter(u => u.contactId === contactId)].sort((a, b) => new Date(b.datum) - new Date(a.datum));
+  const uitvoeringen = [...uitvoeringenVanContact(contactId)].sort((a, b) => new Date(b.datum) - new Date(a.datum));
 
   return `
     <div class="breadcrumb">
@@ -153,7 +164,7 @@ function renderContactDetail(schoolId, contactId) {
                <thead><tr><th>Training</th><th>Datum</th><th>Deelnemers</th><th>Score</th></tr></thead>
                <tbody>
                  ${uitvoeringen.map(u => {
-                   const t = DB.trainingen.find(x => x.id === u.trainingId);
+                   const t = getTraining(u.trainingId);
                    return `<tr class="clickable-row" onclick="navigate('training-detail','${u.trainingId}')">
                      <td style="font-weight:500">${esc(t?.naam || '–')}${t?.type ? ' ' + typeBadge(t.type) : ''}${t?.categorie ? ' ' + catBadge(t.categorie) : ''}</td>
                      <td>${fmtDateShort(u.datum)}</td>

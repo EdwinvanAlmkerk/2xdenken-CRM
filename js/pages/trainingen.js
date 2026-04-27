@@ -211,7 +211,8 @@ function renderStars(score, interactive = false, fid = '') {
 let _trainingTypeFilter = 'alle';
 let _trainingCategoryFilter = 'alle';
 
-function searchTrainingen(v) { smartRender(() => renderTrainingenPage(v)); }
+const _renderTrainingenDeb = debounce(() => smartRender(() => renderTrainingenPage(document.getElementById('search-trainingen')?.value || '')), 140);
+function searchTrainingen(v) { _renderTrainingenDeb(); }
 function setTrainingTypeFilter(v) { _trainingTypeFilter = v || 'alle'; smartRender(() => renderTrainingenPage(document.getElementById('search-trainingen')?.value || '')); }
 function setTrainingCategoryFilter(v) { _trainingCategoryFilter = v || 'alle'; smartRender(() => renderTrainingenPage(document.getElementById('search-trainingen')?.value || '')); }
 
@@ -269,7 +270,7 @@ function renderTrainingenPage(search = '') {
       </div>` : `
     <div style="display:grid;grid-template-columns:repeat(auto-fill,minmax(300px,1fr));gap:16px">
       ${filtered.map(t => {
-        const uitv = DB.uitvoeringen.filter(u => u.trainingId === t.id);
+        const uitv = uitvoeringenVanTraining(t.id);
         const avgScore = uitv.filter(u => u.score).length
           ? Math.round(uitv.filter(u => u.score).reduce((s, u) => s + u.score, 0) / uitv.filter(u => u.score).length * 10) / 10
           : null;
@@ -297,9 +298,9 @@ function renderTrainingenPage(search = '') {
 }
 
 function renderTrainingDetail(id) {
-  const t = DB.trainingen.find(x => x.id === id);
+  const t = getTraining(id);
   if (!t) return '<p>Niet gevonden</p>';
-  const uitv = [...DB.uitvoeringen.filter(u => u.trainingId === id)].sort((a, b) => new Date(b.datum) - new Date(a.datum));
+  const uitv = [...uitvoeringenVanTraining(id)].sort((a, b) => new Date(b.datum) - new Date(a.datum));
   const avgScore = uitv.filter(u => u.score).length
     ? (uitv.filter(u => u.score).reduce((s, u) => s + u.score, 0) / uitv.filter(u => u.score).length).toFixed(1)
     : null;
@@ -357,9 +358,9 @@ function renderTrainingDetail(id) {
         <div class="card"><div class="empty-state">${svgIcon('school', 36)}<p>Nog geen uitvoeringen geregistreerd</p></div></div>` : `
       <div style="display:flex;flex-direction:column;gap:14px">
         ${uitv.map(u => {
-          const school = DB.scholen.find(s => s.id === u.schoolId);
-          const best   = school ? DB.besturen.find(b => b.id === school.bestuurId) : null;
-          const contact = u.contactId ? DB.contacten.find(c => c.id === u.contactId) : null;
+          const school = getSchool(u.schoolId);
+          const best   = school ? getBestuur(school.bestuurId) : null;
+          const contact = getContact(u.contactId);
           return `
           <div class="card">
             <div class="card-body" style="padding:18px 22px">
@@ -436,7 +437,7 @@ function renderTrainingDetail(id) {
 function openTrainingModal(id = '') {
   ensureTrainingTypes();
   ensureTrainingCategories();
-  const t = id ? DB.trainingen.find(x => x.id === id) : null;
+  const t = getTraining(id);
   _trainingLinksDraft = (t?.links && t.links.length ? t.links : [{ label: '', url: '' }]).map(link => ({ label: link.label || '', url: link.url || '' }));
   const typeOpts = getTrainingTypeList().map(tp =>
     `<option value="${tp.id}"${(t?.type || 'training') === tp.id ? ' selected' : ''}>${esc(tp.naam)}</option>`).join('');

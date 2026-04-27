@@ -25,10 +25,13 @@ async function delBestuur(id) {
   if (!confirm('Bestuur verwijderen? Scholen worden losgekoppeld.')) return;
   showLoading();
   try {
+    // Eerst scholen loskoppelen (FK-veilig), dan bestuur verwijderen.
+    // Beide Supabase-calls afronden vóór de lokale DB muteert, zodat
+    // een fout halverwege geen inconsistente UI-state achterlaat.
+    await supa(`/rest/v1/scholen?bestuur_id=eq.${id}`, { method: 'PATCH', body: JSON.stringify({ bestuur_id: null }) });
     await supa(`/rest/v1/besturen?id=eq.${id}`, { method: 'DELETE' });
     DB.besturen = DB.besturen.filter(b => b.id !== id);
     DB.scholen  = DB.scholen.map(s => s.bestuurId === id ? { ...s, bestuurId: null } : s);
-    await supa(`/rest/v1/scholen?bestuur_id=eq.${id}`, { method: 'PATCH', body: JSON.stringify({ bestuur_id: null }) });
     renderContent();
   } catch (e) { toastError(e); } finally { hideLoading(); }
 }

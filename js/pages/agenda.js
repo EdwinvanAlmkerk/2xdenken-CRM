@@ -101,7 +101,7 @@ const AGENDA_KLEUR_LABELS = {
 };
 
 function getAgendaType(typeId) {
-  return DB.agendaTypes.find(t => t.id === typeId) || { id: typeId, naam: typeId, kleur: 'navy' };
+  return DB._idx?.agendaTypeById?.get(typeId) || DB.agendaTypes.find(t => t.id === typeId) || { id: typeId, naam: typeId, kleur: 'navy' };
 }
 
 function agendaBadge(type) {
@@ -138,9 +138,9 @@ function fmtTijd(t) {
 
 // ── Gedeelde agenda-rij voor detailpagina's (school/bestuur/contact) ──
 function renderAgendaRow(a) {
-  const school  = a.schoolId  ? DB.scholen.find(s => s.id === a.schoolId)   : null;
-  const bestuur = a.bestuurId ? DB.besturen.find(b => b.id === a.bestuurId) : null;
-  const contact = a.contactId ? DB.contacten.find(c => c.id === a.contactId) : null;
+  const school  = getSchool(a.schoolId);
+  const bestuur = getBestuur(a.bestuurId);
+  const contact = getContact(a.contactId);
   const tijdStr = a.beginTijd
     ? (a.eindTijd ? `${fmtTijd(a.beginTijd)} – ${fmtTijd(a.eindTijd)}` : fmtTijd(a.beginTijd))
     : 'Hele dag';
@@ -211,12 +211,13 @@ function setAgendaView(v) {
   renderContent();
 }
 
-function searchAgenda(v) { _agendaSearch = v; smartRender(() => renderAgendaPage()); }
+const _renderAgendaDeb = debounce(() => smartRender(() => renderAgendaPage()), 140);
+function searchAgenda(v) { _agendaSearch = v; _renderAgendaDeb(); }
 function filterAgenda(v) { _agendaFilter = v; renderContent(); }
 
 // ── Items ophalen voor een datumreeks ────────────────────────────
 function getItemsForDate(iso) {
-  const crm = DB.agenda.filter(a => a.datum === iso);
+  const crm = agendaOpDatum(iso);
   const outlook = _outlookEvents.filter(a => a.datum === iso);
   return [...crm, ...outlook]
     .sort((a, b) => (a.beginTijd || '').localeCompare(b.beginTijd || ''));
@@ -354,7 +355,7 @@ function renderWeekView() {
       const endMin = a.eindTijd ? timeToMinutes(a.eindTijd) : startMin + 60;
       const top = minutesToPx(startMin);
       const height = Math.max(((endMin - startMin) / 60) * 60, 20);
-      const school = a.schoolId ? DB.scholen.find(s => s.id === a.schoolId) : null;
+      const school = getSchool(a.schoolId);
       const meta = [fmtTijd(a.beginTijd), a.locatie, school?.naam].filter(Boolean).join(' · ');
       return `<div class="cal-event ${agendaEventClass(a.type)}" style="top:${top}px;height:${height}px" onclick="openAgendaItem('${a.id}')" title="${esc(a.titel)}">
         <div class="cal-event-title">${esc(a.titel)}</div>
@@ -424,7 +425,7 @@ function renderDayView() {
     const endMin = a.eindTijd ? timeToMinutes(a.eindTijd) : startMin + 60;
     const top = minutesToPx(startMin);
     const height = Math.max(((endMin - startMin) / 60) * 60, 20);
-    const school = a.schoolId ? DB.scholen.find(s => s.id === a.schoolId) : null;
+    const school = getSchool(a.schoolId);
     const meta = [fmtTijd(a.beginTijd) + (a.eindTijd ? ` – ${fmtTijd(a.eindTijd)}` : ''), a.locatie, school?.naam].filter(Boolean).join(' · ');
     return `<div class="cal-event ${agendaEventClass(a.type)}" style="top:${top}px;height:${height}px;right:20%" onclick="openAgendaItem('${a.id}')">
       <div class="cal-event-title">${esc(a.titel)}</div>
@@ -592,9 +593,9 @@ function renderAgendaList() {
                 <table>
                   <tbody>
                     ${grouped[datum].map(a => {
-                      const school  = a.schoolId  ? DB.scholen.find(s => s.id === a.schoolId)   : null;
-                      const contact = a.contactId ? DB.contacten.find(c => c.id === a.contactId) : null;
-                      const bestuur = a.bestuurId ? DB.besturen.find(b => b.id === a.bestuurId)  : null;
+                      const school  = getSchool(a.schoolId);
+                      const contact = getContact(a.contactId);
+                      const bestuur = getBestuur(a.bestuurId);
                       const tijdStr = a.beginTijd
                         ? (a.eindTijd ? `${fmtTijd(a.beginTijd)} – ${fmtTijd(a.eindTijd)}` : fmtTijd(a.beginTijd))
                         : 'Hele dag';
@@ -630,7 +631,7 @@ function renderAgendaList() {
 // ── School-change handler in modal ───────────────────────────────
 function onAgendaSchoolChange() {
   const schoolId = document.getElementById('f-school').value;
-  const school = schoolId ? DB.scholen.find(s => s.id === schoolId) : null;
+  const school = getSchool(schoolId);
 
   // Bestuur automatisch meezetten
   const bestuurSel = document.getElementById('f-bestuur');
@@ -645,9 +646,7 @@ function onAgendaSchoolChange() {
   // Contacten filteren op school
   const contactSel = document.getElementById('f-contact');
   const currentContact = contactSel.value;
-  const contacten = schoolId
-    ? DB.contacten.filter(c => c.schoolId === schoolId)
-    : DB.contacten;
+  const contacten = schoolId ? contactenVanSchool(schoolId) : DB.contacten;
   contactSel.innerHTML = '<option value="">— Geen —</option>' +
     contacten.map(c =>
       `<option value="${c.id}"${c.id === currentContact ? ' selected' : ''}>${esc(c.naam)}${c.functie ? ` (${esc(c.functie)})` : ''}</option>`
@@ -662,32 +661,30 @@ function onAgendaSchoolChange() {
 //   prefillContactId  — contact vooraf selecteren
 //   prefillBestuurId  — bestuur vooraf selecteren (vanuit bestuur context)
 function openAgendaModal(id = '', prefillDate = '', prefillSchoolId = '', prefillContactId = '', prefillBestuurId = '') {
-  const a = id ? DB.agenda.find(x => x.id === id) : null;
+  const a = getAgenda(id);
   const defaultDatum = a?.datum || prefillDate || dateStr(_agendaDate);
 
   // Bepaal actieve waarden (bestaand item > prefill > leeg)
   const selSchoolId  = a?.schoolId  || prefillSchoolId  || '';
   const selContactId = a?.contactId || prefillContactId || '';
   // Bestuur: afleiden uit school als die er is, anders prefill
-  const schoolForBestuur = DB.scholen.find(x => x.id === selSchoolId);
+  const schoolForBestuur = getSchool(selSchoolId);
   const selBestuurId = a?.bestuurId || (schoolForBestuur?.bestuurId || '') || prefillBestuurId || '';
 
   // School: als prefill, toon locked; anders alle scholen
   const schoolLocked = !a && prefillSchoolId;
   const schoolOpts = schoolLocked
-    ? (() => { const s = DB.scholen.find(x => x.id === prefillSchoolId); return s ? `<option value="${s.id}" selected>${esc(s.naam)}</option>` : ''; })()
+    ? (() => { const s = getSchool(prefillSchoolId); return s ? `<option value="${s.id}" selected>${esc(s.naam)}</option>` : ''; })()
     : DB.scholen.map(s => `<option value="${s.id}"${selSchoolId === s.id ? ' selected' : ''}>${esc(s.naam)}</option>`).join('');
 
   // Bestuur: locked als prefill OF afgeleid van school
   const bestuurLocked = !a && (prefillBestuurId || (prefillSchoolId && selBestuurId));
   const bestuurOpts = bestuurLocked
-    ? (() => { const b = DB.besturen.find(x => x.id === selBestuurId); return b ? `<option value="${b.id}" selected>${esc(b.naam)}</option>` : ''; })()
+    ? (() => { const b = getBestuur(selBestuurId); return b ? `<option value="${b.id}" selected>${esc(b.naam)}</option>` : ''; })()
     : DB.besturen.map(b => `<option value="${b.id}"${selBestuurId === b.id ? ' selected' : ''}>${esc(b.naam)}</option>`).join('');
 
   // Contacten: als school prefill, toon alleen contacten van die school
-  const contactPool = prefillSchoolId
-    ? DB.contacten.filter(c => c.schoolId === prefillSchoolId)
-    : DB.contacten;
+  const contactPool = prefillSchoolId ? contactenVanSchool(prefillSchoolId) : DB.contacten;
   const contactOpts = contactPool.map(c =>
     `<option value="${c.id}"${selContactId === c.id ? ' selected' : ''}>${esc(c.naam)}${c.functie ? ` (${esc(c.functie)})` : ''}</option>`
   ).join('');
@@ -698,8 +695,8 @@ function openAgendaModal(id = '', prefillDate = '', prefillSchoolId = '', prefil
 
   // Context-info voor de modal titel
   let contextLabel = '';
-  if (!a && prefillSchoolId)  { const s = DB.scholen.find(x => x.id === prefillSchoolId);  if (s) contextLabel = ` — ${s.naam}`; }
-  if (!a && prefillBestuurId) { const b = DB.besturen.find(x => x.id === prefillBestuurId); if (b) contextLabel = ` — ${b.naam}`; }
+  if (!a && prefillSchoolId)  { const s = getSchool(prefillSchoolId);  if (s) contextLabel = ` — ${s.naam}`; }
+  if (!a && prefillBestuurId) { const b = getBestuur(prefillBestuurId); if (b) contextLabel = ` — ${b.naam}`; }
 
   showModal(a ? 'Afspraak bewerken' : `Nieuwe afspraak${contextLabel}`,
     `<div class="form-group"><label>Titel *</label><input type="text" id="f-titel" value="${esc(a?.titel || '')}" placeholder="Bijv. Intakegesprek school X"/></div>
@@ -788,9 +785,9 @@ function exportAgendaExcel() {
       ? Math.max(0, timeToMinutes(a.eindTijd) - timeToMinutes(a.beginTijd))
       : 0;
     totaalMin += durMin;
-    const school  = a.schoolId  ? DB.scholen.find(s => s.id === a.schoolId)   : null;
-    const bestuur = a.bestuurId ? DB.besturen.find(b => b.id === a.bestuurId) : null;
-    const contact = a.contactId ? DB.contacten.find(c => c.id === a.contactId) : null;
+    const school  = getSchool(a.schoolId);
+    const bestuur = getBestuur(a.bestuurId);
+    const contact = getContact(a.contactId);
     const typeLabel = a._bron === 'Extern'
       ? 'Externe agenda'
       : (getAgendaType(a.type).naam || a.type || '');

@@ -6,18 +6,23 @@ let _factuurJaar    = String(new Date().getFullYear());
 let _factuurSearch  = '';
 let _factuurSortCol = 'datum';
 let _factuurSortDir = 'desc';
+let _factuurPage    = 1;
 let _regels         = [];
 let _uitvScore      = 0;
+
+function gotoFacturenPage(p) { _factuurPage = p; smartRender(() => renderFacturenPage(_factuurSearch)); }
 
 function sortFacturen(col) {
   if (_factuurSortCol === col) { _factuurSortDir = _factuurSortDir === 'asc' ? 'desc' : 'asc'; }
   else { _factuurSortCol = col; _factuurSortDir = col === 'bedrag' ? 'desc' : 'asc'; }
-  document.getElementById('content').innerHTML = renderFacturenPage(_factuurSearch);
+  _factuurPage = 1;
+  smartRender(() => renderFacturenPage(_factuurSearch));
 }
 
-function filterFacturen(v)   { _factuurSearch = v; smartRender(() => renderFacturenPage(v)); }
-function setFactuurFilter(f) { _factuurFilter = f; smartRender(() => renderFacturenPage(_factuurSearch)); }
-function setFactuurJaar(j)   { _factuurJaar   = j; smartRender(() => renderFacturenPage(_factuurSearch)); }
+const _renderFacturenDeb = debounce(() => smartRender(() => renderFacturenPage(_factuurSearch)), 140);
+function filterFacturen(v)   { _factuurSearch = v; _factuurPage = 1; _renderFacturenDeb(); }
+function setFactuurFilter(f) { _factuurFilter = f; _factuurPage = 1; smartRender(() => renderFacturenPage(_factuurSearch)); }
+function setFactuurJaar(j)   { _factuurJaar   = j; _factuurPage = 1; smartRender(() => renderFacturenPage(_factuurSearch)); }
 
 function renderFacturenPage(search = '') {
   const jaren = [...new Set(DB.facturen.map(f => getFactuurJaar(f)).filter(Boolean))].sort().reverse();
@@ -27,21 +32,22 @@ function renderFacturenPage(search = '') {
     _factuurJaar = jaren.includes(huidigJaar) ? huidigJaar : (jaren[0] || 'alle');
   }
 
+  const q = search.toLowerCase();
   const filtered = DB.facturen.filter(f => {
-    const s  = DB.scholen.find(x => x.id === f.schoolId);
-    const ms = (f.nummer || '').toLowerCase().includes(search.toLowerCase())
-            || (s?.naam || '').toLowerCase().includes(search.toLowerCase())
-            || (f.betreft || '').toLowerCase().includes(search.toLowerCase());
+    const s  = getSchool(f.schoolId);
+    const ms = !q
+            || (f.nummer || '').toLowerCase().includes(q)
+            || (s?.naam || '').toLowerCase().includes(q)
+            || (f.betreft || '').toLowerCase().includes(q);
     const mf = _factuurFilter === 'alle' || f.status === _factuurFilter;
-    const factuurJaar = getFactuurJaar(f);
-    const mj = _factuurJaar === 'alle' || factuurJaar === _factuurJaar;
+    const mj = _factuurJaar === 'alle' || getFactuurJaar(f) === _factuurJaar;
     return ms && mf && mj;
   });
 
   const dir = _factuurSortDir === 'asc' ? 1 : -1;
   filtered.sort((a, b) => {
-    const sa = DB.scholen.find(x => x.id === a.schoolId);
-    const sb = DB.scholen.find(x => x.id === b.schoolId);
+    const sa = getSchool(a.schoolId);
+    const sb = getSchool(b.schoolId);
     switch (_factuurSortCol) {
       case 'nummer':  return dir * (a.nummer || '').localeCompare(b.nummer || '', 'nl', { numeric: true });
       case 'school':  return dir * (sa?.naam || '').localeCompare(sb?.naam || '', 'nl');
@@ -56,6 +62,8 @@ function renderFacturenPage(search = '') {
   const totaalGefilterd  = filtered.reduce((s, f) => s + (f.totaal || 0), 0);
   const totaalBetaald    = filtered.filter(f => f.status === 'betaald').reduce((s, f) => s + (f.totaal || 0), 0);
   const totaalOpenstaand = filtered.filter(f => f.status === 'verzonden').reduce((s, f) => s + (f.totaal || 0), 0);
+  const pageInfo = paginate(filtered, _factuurPage);
+  const pageSlice = pageInfo.slice;
 
   const statusFilters = ['alle', 'concept', 'verzonden', 'betaald', 'vervallen'];
   const flabels = { alle: 'Alle', concept: 'Concept', verzonden: 'Verzonden', betaald: 'Betaald', vervallen: 'Vervallen' };
@@ -124,8 +132,8 @@ function renderFacturenPage(search = '') {
           <tbody>
             ${filtered.length === 0
               ? `<tr><td colspan="7"><div class="empty-state"><p>Geen facturen gevonden</p></div></td></tr>`
-              : filtered.map(f => {
-                  const s = DB.scholen.find(x => x.id === f.schoolId);
+              : pageSlice.map(f => {
+                  const s = getSchool(f.schoolId);
                   return `<tr>
                     <td style="font-weight:700;white-space:nowrap">${esc(f.nummer)}</td>
                     <td style="font-size:13px">${esc(s?.naam || '—')}</td>
@@ -146,12 +154,13 @@ function renderFacturenPage(search = '') {
           </tbody>
         </table>
       </div>
+      ${renderPagination(pageInfo, 'gotoFacturenPage')}
     </div>`;
 }
 
 // ── Facturen tab binnen schooldetail ─────────────────────────────
 function renderFacturenTab(schoolId) {
-  const facturen = DB.facturen.filter(f => f.schoolId === schoolId);
+  const facturen = facturenVanSchool(schoolId);
   return `
     <div style="display:flex;justify-content:flex-end;margin-bottom:16px">
       <button class="btn btn-primary" onclick="openFactuurModal('${schoolId}')">${svgIcon('add')} Nieuwe factuur</button>
@@ -182,11 +191,11 @@ function renderFacturenTab(schoolId) {
 
 // ── Factuur modal ─────────────────────────────────────────────────
 async function openFactuurModal(schoolId, fid = '', prefillContactId = '') {
-  const f = fid ? DB.facturen.find(x => x.id === fid) : null;
-  const school = DB.scholen.find(x => x.id === schoolId);
-  const contacten = DB.contacten.filter(c => c.schoolId === schoolId);
+  const f = getFactuur(fid);
+  const school = getSchool(schoolId);
+  const contacten = contactenVanSchool(schoolId);
   const activeContactId = f?.contactId || prefillContactId || '';
-  const prefillContact = activeContactId ? DB.contacten.find(x => x.id === activeContactId) : null;
+  const prefillContact = getContact(activeContactId);
 
   const nextNr = (() => {
     const yr = new Date().getFullYear();
@@ -293,7 +302,7 @@ function delRegel(i) { _regels.splice(i, 1); renderRegels(_regels); }
 // ── Nieuwe factuur (vanuit facturenoverzicht) ────────────────────
 function openNieuweFactuurModal() {
   const schoolOpts = DB.scholen.map(s => {
-    const best = DB.besturen.find(b => b.id === s.bestuurId);
+    const best = getBestuur(s.bestuurId);
     const label = best ? `${s.naam} (${best.naam})` : s.naam;
     return `<option value="${s.id}">${esc(label)}</option>`;
   }).join('');
@@ -316,8 +325,8 @@ function openNieuweFactuurModal() {
 
 function onNieuweFactuurSchoolChange() {
   const schoolId = document.getElementById('f-nf-school').value;
-  const school = schoolId ? DB.scholen.find(s => s.id === schoolId) : null;
-  const best = school ? DB.besturen.find(b => b.id === school.bestuurId) : null;
+  const school = getSchool(schoolId);
+  const best = school ? getBestuur(school.bestuurId) : null;
 
   // School-info tonen
   const infoEl = document.getElementById('nf-school-info');
@@ -334,7 +343,7 @@ function onNieuweFactuurSchoolChange() {
 
   // Contacten filteren
   const contactSel = document.getElementById('f-nf-contact');
-  const contacten = schoolId ? DB.contacten.filter(c => c.schoolId === schoolId) : [];
+  const contacten = schoolId ? contactenVanSchool(schoolId) : [];
   contactSel.innerHTML = '<option value="">— Geen —</option>' +
     contacten.map(c => `<option value="${c.id}">${esc(c.naam)}${c.functie ? ` — ${esc(c.functie)}` : ''}</option>`).join('');
 }
@@ -355,10 +364,10 @@ const FACTUUR_LOGO =
   '';
 
 function getFactuurHtml(fid) {
-  const f = DB.facturen.find(x => x.id === fid);
+  const f = getFactuur(fid);
   if (!f) return;
-  const school  = DB.scholen.find(x => x.id === f.schoolId);
-  const bestuur = school ? DB.besturen.find(b => b.id === school.bestuurId) : null;
+  const school  = getSchool(f.schoolId);
+  const bestuur = school ? getBestuur(school.bestuurId) : null;
 
   const fmtDutch = value => {
     if (!value) return '';
@@ -379,7 +388,7 @@ function getFactuurHtml(fid) {
   const adresLines = [];
   if (f.tav) adresLines.push('t.a.v. ' + esc(f.tav));
   else {
-    const contact = f.contactId ? DB.contacten.find(c => c.id === f.contactId) : null;
+    const contact = getContact(f.contactId);
     if (contact) adresLines.push('t.a.v. ' + esc(contact.naam));
   }
   if (school?.adres) adresLines.push(esc(school.adres));
@@ -565,12 +574,13 @@ function printFactuur(fid) {
 
 // ── Excel export ──────────────────────────────────────────────────
 function exportFacturenExcel() {
+  const q = (_factuurSearch || '').toLowerCase();
   const filtered = DB.facturen.filter(f => {
-    const s  = DB.scholen.find(x => x.id === f.schoolId);
-    const ms = !_factuurSearch
-      || (f.nummer || '').toLowerCase().includes(_factuurSearch.toLowerCase())
-      || (s?.naam || '').toLowerCase().includes(_factuurSearch.toLowerCase())
-      || (f.betreft || '').toLowerCase().includes(_factuurSearch.toLowerCase());
+    const s  = getSchool(f.schoolId);
+    const ms = !q
+      || (f.nummer || '').toLowerCase().includes(q)
+      || (s?.naam || '').toLowerCase().includes(q)
+      || (f.betreft || '').toLowerCase().includes(q);
     const mf = _factuurFilter === 'alle' || f.status === _factuurFilter;
     const fnrYear = ((f.nummer || '').match(/^(20\d{2})/) || [])[1] || '';
     const mj = _factuurJaar === 'alle' || fnrYear === _factuurJaar || (!fnrYear && (f.datum || '').startsWith(_factuurJaar));
@@ -591,7 +601,7 @@ function exportFacturenExcel() {
     ['', '', '', '', '', '', ''],
     [Q('Factuurnummer'), Q('School'), Q('Betreft'), Q('Factuurdatum'), Q('Vervaldatum'), Q('Bedrag (€)'), Q('Status')],
     ...filtered.map(f => {
-      const s = DB.scholen.find(x => x.id === f.schoolId);
+      const s = getSchool(f.schoolId);
       const statusNL = { betaald: 'Betaald', verzonden: 'Verzonden', concept: 'Concept', vervallen: 'Vervallen' };
       return [Q(f.nummer || ''), Q(s?.naam || '—'), Q(f.betreft || ''), Q(fmtDateShort(f.datum)), Q(fmtDateShort(f.vervaldatum)), EUR(f.totaal), Q(statusNL[f.status] || f.status || '')];
     }),

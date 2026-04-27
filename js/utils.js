@@ -191,7 +191,7 @@ async function downloadBestand(dossierId, idx) {
 }
 
 async function downloadTrainingBestand(trainingId, idx) {
-  const t = DB.trainingen.find(x => x.id === trainingId);
+  const t = getTraining(trainingId);
   if (!t || !t.bestanden || !t.bestanden[idx]) return;
   await downloadStorageBestand(t.bestanden[idx]);
 }
@@ -259,6 +259,8 @@ function renderDossierItem(d, opts = {}) {
     bodyInhoud = `<div class="dossier-text">${esc(d.tekst || '')}</div>${renderBijlagen(d, d.schoolId)}`;
   }
 
+  const factuurLink = renderFactuurLinkVoorDossier(d);
+
   return `
     <div class="dossier-item ${typeCls}">
       <div class="dossier-header" onclick="toggleDossier(this)">
@@ -273,7 +275,25 @@ function renderDossierItem(d, opts = {}) {
           ${esc(d.bronNaam || '')}${schoolLabel ? ` <span style="background:var(--bg3);border-radius:4px;padding:2px 7px;margin-left:4px">${esc(schoolLabel)}</span>` : ''}
         </div>
         ${bodyInhoud}
+        ${factuurLink}
       </div>
+    </div>`;
+}
+
+// Als een dossiernotitie hoort bij een factuur (onderwerp "Factuur {nummer}"
+// en zelfde school), retourneer een knop die de factuur opent.
+function renderFactuurLinkVoorDossier(d) {
+  if (!d || !d.onderwerp || !d.schoolId) return '';
+  const m = String(d.onderwerp).match(/^\s*factuur\s+(\S.*?)\s*$/i);
+  if (!m) return '';
+  const nummer = m[1].trim();
+  const factuur = (typeof facturenVanSchool === 'function' ? facturenVanSchool(d.schoolId) : [])
+    .find(f => String(f.nummer || '').trim() === nummer);
+  if (!factuur) return '';
+  return `
+    <div style="margin-top:10px;display:flex;gap:6px;flex-wrap:wrap">
+      <button class="btn btn-secondary btn-sm" onclick="printFactuur('${factuur.id}')">${svgIcon('eye', 14)} Factuur ${esc(factuur.nummer)} bekijken</button>
+      <button class="btn btn-secondary btn-sm" onclick="openFactuurModal('${factuur.schoolId}','${factuur.id}')">${svgIcon('edit', 14)} Factuur bewerken</button>
     </div>`;
 }
 
@@ -341,7 +361,7 @@ function renderGlobalResults(q) {
   DB.contacten.forEach(c => {
     const sc = Math.max(_searchScore(c.naam, lq), _searchScore(c.email, lq), _searchScore(c.functie, lq));
     if (sc > 0) {
-      const s = DB.scholen.find(x => x.id === c.schoolId);
+      const s = getSchool(c.schoolId);
       groups.contacten.items.push({ icon: 'contact', label: c.naam, sub: [c.functie, s?.naam].filter(Boolean).join(' — '), score: sc, action: () => navigateToContact(c.schoolId, c.id) });
     }
   });
@@ -349,7 +369,7 @@ function renderGlobalResults(q) {
   DB.facturen.forEach(f => {
     const sc = Math.max(_searchScore(f.nummer, lq), _searchScore(f.betreft, lq));
     if (sc > 0) {
-      const s = DB.scholen.find(x => x.id === f.schoolId);
+      const s = getSchool(f.schoolId);
       groups.facturen.items.push({ icon: 'invoice', label: `Factuur ${f.nummer || ''}`, sub: [s?.naam, fmtEuro(f.totaal)].filter(Boolean).join(' — '), score: sc, action: () => openFactuurModal(f.schoolId, f.id) });
     }
   });

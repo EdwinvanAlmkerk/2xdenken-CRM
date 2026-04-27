@@ -4,14 +4,19 @@
 let _scholenSearch  = '';
 let _scholenSortCol = 'naam';
 let _scholenSortDir = 'asc';
+let _scholenPage    = 1;
 
 function sortScholen(col) {
   if (_scholenSortCol === col) { _scholenSortDir = _scholenSortDir === 'asc' ? 'desc' : 'asc'; }
   else { _scholenSortCol = col; _scholenSortDir = 'asc'; }
+  _scholenPage = 1;
   renderContent();
 }
 
-function searchScholen(v) { _scholenSearch = v; smartRender(() => renderScholen(v)); }
+function gotoScholenPage(p) { _scholenPage = p; smartRender(() => renderScholen(_scholenSearch)); }
+
+const _renderScholenDeb = debounce(() => smartRender(() => renderScholen(_scholenSearch)), 140);
+function searchScholen(v) { _scholenSearch = v; _scholenPage = 1; _renderScholenDeb(); }
 
 function renderScholen(search = '') {
   const thStyle = `cursor:pointer;user-select:none;white-space:nowrap;`;
@@ -22,19 +27,24 @@ function renderScholen(search = '') {
       : `<span style="margin-left:4px;font-size:10px;color:var(--navy)">▼</span>`;
   const th = (col, label, extra = '') => `<th style="${thStyle}${extra}" onclick="sortScholen('${col}')">${label}${arrow(col)}</th>`;
 
+  const q = search.toLowerCase();
   let filtered = DB.scholen.filter(s =>
-    s.naam.toLowerCase().includes(search.toLowerCase()) ||
-    (s.plaats || '').toLowerCase().includes(search.toLowerCase()));
+    !q ||
+    s.naam.toLowerCase().includes(q) ||
+    (s.plaats || '').toLowerCase().includes(q));
   const dir = _scholenSortDir === 'asc' ? 1 : -1;
   filtered = [...filtered].sort((a, b) => {
-    const ba = DB.besturen.find(x => x.id === a.bestuurId);
-    const bb = DB.besturen.find(x => x.id === b.bestuurId);
+    const ba = getBestuur(a.bestuurId);
+    const bb = getBestuur(b.bestuurId);
     if (_scholenSortCol === 'naam')      return dir * a.naam.localeCompare(b.naam, 'nl');
     if (_scholenSortCol === 'bestuur')   return dir * (ba?.naam || '').localeCompare(bb?.naam || '', 'nl');
     if (_scholenSortCol === 'plaats')    return dir * (a.plaats || '').localeCompare(b.plaats || '', 'nl');
-    if (_scholenSortCol === 'contacten') return dir * (DB.contacten.filter(c => c.schoolId === a.id).length - DB.contacten.filter(c => c.schoolId === b.id).length);
+    if (_scholenSortCol === 'contacten') return dir * (contactenVanSchool(a.id).length - contactenVanSchool(b.id).length);
     return 0;
   });
+
+  const pageInfo = paginate(filtered, _scholenPage);
+  const pageSlice = pageInfo.slice;
 
   return `
     <div style="display:flex;gap:12px;margin-bottom:20px">
@@ -51,9 +61,9 @@ function renderScholen(search = '') {
           <tbody>
             ${filtered.length === 0
               ? `<tr><td colspan="5"><div class="empty-state"><p>Geen scholen gevonden</p></div></td></tr>`
-              : filtered.map(s => {
-                  const best = DB.besturen.find(b => b.id === s.bestuurId);
-                  const nc = DB.contacten.filter(c => c.schoolId === s.id).length;
+              : pageSlice.map(s => {
+                  const best = getBestuur(s.bestuurId);
+                  const nc = contactenVanSchool(s.id).length;
                   return `<tr class="clickable-row" onclick="navigate('school-detail','${s.id}')">
                     <td style="font-weight:500">${esc(s.naam)}</td>
                     <td style="font-size:13px;color:var(--ink3)">${esc(best?.naam || '–')}</td>
@@ -69,11 +79,12 @@ function renderScholen(search = '') {
           </tbody>
         </table>
       </div>
+      ${renderPagination(pageInfo, 'gotoScholenPage')}
     </div>`;
 }
 
 function openSchoolModal(id = '') {
-  const s = id ? DB.scholen.find(x => x.id === id) : null;
+  const s = getSchool(id);
   const opts = DB.besturen.map(b => `<option value="${b.id}"${s?.bestuurId === b.id ? ' selected' : ''}>${esc(b.naam)}</option>`).join('');
   showModal(s ? 'School bewerken' : 'Nieuwe school',
     `<div class="form-group"><label>Naam school *</label><input type="text" id="f-naam" value="${esc(s?.naam || '')}" placeholder="OBS De Regenboog"/></div>
@@ -93,12 +104,12 @@ function openSchoolModal(id = '') {
 }
 
 function renderSchoolDetail(id) {
-  const s = DB.scholen.find(x => x.id === id);
+  const s = getSchool(id);
   if (!s) return '<p>Niet gevonden</p>';
-  const best     = DB.besturen.find(b => b.id === s.bestuurId);
-  const contacten = DB.contacten.filter(c => c.schoolId === id);
-  const dossiers  = [...DB.dossiers.filter(d => d.schoolId === id)].sort((a, b) => new Date(b.datum) - new Date(a.datum));
-  const facturen  = DB.facturen.filter(f => f.schoolId === id);
+  const best      = getBestuur(s.bestuurId);
+  const contacten = contactenVanSchool(id);
+  const dossiers  = [...dossiersVanSchool(id)].sort((a, b) => new Date(b.datum) - new Date(a.datum));
+  const facturen  = facturenVanSchool(id);
   const adresStr  = [s.adres, s.postcode, s.plaats].filter(Boolean).join(', ');
 
   const tabs = [['info', 'Overzicht'], ['contacten', 'Contacten'], ['dossier', 'Dossier'], ['agenda', 'Agenda'], ['trainingen', 'Trainingen'], ['facturen', 'Facturen']];
@@ -156,7 +167,7 @@ function renderSchoolDetail(id) {
                 ${c.telefoon ? `<div class="c-row">${svgIcon('phone', 13)} <a href="tel:${esc(c.telefoon)}">${esc(c.telefoon)}</a></div>` : ''}
               </div>
               ${(() => {
-                const cDossiers = DB.dossiers.filter(d => d.contactId === c.id).sort((a, b) => new Date(b.datum) - new Date(a.datum));
+                const cDossiers = [...dossiersVanContact(c.id)].sort((a, b) => new Date(b.datum) - new Date(a.datum));
                 return cDossiers.length > 0 ? `
                   <div style="margin-top:10px;padding-top:10px;border-top:1px solid var(--bg3)">
                     <div style="font-size:11px;font-weight:700;text-transform:uppercase;letter-spacing:.6px;color:var(--navy4);margin-bottom:8px">Dossiernotities</div>
@@ -190,7 +201,7 @@ function renderSchoolDetail(id) {
         ? `<div class="card"><div class="empty-state">${svgIcon('note', 36)}<p>Nog geen dossiernotities</p></div></div>`
         : `<div class="dossier-list">${dossiers.map(d => renderDossierItem(d, { delBtn: 'delDossier', delArg: id })).join('')}</div>`}`;
   } else if (schoolTab === 'agenda') {
-    const agendaItems = DB.agenda.filter(a => a.schoolId === id).sort((a, b) => a.datum.localeCompare(b.datum) || (a.beginTijd || '').localeCompare(b.beginTijd || ''));
+    const agendaItems = [...agendaVanSchool(id)].sort((a, b) => a.datum.localeCompare(b.datum) || (a.beginTijd || '').localeCompare(b.beginTijd || ''));
     const vandaag = new Date().toISOString().slice(0, 10);
     const komend = agendaItems.filter(a => a.datum >= vandaag);
     const verlopen = agendaItems.filter(a => a.datum < vandaag);
@@ -247,7 +258,7 @@ function renderSchoolDetail(id) {
 
 // ── School trainingen tab ─────────────────────────────────────────
 function renderSchoolTrainingenTab(schoolId) {
-  const uitv = [...DB.uitvoeringen.filter(u => u.schoolId === schoolId)].sort((a, b) => new Date(b.datum) - new Date(a.datum));
+  const uitv = [...uitvoeringenVanSchool(schoolId)].sort((a, b) => new Date(b.datum) - new Date(a.datum));
   const trainingOpts = DB.trainingen.map(t => `<option value="${t.id}">${esc(t.naam)}</option>`).join('');
 
   return `
@@ -260,8 +271,8 @@ function renderSchoolTrainingenTab(schoolId) {
            <thead><tr><th>Training</th><th>Contactpersoon</th><th>Datum</th><th>Deelnemers</th><th>Score</th><th></th></tr></thead>
            <tbody>
              ${uitv.map(u => {
-               const t = DB.trainingen.find(x => x.id === u.trainingId);
-               const contact = u.contactId ? DB.contacten.find(c => c.id === u.contactId) : null;
+               const t = getTraining(u.trainingId);
+               const contact = getContact(u.contactId);
                return `<tr>
                  <td style="font-weight:500"><a onclick="navigate('training-detail','${u.trainingId}')" style="cursor:pointer;color:var(--navy)">${esc(t?.naam || '–')}</a></td>
                  <td style="font-size:13px;color:var(--ink3)">${contact ? `<a onclick="navigateToContact('${schoolId}','${contact.id}')" style="cursor:pointer;color:var(--blue)">${esc(contact.naam)}</a>` : '–'}</td>
@@ -320,7 +331,7 @@ function openUitvoeringVanSchoolModal(schoolId, preselectContactId = '') {
 
 // ── Contact modals ────────────────────────────────────────────────
 function openContactModal(schoolId, cid = '') {
-  const c = cid ? DB.contacten.find(x => x.id === cid) : null;
+  const c = getContact(cid);
   showModal(c ? 'Contactpersoon bewerken' : 'Contactpersoon toevoegen',
     `<div class="form-group"><label>Naam *</label><input type="text" id="f-naam" value="${esc(c?.naam || '')}" placeholder="Jan de Vries"/></div>
      <div class="form-row">
@@ -340,8 +351,8 @@ function openContactModal(schoolId, cid = '') {
 }
 
 function openDossierModal(schoolId) {
-  const s = DB.scholen.find(x => x.id === schoolId);
-  const contacten = DB.contacten.filter(c => c.schoolId === schoolId);
+  const s = getSchool(schoolId);
+  const contacten = contactenVanSchool(schoolId);
   const opts = contacten.map(c => `<option value="${c.id}">${esc(c.naam)} (${esc(c.functie || '')})</option>`).join('');
   showModal('Notitie toevoegen',
     `<div class="form-group"><label>Contactpersoon (optioneel)</label>
@@ -354,8 +365,8 @@ function openDossierModal(schoolId) {
 }
 
 function openBestandModal(schoolId) {
-  const s = DB.scholen.find(x => x.id === schoolId);
-  const contacten = DB.contacten.filter(c => c.schoolId === schoolId);
+  const s = getSchool(schoolId);
+  const contacten = contactenVanSchool(schoolId);
   const opts = contacten.map(c => `<option value="${c.id}">${esc(c.naam)} (${esc(c.functie || '')})</option>`).join('');
   showModal('Bestand toevoegen',
     `<div class="form-group"><label>Contactpersoon (optioneel)</label>
@@ -381,7 +392,7 @@ function openBestandModal(schoolId) {
 }
 
 function openDossierModalContact(schoolId, contactId) {
-  const c = DB.contacten.find(x => x.id === contactId);
+  const c = getContact(contactId);
   showModal(`Notitie toevoegen — ${esc(c?.naam || '')}`,
     `<input type="hidden" id="f-cid" value="${esc(contactId)}"/>
      <div class="form-group"><label>Onderwerp *</label>
@@ -395,7 +406,7 @@ function openDossierModalContact(schoolId, contactId) {
 }
 
 function openBestandModalContact(schoolId, contactId) {
-  const c = DB.contacten.find(x => x.id === contactId);
+  const c = getContact(contactId);
   showModal(`Bestand toevoegen — ${esc(c?.naam || '')}`,
     `<input type="hidden" id="f-cid" value="${esc(contactId)}"/>
      <div class="form-group"><label>Onderwerp *</label>

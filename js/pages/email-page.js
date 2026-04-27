@@ -32,7 +32,8 @@ function _saveMailCache(key, messages) {
 
 function setEmailFolder(f) { _emailFolder = f; _emailSelected = null; _emailFilter = 'alles'; renderContent(); }
 function setEmailFilter(f) { _emailFilter = f; renderContent(); }
-function searchEmail(v) { _emailSearch = v; smartRender(() => renderEmailPage()); }
+const _renderEmailDeb = debounce(() => smartRender(() => renderEmailPage()), 140);
+function searchEmail(v) { _emailSearch = v; _renderEmailDeb(); }
 function toggleFolderGroup(g) { _foldersCollapsed[g] = !_foldersCollapsed[g]; renderContent(); }
 
 async function selectInboxEmail(uid) {
@@ -396,8 +397,8 @@ function renderEmailPage() {
               </div>`
             : items.map(e => {
                 const isActive = selected && String(e.id) === String(selected.id);
-                const matchedContact = e.aanEmail ? DB.contacten.find(c => c.email && c.email.toLowerCase() === e.aanEmail.toLowerCase()) : null;
-                const matchedSchool = e.schoolId ? DB.scholen.find(s => s.id === e.schoolId) : (matchedContact ? DB.scholen.find(s => s.id === matchedContact.schoolId) : null);
+                const matchedContact = getContactByEmail(e.aanEmail);
+                const matchedSchool = getSchool(e.schoolId) || (matchedContact ? getSchool(matchedContact.schoolId) : null);
                 const naam = e.aanNaam || e.aanEmail || '—';
                 const isUnread = e._isInbox && !e.read;
                 return `
@@ -440,11 +441,11 @@ function renderFolder(id, label, icon, count) {
 // ── E-mail detail ────────────────────────────────────────────────
 function renderEmailDetail(e) {
   const isInbox = e._isInbox;
-  const contact = e.contactId ? DB.contacten.find(c => c.id === e.contactId) : null;
-  const school = e.schoolId ? DB.scholen.find(s => s.id === e.schoolId) : null;
-  const factuur = e.factuurId ? DB.facturen.find(f => f.id === e.factuurId) : null;
-  const matchedContact = !contact && e.aanEmail ? DB.contacten.find(c => c.email && c.email.toLowerCase() === e.aanEmail.toLowerCase()) : contact;
-  const matchedSchool = !school && matchedContact ? DB.scholen.find(s => s.id === matchedContact.schoolId) : school;
+  const contact = getContact(e.contactId);
+  const school = getSchool(e.schoolId);
+  const factuur = getFactuur(e.factuurId);
+  const matchedContact = contact || getContactByEmail(e.aanEmail);
+  const matchedSchool = school || (matchedContact ? getSchool(matchedContact.schoolId) : null);
   const displayLabel = isInbox ? 'Van' : 'Aan';
 
   return `

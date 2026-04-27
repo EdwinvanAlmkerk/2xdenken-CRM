@@ -65,7 +65,7 @@ function renderDashboard() {
           ${afsprakenVandaag.length === 0
             ? `<div class="empty-state">${svgIcon('calendar', 36)}<p>Geen afspraken vandaag</p></div>`
             : `<div style="display:flex;flex-direction:column;gap:10px">${afsprakenVandaag.map(a => {
-                const school = a.schoolId ? DB.scholen.find(s => s.id === a.schoolId) : null;
+                const school = getSchool(a.schoolId);
                 const tijdStr = a.beginTijd ? fmtTijd(a.beginTijd) : 'Hele dag';
                 const eindStr = a.eindTijd ? fmtTijd(a.eindTijd) : '';
                 return `<div style="display:flex;gap:12px;align-items:flex-start;padding:8px 12px;border-radius:8px;background:var(--mint1); cursor:pointer" onclick="openAgendaItem('${a.id}')">

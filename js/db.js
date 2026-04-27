@@ -202,9 +202,174 @@ async function loadAllData() {
     DB.emailLog       = (emailLog || []).map(fromDB_emailLog);
     DB.emailSettings  = (emailSettingsArr || []).map(fromDB_emailSettings)[0] || null;
     DB.outlookSettings = (outlookSettingsArr || []).map(fromDB_outlookSettings)[0] || null;
+    rebuildIndexes();
   } catch (e) {
     showToast('Gegevens laden mislukt: ' + mapSupaError(e), 'error'); console.error(e);
   } finally {
     hideLoading();
   }
 }
+
+// ════════════════════════════════════════════════════════════════
+// INDEXES — O(1) lookups in plaats van O(n) .find()-loops in render-paths
+// ════════════════════════════════════════════════════════════════
+// De Maps hieronder vervangen herhaalde .find() aanroepen in render-loops
+// (N+1 gedrag). Ze worden opnieuw gebouwd aan het begin van elke render
+// (zie router.js renderContent) en na loadAllData(). Dat is O(n) per render
+// in plaats van O(n²) door geneste find()-loops.
+
+DB._idx = {
+  schoolById:        new Map(),
+  bestuurById:       new Map(),
+  contactById:       new Map(),
+  trainingById:      new Map(),
+  factuurById:       new Map(),
+  dossierById:       new Map(),
+  agendaById:        new Map(),
+  uitvById:          new Map(),
+  agendaTypeById:    new Map(),
+  trainingTypeById:  new Map(),
+  trainingCatById:   new Map(),
+  contactenBySchool:    new Map(),
+  scholenByBestuur:     new Map(),
+  dossiersBySchool:     new Map(),
+  dossiersByContact:    new Map(),
+  facturenBySchool:     new Map(),
+  facturenByContact:    new Map(),
+  uitvBySchool:         new Map(),
+  uitvByContact:        new Map(),
+  uitvByTraining:       new Map(),
+  agendaBySchool:       new Map(),
+  agendaByContact:      new Map(),
+  agendaByBestuur:      new Map(),
+  agendaByDate:         new Map(),
+  contactByEmail:       new Map(),
+};
+
+function _groupBy(arr, key) {
+  const m = new Map();
+  for (const it of arr) {
+    const k = it[key];
+    if (!k) continue;
+    const list = m.get(k);
+    if (list) list.push(it); else m.set(k, [it]);
+  }
+  return m;
+}
+
+function _byId(arr) {
+  const m = new Map();
+  for (const it of arr) if (it?.id) m.set(it.id, it);
+  return m;
+}
+
+// Snapshot van array-referenties + lengtes waarop de indexes zijn gebouwd.
+// Wordt gebruikt door ensureIndexes() om vast te stellen of een rebuild
+// nodig is. Dekt: reassignment (map/filter geeft nieuwe ref) én in-place
+// push/unshift/splice (zelfde ref, andere length).
+DB._idx._builtFrom = null;
+
+function _snapshotDB() {
+  return {
+    s: DB.scholen,       sL: (DB.scholen || []).length,
+    b: DB.besturen,      bL: (DB.besturen || []).length,
+    c: DB.contacten,     cL: (DB.contacten || []).length,
+    t: DB.trainingen,    tL: (DB.trainingen || []).length,
+    f: DB.facturen,      fL: (DB.facturen || []).length,
+    d: DB.dossiers,      dL: (DB.dossiers || []).length,
+    a: DB.agenda,        aL: (DB.agenda || []).length,
+    u: DB.uitvoeringen,  uL: (DB.uitvoeringen || []).length,
+    at: DB.agendaTypes,  atL: (DB.agendaTypes || []).length,
+    tt: DB.trainingTypes, ttL: (DB.trainingTypes || []).length,
+    tc: DB.trainingCategories, tcL: (DB.trainingCategories || []).length,
+  };
+}
+
+function _snapshotMatches(a, b) {
+  if (!a || !b) return false;
+  return a.s === b.s && a.sL === b.sL
+      && a.b === b.b && a.bL === b.bL
+      && a.c === b.c && a.cL === b.cL
+      && a.t === b.t && a.tL === b.tL
+      && a.f === b.f && a.fL === b.fL
+      && a.d === b.d && a.dL === b.dL
+      && a.a === b.a && a.aL === b.aL
+      && a.u === b.u && a.uL === b.uL
+      && a.at === b.at && a.atL === b.atL
+      && a.tt === b.tt && a.ttL === b.ttL
+      && a.tc === b.tc && a.tcL === b.tcL;
+}
+
+// Rebuildt de indexes alleen als de DB-state daadwerkelijk is veranderd
+// (andere array-referentie of lengte). Veilig om vaak aan te roepen.
+function ensureIndexes() {
+  const snap = _snapshotDB();
+  if (!_snapshotMatches(DB._idx._builtFrom, snap)) rebuildIndexes();
+}
+
+function rebuildIndexes() {
+  const i = DB._idx;
+  i.schoolById       = _byId(DB.scholen || []);
+  i.bestuurById      = _byId(DB.besturen || []);
+  i.contactById      = _byId(DB.contacten || []);
+  i.trainingById     = _byId(DB.trainingen || []);
+  i.factuurById      = _byId(DB.facturen || []);
+  i.dossierById      = _byId(DB.dossiers || []);
+  i.agendaById       = _byId(DB.agenda || []);
+  i.uitvById         = _byId(DB.uitvoeringen || []);
+  i.agendaTypeById   = _byId(DB.agendaTypes || []);
+  i.trainingTypeById = _byId(DB.trainingTypes || []);
+  i.trainingCatById  = _byId(DB.trainingCategories || []);
+  i.contactenBySchool = _groupBy(DB.contacten || [], 'schoolId');
+  i.scholenByBestuur  = _groupBy(DB.scholen || [],   'bestuurId');
+  i.dossiersBySchool  = _groupBy(DB.dossiers || [],  'schoolId');
+  i.dossiersByContact = _groupBy(DB.dossiers || [],  'contactId');
+  i.facturenBySchool  = _groupBy(DB.facturen || [],  'schoolId');
+  i.facturenByContact = _groupBy(DB.facturen || [],  'contactId');
+  i.uitvBySchool      = _groupBy(DB.uitvoeringen || [], 'schoolId');
+  i.uitvByContact     = _groupBy(DB.uitvoeringen || [], 'contactId');
+  i.uitvByTraining    = _groupBy(DB.uitvoeringen || [], 'trainingId');
+  i.agendaBySchool    = _groupBy(DB.agenda || [], 'schoolId');
+  i.agendaByContact   = _groupBy(DB.agenda || [], 'contactId');
+  i.agendaByBestuur   = _groupBy(DB.agenda || [], 'bestuurId');
+  i.agendaByDate      = _groupBy(DB.agenda || [], 'datum');
+  i.contactByEmail.clear();
+  for (const c of DB.contacten || []) {
+    if (c.email) i.contactByEmail.set(c.email.toLowerCase(), c);
+  }
+  i._builtFrom = _snapshotDB();
+}
+
+function getContactByEmail(email) {
+  if (!email) return null;
+  ensureIndexes();
+  return DB._idx.contactByEmail.get(String(email).toLowerCase()) || null;
+}
+
+// ── By-id getters (O(1)) ─────────────────────────────────────────
+// Elke getter roept ensureIndexes() aan zodat we self-healing zijn als
+// DB is gemuteerd zonder renderContent() te triggeren. De check is een
+// goedkope referentie+length vergelijking (~11 compares).
+function getSchool(id)       { ensureIndexes(); return id ? DB._idx.schoolById.get(id)       || null : null; }
+function getBestuur(id)      { ensureIndexes(); return id ? DB._idx.bestuurById.get(id)      || null : null; }
+function getContact(id)      { ensureIndexes(); return id ? DB._idx.contactById.get(id)      || null : null; }
+function getTraining(id)     { ensureIndexes(); return id ? DB._idx.trainingById.get(id)     || null : null; }
+function getFactuur(id)      { ensureIndexes(); return id ? DB._idx.factuurById.get(id)      || null : null; }
+function getDossier(id)      { ensureIndexes(); return id ? DB._idx.dossierById.get(id)      || null : null; }
+function getAgenda(id)       { ensureIndexes(); return id ? DB._idx.agendaById.get(id)       || null : null; }
+function getUitvoering(id)   { ensureIndexes(); return id ? DB._idx.uitvById.get(id)         || null : null; }
+
+// ── Relationele getters (O(1) lookup, O(k) resultaatlijst) ──────
+function contactenVanSchool(id)   { ensureIndexes(); return DB._idx.contactenBySchool.get(id)  || []; }
+function scholenVanBestuur(id)    { ensureIndexes(); return DB._idx.scholenByBestuur.get(id)   || []; }
+function dossiersVanSchool(id)    { ensureIndexes(); return DB._idx.dossiersBySchool.get(id)   || []; }
+function dossiersVanContact(id)   { ensureIndexes(); return DB._idx.dossiersByContact.get(id)  || []; }
+function facturenVanSchool(id)    { ensureIndexes(); return DB._idx.facturenBySchool.get(id)   || []; }
+function facturenVanContact(id)   { ensureIndexes(); return DB._idx.facturenByContact.get(id)  || []; }
+function uitvoeringenVanSchool(id)   { ensureIndexes(); return DB._idx.uitvBySchool.get(id)    || []; }
+function uitvoeringenVanContact(id)  { ensureIndexes(); return DB._idx.uitvByContact.get(id)   || []; }
+function uitvoeringenVanTraining(id) { ensureIndexes(); return DB._idx.uitvByTraining.get(id)  || []; }
+function agendaVanSchool(id)      { ensureIndexes(); return DB._idx.agendaBySchool.get(id)     || []; }
+function agendaVanContact(id)     { ensureIndexes(); return DB._idx.agendaByContact.get(id)    || []; }
+function agendaVanBestuur(id)     { ensureIndexes(); return DB._idx.agendaByBestuur.get(id)    || []; }
+function agendaOpDatum(iso)       { ensureIndexes(); return DB._idx.agendaByDate.get(iso)      || []; }

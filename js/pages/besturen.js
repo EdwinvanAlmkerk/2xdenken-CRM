@@ -4,14 +4,18 @@
 let _bestuurSearch  = '';
 let _bestuurSortCol = 'naam';
 let _bestuurSortDir = 'asc';
+let _bestuurPage    = 1;
 
 function sortBesturen(col) {
   if (_bestuurSortCol === col) { _bestuurSortDir = _bestuurSortDir === 'asc' ? 'desc' : 'asc'; }
   else { _bestuurSortCol = col; _bestuurSortDir = 'asc'; }
+  _bestuurPage = 1;
   renderContent();
 }
 
-function searchBesturen(v) { _bestuurSearch = v; smartRender(() => renderBesturen(v)); }
+const _renderBesturenDeb = debounce(() => smartRender(() => renderBesturen(_bestuurSearch)), 140);
+function searchBesturen(v) { _bestuurSearch = v; _bestuurPage = 1; _renderBesturenDeb(); }
+function gotoBesturenPage(p) { _bestuurPage = p; smartRender(() => renderBesturen(_bestuurSearch)); }
 
 function renderBesturen(search = '') {
   const thStyle = `cursor:pointer;user-select:none;white-space:nowrap;`;
@@ -22,13 +26,26 @@ function renderBesturen(search = '') {
       : `<span style="margin-left:4px;font-size:10px;color:var(--navy)">▼</span>`;
   const th = (col, label) => `<th style="${thStyle}" onclick="sortBesturen('${col}')">${label}${arrow(col)}</th>`;
 
-  let filtered = DB.besturen.filter(b => b.naam.toLowerCase().includes(search.toLowerCase()));
+  const q = search.toLowerCase();
+  let filtered = DB.besturen.filter(b => !q || b.naam.toLowerCase().includes(q));
+  // Cache scholen-counts: 1× lookup per bestuur ipv 1× per comparator-call
+  // (sort gebruikt comparator ~n·log(n) keer; zonder cache is dat een extra
+  // Map.get per vergelijking, nu maar 1× per bestuur).
+  const countCache = new Map();
+  const countFor = id => {
+    let n = countCache.get(id);
+    if (n === undefined) { n = scholenVanBestuur(id).length; countCache.set(id, n); }
+    return n;
+  };
   const dir = _bestuurSortDir === 'asc' ? 1 : -1;
   filtered = [...filtered].sort((a, b) => {
     if (_bestuurSortCol === 'naam')    return dir * a.naam.localeCompare(b.naam, 'nl');
-    if (_bestuurSortCol === 'scholen') return dir * (DB.scholen.filter(s => s.bestuurId === a.id).length - DB.scholen.filter(s => s.bestuurId === b.id).length);
+    if (_bestuurSortCol === 'scholen') return dir * (countFor(a.id) - countFor(b.id));
     return 0;
   });
+
+  const pageInfo = paginate(filtered, _bestuurPage);
+  const pageSlice = pageInfo.slice;
 
   return `
     <div style="display:flex;gap:12px;margin-bottom:20px">
@@ -45,8 +62,8 @@ function renderBesturen(search = '') {
           <tbody>
             ${filtered.length === 0
               ? `<tr><td colspan="4"><div class="empty-state"><p>Geen besturen gevonden</p></div></td></tr>`
-              : filtered.map(b => {
-                  const cnt = DB.scholen.filter(s => s.bestuurId === b.id).length;
+              : pageSlice.map(b => {
+                  const cnt = countFor(b.id);
                   return `<tr class="clickable-row" onclick="navigate('bestuur-detail','${b.id}')">
                     <td style="font-weight:500">${esc(b.naam)}</td>
                     <td style="color:var(--ink3);font-size:13px">${cnt} ${cnt === 1 ? 'school' : 'scholen'}</td>
@@ -61,11 +78,12 @@ function renderBesturen(search = '') {
           </tbody>
         </table>
       </div>
+      ${renderPagination(pageInfo, 'gotoBesturenPage')}
     </div>`;
 }
 
 function openBestuurModal(id = '') {
-  const b = id ? DB.besturen.find(x => x.id === id) : null;
+  const b = getBestuur(id);
   showModal(b ? 'Bestuur bewerken' : 'Nieuw bestuur',
     `<div class="form-group"><label>Naam bestuur *</label><input type="text" id="f-naam" value="${esc(b?.naam || '')}" placeholder="Stichting Primair Onderwijs…"/></div>
      <div class="form-group"><label>Website</label><input type="url" id="f-web" value="${esc(b?.website || '')}" placeholder="https://…"/></div>
@@ -76,11 +94,10 @@ function openBestuurModal(id = '') {
 }
 
 function renderBestuurDetail(id) {
-  const b = DB.besturen.find(x => x.id === id);
+  const b = getBestuur(id);
   if (!b) return '<p>Niet gevonden</p>';
-  const scholen  = DB.scholen.filter(s => s.bestuurId === id);
-  const schoolIds = scholen.map(s => s.id);
-  const dossiers = [...DB.dossiers.filter(d => schoolIds.includes(d.schoolId))].sort((a, b) => new Date(b.datum) - new Date(a.datum));
+  const scholen  = scholenVanBestuur(id);
+  const dossiers = scholen.flatMap(s => dossiersVanSchool(s.id)).sort((a, b) => new Date(b.datum) - new Date(a.datum));
 
   const tabs = [['scholen', 'Scholen'], ['dossier', 'Dossier'], ['agenda', 'Agenda']];
   let tabContent = '';
@@ -98,8 +115,8 @@ function renderBestuurDetail(id) {
                   <tr class="clickable-row" onclick="navigate('school-detail','${s.id}')">
                     <td style="font-weight:500">${esc(s.naam)}</td>
                     <td>${esc(s.plaats || '–')}</td>
-                    <td>${DB.contacten.filter(c => c.schoolId === s.id).length}</td>
-                    <td>${DB.dossiers.filter(d => d.schoolId === s.id).length}</td>
+                    <td>${contactenVanSchool(s.id).length}</td>
+                    <td>${dossiersVanSchool(s.id).length}</td>
                   </tr>`).join('')}
             </tbody>
           </table>
@@ -114,11 +131,11 @@ function renderBestuurDetail(id) {
       ${dossiers.length === 0
         ? `<div class="card"><div class="empty-state">${svgIcon('note', 36)}<p>Nog geen dossiernotities</p></div></div>`
         : `<div class="dossier-list">${dossiers.map(d => {
-            const school = DB.scholen.find(s => s.id === d.schoolId);
+            const school = getSchool(d.schoolId);
             return renderDossierItem(d, { delBtn: 'delDossierBestuur', delArg: id, schoolLabel: school?.naam });
           }).join('')}</div>`}`;
   } else if (bestuurTab === 'agenda') {
-    const agendaItems = DB.agenda.filter(a => a.bestuurId === id).sort((a, b) => a.datum.localeCompare(b.datum) || (a.beginTijd || '').localeCompare(b.beginTijd || ''));
+    const agendaItems = [...agendaVanBestuur(id)].sort((a, b) => a.datum.localeCompare(b.datum) || (a.beginTijd || '').localeCompare(b.beginTijd || ''));
     const vandaag = new Date().toISOString().slice(0, 10);
     const komend = agendaItems.filter(a => a.datum >= vandaag);
     const verlopen = agendaItems.filter(a => a.datum < vandaag);
@@ -165,8 +182,8 @@ function renderBestuurDetail(id) {
 }
 
 function openBestuurDossierModal(bestuurId) {
-  const b = DB.besturen.find(x => x.id === bestuurId);
-  const scholen = DB.scholen.filter(s => s.bestuurId === bestuurId);
+  const b = getBestuur(bestuurId);
+  const scholen = scholenVanBestuur(bestuurId);
   const schoolOpts = scholen.map(s => `<option value="${s.id}">${esc(s.naam)}</option>`).join('');
   showModal('Notitie toevoegen — ' + esc(b?.naam || ''),
     `<div class="form-group"><label>School *</label>
@@ -183,8 +200,8 @@ function openBestuurDossierModal(bestuurId) {
 }
 
 function openBestuurBestandModal(bestuurId) {
-  const b = DB.besturen.find(x => x.id === bestuurId);
-  const scholen = DB.scholen.filter(s => s.bestuurId === bestuurId);
+  const b = getBestuur(bestuurId);
+  const scholen = scholenVanBestuur(bestuurId);
   const schoolOpts = scholen.map(s => `<option value="${s.id}">${esc(s.naam)}</option>`).join('');
   showModal('Bestand toevoegen — ' + esc(b?.naam || ''),
     `<div class="form-group"><label>School *</label>

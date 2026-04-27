@@ -47,6 +47,18 @@ function closeModal() {
   if (el) el.remove();
 }
 
+// ── Debounce helper ─────────────────────────────────────────────
+// Vertraagt de uitvoering van fn tot er ms geen nieuwe calls zijn geweest.
+// Gebruikt voor search-inputs zodat we niet per toetsaanslag de hele lijst
+// hertekenen.
+function debounce(fn, ms = 140) {
+  let t = null;
+  return function (...args) {
+    clearTimeout(t);
+    t = setTimeout(() => fn.apply(this, args), ms);
+  };
+}
+
 // ── Focus-behoudende render helper ──────────────────────────────
 function smartRender(renderFn) {
   const active = document.activeElement;
@@ -74,6 +86,61 @@ function smartRender(renderFn) {
       }
     }
   }
+}
+
+// ── Paginatie helper ────────────────────────────────────────────
+// Geeft een slice + HTML-controls terug voor een grote tabel. De
+// page-state wordt door de aanroepende pagina bijgehouden. Bij
+// filter/sort-wijziging moet de caller zelf de page terug naar 1
+// zetten.
+const PAGE_SIZE = 100;
+
+function paginate(items, page, perPage = PAGE_SIZE) {
+  const total = items.length;
+  const totalPages = Math.max(1, Math.ceil(total / perPage));
+  const current = Math.min(Math.max(1, page || 1), totalPages);
+  const start = (current - 1) * perPage;
+  return {
+    slice: items.slice(start, start + perPage),
+    total,
+    totalPages,
+    page: current,
+    perPage,
+    from: total === 0 ? 0 : start + 1,
+    to: Math.min(start + perPage, total),
+  };
+}
+
+function renderPagination(info, gotoFnName) {
+  if (info.totalPages <= 1) return '';
+  const btn = (p, label, disabled = false, isActive = false) =>
+    `<button class="btn btn-sm ${isActive ? 'btn-primary' : 'btn-secondary'}" ${disabled ? 'disabled style="opacity:.4;cursor:default"' : `onclick="${gotoFnName}(${p})"`}>${label}</button>`;
+
+  // Compacte paginatie: eerste, huidige ±2, laatste
+  const pages = [];
+  const p = info.page, tp = info.totalPages;
+  const add = n => { if (!pages.includes(n) && n >= 1 && n <= tp) pages.push(n); };
+  add(1); add(tp);
+  for (let i = p - 2; i <= p + 2; i++) add(i);
+  pages.sort((a, b) => a - b);
+
+  const buttons = [];
+  let prev = 0;
+  for (const n of pages) {
+    if (prev && n - prev > 1) buttons.push('<span style="padding:0 4px;color:var(--navy4)">…</span>');
+    buttons.push(btn(n, String(n), false, n === p));
+    prev = n;
+  }
+
+  return `
+    <div style="display:flex;justify-content:space-between;align-items:center;margin-top:12px;flex-wrap:wrap;gap:10px">
+      <span style="font-size:12px;color:var(--navy4)">${info.from}–${info.to} van ${info.total}</span>
+      <div style="display:flex;gap:4px;align-items:center;flex-wrap:wrap">
+        ${btn(p - 1, '‹', p <= 1)}
+        ${buttons.join('')}
+        ${btn(p + 1, '›', p >= tp)}
+      </div>
+    </div>`;
 }
 
 // ── Backup export (JSON) ─────────────────────────────────────────
