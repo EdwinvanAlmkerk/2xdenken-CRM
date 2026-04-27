@@ -131,10 +131,11 @@ function openSchoolModal(id = '', defaultBestuurId = '') {
   const s = getSchool(id);
   const huidigBestuurId = s?.bestuurId || defaultBestuurId || '';
   const opts = DB.besturen.map(b => `<option value="${b.id}"${huidigBestuurId === b.id ? ' selected' : ''}>${esc(b.naam)}</option>`).join('');
+  const debnrPrefill = s?.debiteurnr || (s ? '' : nextDebiteurnr());
   showModal(s ? 'School bewerken' : 'Nieuwe school',
     `<div class="form-group"><label>Naam school *</label><input type="text" id="f-naam" value="${esc(s?.naam || '')}" placeholder="OBS De Regenboog"/></div>
      <div class="form-row">
-       <div class="form-group"><label>Debiteurnummer</label><input type="text" id="f-debnr-school" value="${esc(s?.debiteurnr || '')}" placeholder="DB01"/></div>
+       <div class="form-group"><label>Debiteurnummer</label><input type="text" id="f-debnr-school" value="${esc(debnrPrefill)}" placeholder="DB01"/></div>
        <div class="form-group"><label>Bestuur</label><select id="f-best"><option value="">— Geen bestuur —</option>${opts}</select></div>
      </div>
      <div class="form-group"><label>Adres</label><input type="text" id="f-adres" value="${esc(s?.adres || '')}" placeholder="Straatnaam 1"/></div>

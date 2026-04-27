@@ -6,7 +6,11 @@
 async function saveBestuur(id) {
   const naam = document.getElementById('f-naam').value.trim();
   if (!naam) return alert('Naam is verplicht');
-  const data = { naam, website: document.getElementById('f-web').value.trim(), adres: document.getElementById('f-adres').value.trim(), debiteurnr: document.getElementById('f-debnr-bestuur').value.trim() };
+  const debiteurnr = document.getElementById('f-debnr-bestuur').value.trim();
+  if (debiteurnr && isDebiteurnrInUse(debiteurnr, 'bestuur', id || null)) {
+    return alert(`Debiteurnummer ${debiteurnr} is al in gebruik door een andere klant.`);
+  }
+  const data = { naam, website: document.getElementById('f-web').value.trim(), adres: document.getElementById('f-adres').value.trim(), debiteurnr };
   showLoading();
   try {
     if (id) {
@@ -40,10 +44,14 @@ async function delBestuur(id) {
 async function saveSchool(id) {
   const naam = document.getElementById('f-naam').value.trim();
   if (!naam) return alert('Naam is verplicht');
+  const debiteurnr = document.getElementById('f-debnr-school').value.trim();
+  if (debiteurnr && isDebiteurnrInUse(debiteurnr, 'school', id || null)) {
+    return alert(`Debiteurnummer ${debiteurnr} is al in gebruik door een andere klant.`);
+  }
   const data = {
     naam,
     bestuurId:  document.getElementById('f-best').value || null,
-    debiteurnr: document.getElementById('f-debnr-school').value.trim(),
+    debiteurnr,
     adres:      document.getElementById('f-adres').value.trim(),
     postcode:   document.getElementById('f-pc').value.trim(),
     plaats:     document.getElementById('f-plaats').value.trim(),

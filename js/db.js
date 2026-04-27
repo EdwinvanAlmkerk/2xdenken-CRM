@@ -377,6 +377,42 @@ function factuurKlantNaam(f) {
   const b = f.bestuurId ? getBestuur(f.bestuurId) : null;
   return b?.naam || '';
 }
+
+// Genereer het volgende vrije debiteurnummer (DB-prefix + oplopend nummer)
+// op basis van bestaande nummers op scholen én besturen — beide gebruiken
+// dezelfde namespace zodat elk klant-debiteurnummer uniek is.
+function nextDebiteurnr() {
+  let max = 0;
+  const scan = list => {
+    for (const x of list || []) {
+      const m = String(x.debiteurnr || '').match(/^DB(\d+)$/i);
+      if (m) {
+        const n = parseInt(m[1], 10);
+        if (n > max) max = n;
+      }
+    }
+  };
+  scan(DB.scholen);
+  scan(DB.besturen);
+  return 'DB' + String(max + 1).padStart(2, '0');
+}
+
+// Controleer of een debiteurnummer al door een andere klant gebruikt wordt.
+// excludeType: 'school' of 'bestuur'; excludeId is de id die we mogen overslaan
+// (bij bewerken van een bestaande record).
+function isDebiteurnrInUse(debiteurnr, excludeType, excludeId) {
+  const norm = String(debiteurnr || '').trim().toLowerCase();
+  if (!norm) return false;
+  for (const s of DB.scholen || []) {
+    if (excludeType === 'school' && s.id === excludeId) continue;
+    if (String(s.debiteurnr || '').trim().toLowerCase() === norm) return true;
+  }
+  for (const b of DB.besturen || []) {
+    if (excludeType === 'bestuur' && b.id === excludeId) continue;
+    if (String(b.debiteurnr || '').trim().toLowerCase() === norm) return true;
+  }
+  return false;
+}
 function uitvoeringenVanSchool(id)   { ensureIndexes(); return DB._idx.uitvBySchool.get(id)    || []; }
 function uitvoeringenVanContact(id)  { ensureIndexes(); return DB._idx.uitvByContact.get(id)   || []; }
 function uitvoeringenVanTraining(id) { ensureIndexes(); return DB._idx.uitvByTraining.get(id)  || []; }

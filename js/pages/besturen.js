@@ -122,9 +122,10 @@ function exportBesturenExcel() {
 
 function openBestuurModal(id = '') {
   const b = getBestuur(id);
+  const debnrPrefill = b?.debiteurnr || (b ? '' : nextDebiteurnr());
   showModal(b ? 'Bestuur bewerken' : 'Nieuw bestuur',
     `<div class="form-group"><label>Naam bestuur *</label><input type="text" id="f-naam" value="${esc(b?.naam || '')}" placeholder="Stichting Primair Onderwijs…"/></div>
-     <div class="form-group"><label>Debiteurnummer</label><input type="text" id="f-debnr-bestuur" value="${esc(b?.debiteurnr || '')}" placeholder="DB01"/></div>
+     <div class="form-group"><label>Debiteurnummer</label><input type="text" id="f-debnr-bestuur" value="${esc(debnrPrefill)}" placeholder="DB01"/></div>
      <div class="form-group"><label>Website</label><input type="url" id="f-web" value="${esc(b?.website || '')}" placeholder="https://…"/></div>
      <div class="form-group"><label>Adres</label><input type="text" id="f-adres" value="${esc(b?.adres || '')}" placeholder="Straat en huisnummer"/></div>`,
     `<button class="btn btn-secondary" onclick="closeModal()">Annuleren</button>
