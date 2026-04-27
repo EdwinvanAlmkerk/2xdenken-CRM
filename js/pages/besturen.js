@@ -53,6 +53,7 @@ function renderBesturen(search = '') {
         <span class="search-icon">${svgIcon('search', 15)}</span>
         <input id="search-besturen" type="text" placeholder="Zoek bestuur…" value="${esc(search)}" oninput="searchBesturen(this.value)" style="padding-left:34px"/>
       </div>
+      <button class="btn btn-secondary" onclick="exportBesturenExcel()" style="border-color:var(--groen);color:var(--groen);font-weight:700">${svgIcon('download', 15)} Excel export</button>
       <button class="btn btn-primary" onclick="openBestuurModal()">${svgIcon('add')} Nieuw bestuur</button>
     </div>
     <div class="card">
@@ -80,6 +81,41 @@ function renderBesturen(search = '') {
       </div>
       ${renderPagination(pageInfo, 'gotoBesturenPage')}
     </div>`;
+}
+
+function exportBesturenExcel() {
+  const q = (_bestuurSearch || '').toLowerCase();
+  const filtered = DB.besturen
+    .filter(b => !q || b.naam.toLowerCase().includes(q))
+    .sort((a, b) => a.naam.localeCompare(b.naam, 'nl'));
+
+  const Q = s => '"' + String(s ?? '').replace(/"/g, '""') + '"';
+  const titel = 'Besturenoverzicht 2xDenken';
+
+  const rows = [
+    [Q(titel), '', '', '', '', ''],
+    ['', '', '', '', '', ''],
+    [Q('Naam bestuur'), Q('Adres'), Q('Website'), Q('Aantal scholen'), Q('Aantal contacten'), Q('Aantal facturen')],
+    ...filtered.map(b => {
+      const scholen = scholenVanBestuur(b.id);
+      const aantContact = scholen.reduce((n, s) => n + contactenVanSchool(s.id).length, 0);
+      const aantFact    = scholen.reduce((n, s) => n + facturenVanSchool(s.id).length, 0);
+      return [Q(b.naam), Q(b.adres), Q(b.website), scholen.length, aantContact, aantFact];
+    }),
+    ['', '', '', '', '', ''],
+    [Q(`Geëxporteerd op: ${new Date().toLocaleDateString('nl-NL')} | Aantal besturen: ${filtered.length}`), '', '', '', '', ''],
+  ];
+
+  const csv  = '\uFEFF' + rows.map(r => r.join(';')).join('\r\n');
+  const blob = new Blob([csv], { type: 'text/csv;charset=utf-8;' });
+  const url  = URL.createObjectURL(blob);
+  const a    = document.createElement('a');
+  a.href = url;
+  a.download = `2xDenken_besturen.csv`;
+  document.body.appendChild(a);
+  a.click();
+  document.body.removeChild(a);
+  URL.revokeObjectURL(url);
 }
 
 function openBestuurModal(id = '') {

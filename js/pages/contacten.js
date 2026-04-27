@@ -48,11 +48,12 @@ function renderContacten(search = '') {
   const pageSlice = pageInfo.slice;
 
   return `
-    <div style="margin-bottom:20px">
-      <div class="search-wrap">
+    <div style="display:flex;gap:12px;margin-bottom:20px">
+      <div class="search-wrap" style="flex:1">
         <span class="search-icon">${svgIcon('search', 15)}</span>
         <input id="search-contacten" type="text" placeholder="Zoek contactpersoon, functie of e-mail…" value="${esc(search)}" oninput="searchContacten(this.value)" style="padding-left:34px"/>
       </div>
+      <button class="btn btn-secondary" onclick="exportContactenExcel()" style="border-color:var(--groen);color:var(--groen);font-weight:700">${svgIcon('download', 15)} Excel export</button>
     </div>
     <div class="card">
       <div class="table-wrap">
@@ -82,6 +83,53 @@ function renderContacten(search = '') {
       </div>
       ${renderPagination(pageInfo, 'gotoContactenPage')}
     </div>`;
+}
+
+function exportContactenExcel() {
+  const q = (_contactenSearch || '').toLowerCase();
+  const filtered = DB.contacten
+    .filter(c => !q
+      || c.naam.toLowerCase().includes(q)
+      || (c.functie || '').toLowerCase().includes(q)
+      || (c.email || '').toLowerCase().includes(q))
+    .sort((a, b) => a.naam.localeCompare(b.naam, 'nl'));
+
+  const Q = s => '"' + String(s ?? '').replace(/"/g, '""') + '"';
+  const titel = 'Contactenoverzicht 2xDenken';
+  const typeNL = { beslisser: 'Beslisser', beinvloeder: 'Beïnvloeder' };
+
+  const rows = [
+    [Q(titel), '', '', '', '', '', '', ''],
+    ['', '', '', '', '', '', '', ''],
+    [Q('Naam'), Q('Functie'), Q('Type'), Q('E-mail'), Q('Telefoon'), Q('School'), Q('Plaats'), Q('Bestuur')],
+    ...filtered.map(c => {
+      const s = getSchool(c.schoolId);
+      const b = s ? getBestuur(s.bestuurId) : null;
+      return [
+        Q(c.naam),
+        Q(c.functie),
+        Q(typeNL[c.type] || c.type || ''),
+        Q(c.email),
+        Q(c.telefoon),
+        Q(s?.naam || ''),
+        Q(s?.plaats || ''),
+        Q(b?.naam || ''),
+      ];
+    }),
+    ['', '', '', '', '', '', '', ''],
+    [Q(`Geëxporteerd op: ${new Date().toLocaleDateString('nl-NL')} | Aantal contacten: ${filtered.length}`), '', '', '', '', '', '', ''],
+  ];
+
+  const csv  = '\uFEFF' + rows.map(r => r.join(';')).join('\r\n');
+  const blob = new Blob([csv], { type: 'text/csv;charset=utf-8;' });
+  const url  = URL.createObjectURL(blob);
+  const a    = document.createElement('a');
+  a.href = url;
+  a.download = `2xDenken_contacten.csv`;
+  document.body.appendChild(a);
+  a.click();
+  document.body.removeChild(a);
+  URL.revokeObjectURL(url);
 }
 
 // ── Contact detail pagina ──────────────────────────────────────────────

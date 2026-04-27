@@ -52,6 +52,7 @@ function renderScholen(search = '') {
         <span class="search-icon">${svgIcon('search', 15)}</span>
         <input id="search-scholen" type="text" placeholder="Zoek school of plaats…" value="${esc(search)}" oninput="searchScholen(this.value)" style="padding-left:34px"/>
       </div>
+      <button class="btn btn-secondary" onclick="exportScholenExcel()" style="border-color:var(--groen);color:var(--groen);font-weight:700">${svgIcon('download', 15)} Excel export</button>
       <button class="btn btn-primary" onclick="openSchoolModal()">${svgIcon('add')} Nieuwe school</button>
     </div>
     <div class="card">
@@ -81,6 +82,49 @@ function renderScholen(search = '') {
       </div>
       ${renderPagination(pageInfo, 'gotoScholenPage')}
     </div>`;
+}
+
+function exportScholenExcel() {
+  const q = (_scholenSearch || '').toLowerCase();
+  const filtered = DB.scholen
+    .filter(s => !q || s.naam.toLowerCase().includes(q) || (s.plaats || '').toLowerCase().includes(q))
+    .sort((a, b) => a.naam.localeCompare(b.naam, 'nl'));
+
+  const Q = s => '"' + String(s ?? '').replace(/"/g, '""') + '"';
+  const titel = 'Scholenoverzicht 2xDenken';
+
+  const rows = [
+    [Q(titel), '', '', '', '', '', '', '', ''],
+    ['', '', '', '', '', '', '', '', ''],
+    [Q('Naam school'), Q('Bestuur'), Q('Debiteurnummer'), Q('Adres'), Q('Postcode'), Q('Plaats'), Q('Website'), Q('Aantal contacten'), Q('Aantal facturen')],
+    ...filtered.map(s => {
+      const best = getBestuur(s.bestuurId);
+      return [
+        Q(s.naam),
+        Q(best?.naam || ''),
+        Q(s.debiteurnr),
+        Q(s.adres),
+        Q(s.postcode),
+        Q(s.plaats),
+        Q(s.website),
+        contactenVanSchool(s.id).length,
+        facturenVanSchool(s.id).length,
+      ];
+    }),
+    ['', '', '', '', '', '', '', '', ''],
+    [Q(`Geëxporteerd op: ${new Date().toLocaleDateString('nl-NL')} | Aantal scholen: ${filtered.length}`), '', '', '', '', '', '', '', ''],
+  ];
+
+  const csv  = '\uFEFF' + rows.map(r => r.join(';')).join('\r\n');
+  const blob = new Blob([csv], { type: 'text/csv;charset=utf-8;' });
+  const url  = URL.createObjectURL(blob);
+  const a    = document.createElement('a');
+  a.href = url;
+  a.download = `2xDenken_scholen.csv`;
+  document.body.appendChild(a);
+  a.click();
+  document.body.removeChild(a);
+  URL.revokeObjectURL(url);
 }
 
 function openSchoolModal(id = '', defaultBestuurId = '') {
