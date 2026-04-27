@@ -34,10 +34,10 @@ function renderFacturenPage(search = '') {
 
   const q = search.toLowerCase();
   const filtered = DB.facturen.filter(f => {
-    const s  = getSchool(f.schoolId);
+    const klantNaam = factuurKlantNaam(f);
     const ms = !q
             || (f.nummer || '').toLowerCase().includes(q)
-            || (s?.naam || '').toLowerCase().includes(q)
+            || klantNaam.toLowerCase().includes(q)
             || (f.betreft || '').toLowerCase().includes(q);
     const mf = _factuurFilter === 'alle' || f.status === _factuurFilter;
     const mj = _factuurJaar === 'alle' || getFactuurJaar(f) === _factuurJaar;
@@ -46,11 +46,9 @@ function renderFacturenPage(search = '') {
 
   const dir = _factuurSortDir === 'asc' ? 1 : -1;
   filtered.sort((a, b) => {
-    const sa = getSchool(a.schoolId);
-    const sb = getSchool(b.schoolId);
     switch (_factuurSortCol) {
       case 'nummer':  return dir * (a.nummer || '').localeCompare(b.nummer || '', 'nl', { numeric: true });
-      case 'school':  return dir * (sa?.naam || '').localeCompare(sb?.naam || '', 'nl');
+      case 'school':  return dir * factuurKlantNaam(a).localeCompare(factuurKlantNaam(b), 'nl');
       case 'betreft': return dir * (a.betreft || '').localeCompare(b.betreft || '', 'nl');
       case 'datum':   return dir * ((a.datum || '') < (b.datum || '') ? -1 : (a.datum || '') > (b.datum || '') ? 1 : 0);
       case 'bedrag':  return dir * ((a.totaal || 0) - (b.totaal || 0));
@@ -122,7 +120,7 @@ function renderFacturenPage(search = '') {
         <table>
           <thead><tr>
             ${th('nummer', 'Nummer')}
-            ${th('school', 'School')}
+            ${th('school', 'Klant')}
             ${th('betreft', 'Betreft')}
             ${th('datum', 'Datum')}
             ${th('bedrag', 'Bedrag')}
@@ -134,18 +132,22 @@ function renderFacturenPage(search = '') {
               ? `<tr><td colspan="7"><div class="empty-state"><p>Geen facturen gevonden</p></div></td></tr>`
               : pageSlice.map(f => {
                   const s = getSchool(f.schoolId);
+                  const b = f.bestuurId ? getBestuur(f.bestuurId) : null;
+                  const klantHtml = s
+                    ? `${esc(s.naam)}${b ? `<div style="font-size:11px;color:var(--navy4);margin-top:2px">${esc(b.naam)}</div>` : ''}`
+                    : (b ? `${esc(b.naam)}<div style="font-size:11px;color:var(--navy4);margin-top:2px">via bestuur</div>` : '—');
                   return `<tr>
                     <td style="font-weight:700;white-space:nowrap">${esc(f.nummer)}</td>
-                    <td style="font-size:13px">${esc(s?.naam || '—')}</td>
+                    <td style="font-size:13px">${klantHtml}</td>
                     <td style="font-size:12.5px;color:var(--navy3);max-width:200px;overflow:hidden;text-overflow:ellipsis;white-space:nowrap">${esc(f.betreft || '')}</td>
                     <td style="white-space:nowrap">${fmtDateShort(f.datum)}</td>
                     <td style="font-weight:600;white-space:nowrap">${fmtEuro(f.totaal)}</td>
                     <td>${badge(f.status)}</td>
                     <td>
                       <div style="display:flex;gap:4px;justify-content:center">
-                        <button class="btn btn-ghost btn-icon btn-sm" title="Factuur e-mailen" onclick="openEmailModal({factuurId:'${f.id}',schoolId:'${f.schoolId}',contactId:'${f.contactId || ''}'})" style="color:var(--accent)">${svgIcon('mail', 14)}</button>
+                        <button class="btn btn-ghost btn-icon btn-sm" title="Factuur e-mailen" onclick="openEmailModal({factuurId:'${f.id}',schoolId:'${f.schoolId || ''}',contactId:'${f.contactId || ''}'})" style="color:var(--accent)">${svgIcon('mail', 14)}</button>
                         <button class="btn btn-ghost btn-icon btn-sm" title="Factuur bekijken" onclick="printFactuur('${f.id}')" style="color:var(--navy);border:1.5px solid var(--bg3)">${svgIcon('eye', 15)}</button>
-                        <button class="btn btn-ghost btn-icon btn-sm" title="Bewerken" onclick="openFactuurModal('${f.schoolId}','${f.id}')">${svgIcon('edit', 14)}</button>
+                        <button class="btn btn-ghost btn-icon btn-sm" title="Bewerken" onclick="openFactuurModal('${f.schoolId || ''}','${f.id}')">${svgIcon('edit', 14)}</button>
                         <button class="btn btn-ghost btn-icon btn-sm" title="Verwijderen" onclick="delFactuurOverview('${f.id}')" style="color:var(--s-rood)">${svgIcon('trash', 14)}</button>
                       </div>
                     </td>
@@ -190,10 +192,23 @@ function renderFacturenTab(schoolId) {
 }
 
 // ── Factuur modal ─────────────────────────────────────────────────
-async function openFactuurModal(schoolId, fid = '', prefillContactId = '') {
+async function openFactuurModal(schoolId, fid = '', prefillContactId = '', prefillBestuurId = '') {
   const f = getFactuur(fid);
-  const school = getSchool(schoolId);
-  const contacten = contactenVanSchool(schoolId);
+
+  let initialBestuurId = '';
+  let initialSchoolId  = '';
+  if (f) {
+    initialSchoolId  = f.schoolId || '';
+    initialBestuurId = f.bestuurId || (initialSchoolId ? (getSchool(initialSchoolId)?.bestuurId || '') : '');
+  } else {
+    initialSchoolId = schoolId || '';
+    initialBestuurId = initialSchoolId
+      ? (getSchool(initialSchoolId)?.bestuurId || '')
+      : (prefillBestuurId || '');
+  }
+
+  const school = initialSchoolId ? getSchool(initialSchoolId) : null;
+  const bestuur = initialBestuurId ? getBestuur(initialBestuurId) : null;
   const activeContactId = f?.contactId || prefillContactId || '';
   const prefillContact = getContact(activeContactId);
 
@@ -203,21 +218,28 @@ async function openFactuurModal(schoolId, fid = '', prefillContactId = '') {
     return String(yr) + String(Math.max(0, ...allNrs) + 1).padStart(2, '0');
   })();
 
-  const prefillDebnr = f?.debiteurnr || school?.debiteurnr || '';
+  const prefillDebnr = f?.debiteurnr || school?.debiteurnr || bestuur?.debiteurnr || '';
   const prefillTav = f?.tav || (prefillContact && !f ? prefillContact.naam : '');
   const regels = f?.regels?.length ? f.regels : [{ id: uid(), omschrijving: '', toelichting: '', datum: '', uren: '', bedrag: 0 }];
-  const contactOpts = contacten.map(c => `<option value="${c.id}"${activeContactId === c.id ? ' selected' : ''}>${esc(c.naam)}${c.functie ? ` — ${esc(c.functie)}` : ''}</option>`).join('');
 
-  const schoolInfoHtml = (!f && school) ? `
-    <div style="background:var(--bg2);border:1px solid var(--bg3);border-radius:var(--r);padding:12px 16px;margin-bottom:18px;font-size:13px;color:var(--navy3)">
-      <div style="font-weight:800;color:var(--navy);margin-bottom:4px">${svgIcon('school', 15)} ${esc(school.naam)}</div>
-      ${school.adres ? `<div>${esc(school.adres)}</div>` : ''}
-      ${(school.postcode || school.plaats) ? `<div>${[school.postcode, school.plaats].filter(Boolean).map(esc).join(' ')}</div>` : ''}
-      ${school.debiteurnr ? `<div style="margin-top:4px">Debiteur: <strong>${esc(school.debiteurnr)}</strong></div>` : ''}
-    </div>` : '';
+  const bestuurOpts = [...DB.besturen]
+    .sort((a, b) => a.naam.localeCompare(b.naam, 'nl'))
+    .map(b => `<option value="${b.id}"${initialBestuurId === b.id ? ' selected' : ''}>${esc(b.naam)}</option>`).join('');
 
   showModal(f ? 'Factuur bewerken' : 'Nieuwe factuur',
-    `${schoolInfoHtml}
+    `<div class="form-row">
+       <div class="form-group"><label>Bestuur *</label>
+         <select id="f-bestuur" onchange="onFactuurBestuurChange()">
+           <option value="">— Kies bestuur —</option>${bestuurOpts}
+         </select>
+       </div>
+       <div class="form-group"><label>School (optioneel)</label>
+         <select id="f-school" onchange="onFactuurSchoolChange()">
+           <option value="">— Geen school (factuur op bestuurniveau) —</option>
+         </select>
+       </div>
+     </div>
+     <div id="factuur-klant-info"></div>
      <div class="form-row">
        <div class="form-group"><label>Factuurnummer *</label><input type="text" id="f-nr" value="${esc(f?.nummer || nextNr)}"/></div>
        <div class="form-group"><label>Debiteurnummer</label><input type="text" id="f-debnr" value="${esc(prefillDebnr)}" placeholder="DB15"/></div>
@@ -236,7 +258,7 @@ async function openFactuurModal(schoolId, fid = '', prefillContactId = '') {
      <div class="form-group"><label>Betreft (onderwerpregel op factuur)</label><input type="text" id="f-betreft" value="${esc(f?.betreft || '')}" placeholder="Het Anker, 3e factuur coachtraject K.S."/></div>
      <div class="form-row">
        <div class="form-group"><label>T.a.v. — kies contactpersoon</label>
-         <select id="f-contact"><option value="">— Geen t.a.v. —</option>${contactOpts}</select>
+         <select id="f-contact"><option value="">— Geen t.a.v. —</option></select>
        </div>
        <div class="form-group"><label>Of vrij t.a.v.-veld (overschrijft dropdown)</label>
          <input type="text" id="f-tav" value="${esc(prefillTav)}" placeholder="M. Breuningen"/>
@@ -250,9 +272,74 @@ async function openFactuurModal(schoolId, fid = '', prefillContactId = '') {
      <div id="regels-wrap"></div>
      <div id="totaal-wrap" class="invoice-total" style="margin-top:10px"></div>`,
     `<button class="btn btn-secondary" onclick="closeModal()">Annuleren</button>
-     <button class="btn btn-primary" onclick="saveFactuur('${schoolId}','${fid || ''}')">Opslaan</button>`, true);
+     <button class="btn btn-primary" onclick="saveFactuur('${fid || ''}')">Opslaan</button>`, true);
 
+  refreshFactuurSchoolDropdown(initialBestuurId, initialSchoolId);
+  refreshFactuurContactDropdown(initialSchoolId, activeContactId);
+  refreshFactuurKlantInfo();
   renderRegels(regels);
+}
+
+function onFactuurBestuurChange() {
+  const bestuurId = document.getElementById('f-bestuur')?.value || '';
+  refreshFactuurSchoolDropdown(bestuurId, '');
+  refreshFactuurContactDropdown('', '');
+  refreshFactuurKlantInfo();
+  const debEl = document.getElementById('f-debnr');
+  const bestuur = getBestuur(bestuurId);
+  if (debEl && !debEl.value && bestuur?.debiteurnr) debEl.value = bestuur.debiteurnr;
+}
+
+function onFactuurSchoolChange() {
+  const schoolId = document.getElementById('f-school')?.value || '';
+  refreshFactuurContactDropdown(schoolId, '');
+  refreshFactuurKlantInfo();
+  const school = getSchool(schoolId);
+  const debEl = document.getElementById('f-debnr');
+  if (debEl && school?.debiteurnr) debEl.value = school.debiteurnr;
+}
+
+function refreshFactuurSchoolDropdown(bestuurId, selectedSchoolId) {
+  const sel = document.getElementById('f-school');
+  if (!sel) return;
+  const scholen = bestuurId ? scholenVanBestuur(bestuurId) : [];
+  const opts = [...scholen].sort((a, b) => a.naam.localeCompare(b.naam, 'nl'))
+    .map(s => `<option value="${s.id}"${selectedSchoolId === s.id ? ' selected' : ''}>${esc(s.naam)}</option>`).join('');
+  sel.innerHTML = `<option value="">— Geen school (factuur op bestuurniveau) —</option>${opts}`;
+}
+
+function refreshFactuurContactDropdown(schoolId, selectedContactId) {
+  const sel = document.getElementById('f-contact');
+  if (!sel) return;
+  const contacten = schoolId ? contactenVanSchool(schoolId) : [];
+  const opts = contacten.map(c => `<option value="${c.id}"${selectedContactId === c.id ? ' selected' : ''}>${esc(c.naam)}${c.functie ? ` — ${esc(c.functie)}` : ''}</option>`).join('');
+  sel.innerHTML = `<option value="">— Geen t.a.v. —</option>${opts}`;
+}
+
+function refreshFactuurKlantInfo() {
+  const wrap = document.getElementById('factuur-klant-info');
+  if (!wrap) return;
+  const bestuur = getBestuur(document.getElementById('f-bestuur')?.value || '');
+  const school  = getSchool(document.getElementById('f-school')?.value || '');
+  if (school) {
+    wrap.innerHTML = `
+      <div style="background:var(--bg2);border:1px solid var(--bg3);border-radius:var(--r);padding:12px 16px;margin-bottom:18px;font-size:13px;color:var(--navy3)">
+        <div style="font-weight:800;color:var(--navy);margin-bottom:4px">${svgIcon('school', 15)} ${esc(school.naam)}</div>
+        ${bestuur ? `<div>Bestuur: ${esc(bestuur.naam)}</div>` : ''}
+        ${school.adres ? `<div>${esc(school.adres)}</div>` : ''}
+        ${(school.postcode || school.plaats) ? `<div>${[school.postcode, school.plaats].filter(Boolean).map(esc).join(' ')}</div>` : ''}
+        ${school.debiteurnr ? `<div style="margin-top:4px">Debiteur: <strong>${esc(school.debiteurnr)}</strong></div>` : ''}
+      </div>`;
+  } else if (bestuur) {
+    wrap.innerHTML = `
+      <div style="background:var(--bg2);border:1px solid var(--bg3);border-radius:var(--r);padding:12px 16px;margin-bottom:18px;font-size:13px;color:var(--navy3)">
+        <div style="font-weight:800;color:var(--navy);margin-bottom:4px">${svgIcon('board', 15)} ${esc(bestuur.naam)} <span style="font-weight:400;color:var(--navy4);font-size:12px">— factuur op bestuurniveau</span></div>
+        ${bestuur.adres ? `<div>${esc(bestuur.adres)}</div>` : ''}
+        ${bestuur.debiteurnr ? `<div style="margin-top:4px">Debiteur: <strong>${esc(bestuur.debiteurnr)}</strong></div>` : ''}
+      </div>`;
+  } else {
+    wrap.innerHTML = '';
+  }
 }
 
 function parseFactuurBedrag(val) {
@@ -301,20 +388,24 @@ function delRegel(i) { _regels.splice(i, 1); renderRegels(_regels); }
 
 // ── Nieuwe factuur (vanuit facturenoverzicht) ────────────────────
 function openNieuweFactuurModal() {
-  const schoolOpts = DB.scholen.map(s => {
-    const best = getBestuur(s.bestuurId);
-    const label = best ? `${s.naam} (${best.naam})` : s.naam;
-    return `<option value="${s.id}">${esc(label)}</option>`;
-  }).join('');
+  const bestuurOpts = [...DB.besturen]
+    .sort((a, b) => a.naam.localeCompare(b.naam, 'nl'))
+    .map(b => `<option value="${b.id}">${esc(b.naam)}</option>`).join('');
 
-  showModal('Nieuwe factuur — kies school',
+  showModal('Nieuwe factuur — kies bestuur en (optioneel) school',
     `<div class="form-group">
-       <label>School *</label>
-       <select id="f-nf-school" onchange="onNieuweFactuurSchoolChange()">
-         <option value="">— Selecteer een school —</option>${schoolOpts}
+       <label>Bestuur *</label>
+       <select id="f-nf-bestuur" onchange="onNieuweFactuurBestuurChange()">
+         <option value="">— Selecteer een bestuur —</option>${bestuurOpts}
        </select>
      </div>
-     <div id="nf-school-info"></div>
+     <div class="form-group">
+       <label>School (optioneel)</label>
+       <select id="f-nf-school" onchange="onNieuweFactuurSchoolChange()">
+         <option value="">— Geen school (factuur op bestuurniveau) —</option>
+       </select>
+     </div>
+     <div id="nf-klant-info"></div>
      <div class="form-group">
        <label>Contactpersoon (t.a.v.)</label>
        <select id="f-nf-contact"><option value="">— Geen —</option></select>
@@ -323,37 +414,59 @@ function openNieuweFactuurModal() {
      <button class="btn btn-primary" onclick="startNieuweFactuur()">Doorgaan</button>`);
 }
 
+function onNieuweFactuurBestuurChange() {
+  const bestuurId = document.getElementById('f-nf-bestuur').value;
+  const sel = document.getElementById('f-nf-school');
+  const scholen = bestuurId ? scholenVanBestuur(bestuurId) : [];
+  sel.innerHTML = '<option value="">— Geen school (factuur op bestuurniveau) —</option>' +
+    [...scholen].sort((a, b) => a.naam.localeCompare(b.naam, 'nl'))
+      .map(s => `<option value="${s.id}">${esc(s.naam)}</option>`).join('');
+  document.getElementById('f-nf-contact').innerHTML = '<option value="">— Geen —</option>';
+  updateNieuweFactuurInfo();
+}
+
 function onNieuweFactuurSchoolChange() {
   const schoolId = document.getElementById('f-nf-school').value;
-  const school = getSchool(schoolId);
-  const best = school ? getBestuur(school.bestuurId) : null;
-
-  // School-info tonen
-  const infoEl = document.getElementById('nf-school-info');
-  if (infoEl) {
-    infoEl.innerHTML = school ? `
-      <div style="background:var(--glass);border:1px solid var(--bg3);border-radius:var(--r);padding:12px 16px;margin-bottom:18px;font-size:13px;color:var(--navy3)">
-        <div style="font-weight:700;color:var(--navy);margin-bottom:4px">${svgIcon('school', 15)} ${esc(school.naam)}</div>
-        ${best ? `<div>Bestuur: ${esc(best.naam)}</div>` : ''}
-        ${school.adres ? `<div>${esc(school.adres)}</div>` : ''}
-        ${(school.postcode || school.plaats) ? `<div>${[school.postcode, school.plaats].filter(Boolean).map(esc).join(' ')}</div>` : ''}
-        ${school.debiteurnr ? `<div style="margin-top:4px">Debiteurnummer: <strong>${esc(school.debiteurnr)}</strong></div>` : ''}
-      </div>` : '';
-  }
-
-  // Contacten filteren
   const contactSel = document.getElementById('f-nf-contact');
   const contacten = schoolId ? contactenVanSchool(schoolId) : [];
   contactSel.innerHTML = '<option value="">— Geen —</option>' +
     contacten.map(c => `<option value="${c.id}">${esc(c.naam)}${c.functie ? ` — ${esc(c.functie)}` : ''}</option>`).join('');
+  updateNieuweFactuurInfo();
+}
+
+function updateNieuweFactuurInfo() {
+  const el = document.getElementById('nf-klant-info');
+  if (!el) return;
+  const bestuur = getBestuur(document.getElementById('f-nf-bestuur').value);
+  const school  = getSchool(document.getElementById('f-nf-school').value);
+  if (school) {
+    el.innerHTML = `
+      <div style="background:var(--glass);border:1px solid var(--bg3);border-radius:var(--r);padding:12px 16px;margin-bottom:18px;font-size:13px;color:var(--navy3)">
+        <div style="font-weight:700;color:var(--navy);margin-bottom:4px">${svgIcon('school', 15)} ${esc(school.naam)}</div>
+        ${bestuur ? `<div>Bestuur: ${esc(bestuur.naam)}</div>` : ''}
+        ${school.adres ? `<div>${esc(school.adres)}</div>` : ''}
+        ${(school.postcode || school.plaats) ? `<div>${[school.postcode, school.plaats].filter(Boolean).map(esc).join(' ')}</div>` : ''}
+        ${school.debiteurnr ? `<div style="margin-top:4px">Debiteurnummer: <strong>${esc(school.debiteurnr)}</strong></div>` : ''}
+      </div>`;
+  } else if (bestuur) {
+    el.innerHTML = `
+      <div style="background:var(--glass);border:1px solid var(--bg3);border-radius:var(--r);padding:12px 16px;margin-bottom:18px;font-size:13px;color:var(--navy3)">
+        <div style="font-weight:700;color:var(--navy);margin-bottom:4px">${svgIcon('board', 15)} ${esc(bestuur.naam)} <span style="font-weight:400;color:var(--navy4);font-size:12px">— factuur op bestuurniveau</span></div>
+        ${bestuur.adres ? `<div>${esc(bestuur.adres)}</div>` : ''}
+        ${bestuur.debiteurnr ? `<div style="margin-top:4px">Debiteurnummer: <strong>${esc(bestuur.debiteurnr)}</strong></div>` : ''}
+      </div>`;
+  } else {
+    el.innerHTML = '';
+  }
 }
 
 function startNieuweFactuur() {
-  const schoolId = document.getElementById('f-nf-school').value;
-  if (!schoolId) return alert('Selecteer eerst een school');
+  const bestuurId = document.getElementById('f-nf-bestuur').value;
+  if (!bestuurId) return alert('Selecteer eerst een bestuur');
+  const schoolId = document.getElementById('f-nf-school').value || '';
   const contactId = document.getElementById('f-nf-contact').value || '';
   closeModal();
-  openFactuurModal(schoolId, '', contactId);
+  openFactuurModal(schoolId, '', contactId, bestuurId);
 }
 
 // ── Factuur HTML genereren (herbruikbaar voor print + e-mail) ─────
@@ -366,8 +479,10 @@ const FACTUUR_LOGO =
 function getFactuurHtml(fid) {
   const f = getFactuur(fid);
   if (!f) return;
-  const school  = getSchool(f.schoolId);
-  const bestuur = school ? getBestuur(school.bestuurId) : null;
+  const school  = f.schoolId ? getSchool(f.schoolId) : null;
+  const bestuur = school
+    ? getBestuur(school.bestuurId)
+    : (f.bestuurId ? getBestuur(f.bestuurId) : null);
 
   const fmtDutch = value => {
     if (!value) return '';
@@ -391,8 +506,9 @@ function getFactuurHtml(fid) {
     const contact = getContact(f.contactId);
     if (contact) adresLines.push('t.a.v. ' + esc(contact.naam));
   }
-  if (school?.adres) adresLines.push(esc(school.adres));
-  if (school?.postcode || school?.plaats)
+  const adresBron = school || bestuur;
+  if (adresBron?.adres) adresLines.push(esc(adresBron.adres));
+  if (school && (school.postcode || school.plaats))
     adresLines.push([school.postcode, school.plaats].filter(Boolean).map(esc).join(' '));
 
   const totaal = Number.isFinite(Number(f.totaal))
@@ -576,10 +692,10 @@ function printFactuur(fid) {
 function exportFacturenExcel() {
   const q = (_factuurSearch || '').toLowerCase();
   const filtered = DB.facturen.filter(f => {
-    const s  = getSchool(f.schoolId);
+    const klant = factuurKlantNaam(f);
     const ms = !q
       || (f.nummer || '').toLowerCase().includes(q)
-      || (s?.naam || '').toLowerCase().includes(q)
+      || klant.toLowerCase().includes(q)
       || (f.betreft || '').toLowerCase().includes(q);
     const mf = _factuurFilter === 'alle' || f.status === _factuurFilter;
     const fnrYear = ((f.nummer || '').match(/^(20\d{2})/) || [])[1] || '';
@@ -597,20 +713,21 @@ function exportFacturenExcel() {
   const Q   = s => '"' + String(s || '').replace(/"/g, '""') + '"';
 
   const rows = [
-    [Q(titel), '', '', '', '', '', ''],
-    ['', '', '', '', '', '', ''],
-    [Q('Factuurnummer'), Q('School'), Q('Betreft'), Q('Factuurdatum'), Q('Vervaldatum'), Q('Bedrag (€)'), Q('Status')],
+    [Q(titel), '', '', '', '', '', '', ''],
+    ['', '', '', '', '', '', '', ''],
+    [Q('Factuurnummer'), Q('School'), Q('Bestuur'), Q('Betreft'), Q('Factuurdatum'), Q('Vervaldatum'), Q('Bedrag (€)'), Q('Status')],
     ...filtered.map(f => {
-      const s = getSchool(f.schoolId);
+      const s = f.schoolId ? getSchool(f.schoolId) : null;
+      const b = f.bestuurId ? getBestuur(f.bestuurId) : (s ? getBestuur(s.bestuurId) : null);
       const statusNL = { betaald: 'Betaald', verzonden: 'Verzonden', concept: 'Concept', vervallen: 'Vervallen' };
-      return [Q(f.nummer || ''), Q(s?.naam || '—'), Q(f.betreft || ''), Q(fmtDateShort(f.datum)), Q(fmtDateShort(f.vervaldatum)), EUR(f.totaal), Q(statusNL[f.status] || f.status || '')];
+      return [Q(f.nummer || ''), Q(s?.naam || ''), Q(b?.naam || ''), Q(f.betreft || ''), Q(fmtDateShort(f.datum)), Q(fmtDateShort(f.vervaldatum)), EUR(f.totaal), Q(statusNL[f.status] || f.status || '')];
     }),
-    ['', '', '', '', '', '', ''],
-    [Q('TOTAAL OMZET'), '', '', '', '', EUR(totaal), ''],
-    [Q('Waarvan betaald'), '', '', '', '', EUR(betaald), ''],
-    [Q('Waarvan openstaand'), '', '', '', '', EUR(open), ''],
-    ['', '', '', '', '', '', ''],
-    [Q(`Geëxporteerd op: ${new Date().toLocaleDateString('nl-NL')} | Aantal facturen: ${filtered.length}`), '', '', '', '', '', ''],
+    ['', '', '', '', '', '', '', ''],
+    [Q('TOTAAL OMZET'), '', '', '', '', '', EUR(totaal), ''],
+    [Q('Waarvan betaald'), '', '', '', '', '', EUR(betaald), ''],
+    [Q('Waarvan openstaand'), '', '', '', '', '', EUR(open), ''],
+    ['', '', '', '', '', '', '', ''],
+    [Q(`Geëxporteerd op: ${new Date().toLocaleDateString('nl-NL')} | Aantal facturen: ${filtered.length}`), '', '', '', '', '', '', ''],
   ];
 
   const csv = '\uFEFF' + rows.map(r => r.join(';')).join('\r\n');

@@ -216,9 +216,12 @@ async function delDossierBestuur(did, bestuurId) {
 }
 
 // ── FACTUREN ──────────────────────────────────────────────────────
-async function saveFactuur(schoolId, fid) {
+async function saveFactuur(fid) {
   const nummer = document.getElementById('f-nr').value.trim();
   if (!nummer) return alert('Factuurnummer is verplicht');
+  const bestuurId = document.getElementById('f-bestuur')?.value || '';
+  if (!bestuurId) return alert('Kies eerst een bestuur');
+  const schoolId = document.getElementById('f-school')?.value || '';
   const regels = _regels.map(r => ({
     id: r.id || uid(),
     omschrijving: r.omschrijving || '',
@@ -230,7 +233,9 @@ async function saveFactuur(schoolId, fid) {
   const totaal = Math.round(regels.reduce((s, r) => s + (Math.round((r.bedrag || 0) * 100) / 100), 0) * 100) / 100;
   const tavVrij = document.getElementById('f-tav')?.value.trim() || '';
   const data = {
-    schoolId, nummer,
+    schoolId:    schoolId || '',
+    bestuurId,
+    nummer,
     contactId:   document.getElementById('f-contact')?.value || null,
     tav:         tavVrij || null,
     debiteurnr:  document.getElementById('f-debnr').value.trim(),

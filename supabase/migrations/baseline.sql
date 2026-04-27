@@ -93,6 +93,7 @@ CREATE INDEX IF NOT EXISTS idx_uitvoeringen_training_id ON uitvoeringen(training
 CREATE TABLE IF NOT EXISTS facturen (
   id          text PRIMARY KEY,
   school_id   text REFERENCES scholen(id)   ON DELETE SET NULL,
+  bestuur_id  text REFERENCES besturen(id)  ON DELETE SET NULL,
   contact_id  text REFERENCES contacten(id) ON DELETE SET NULL,
   nummer      text NOT NULL,
   debiteurnr  text DEFAULT ''::text,
@@ -105,6 +106,8 @@ CREATE TABLE IF NOT EXISTS facturen (
   regels      jsonb   DEFAULT '[]'::jsonb,
   created_at  timestamptz DEFAULT now()
 );
+
+CREATE INDEX IF NOT EXISTS idx_facturen_bestuur_id ON facturen(bestuur_id);
 
 CREATE TABLE IF NOT EXISTS factuur_regels (
   id           text PRIMARY KEY,

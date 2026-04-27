@@ -379,8 +379,8 @@ function renderGlobalResults(q) {
   DB.facturen.forEach(f => {
     const sc = Math.max(_searchScore(f.nummer, lq), _searchScore(f.betreft, lq));
     if (sc > 0) {
-      const s = getSchool(f.schoolId);
-      groups.facturen.items.push({ icon: 'invoice', label: `Factuur ${f.nummer || ''}`, sub: [s?.naam, fmtEuro(f.totaal)].filter(Boolean).join(' — '), score: sc, action: () => openFactuurModal(f.schoolId, f.id) });
+      const klant = factuurKlantNaam(f);
+      groups.facturen.items.push({ icon: 'invoice', label: `Factuur ${f.nummer || ''}`, sub: [klant, fmtEuro(f.totaal)].filter(Boolean).join(' — '), score: sc, action: () => openFactuurModal(f.schoolId || '', f.id) });
     }
   });
 

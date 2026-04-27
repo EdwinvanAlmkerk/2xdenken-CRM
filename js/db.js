@@ -96,7 +96,7 @@ function fromDB_bestuur(r)  { return { id: r.id, naam: r.naam, website: r.websit
 function fromDB_school(r)   { return { id: r.id, bestuurId: r.bestuur_id, naam: r.naam, debiteurnr: r.debiteurnr || '', adres: r.adres || '', postcode: r.postcode || '', plaats: r.plaats || '', website: r.website || '' }; }
 function fromDB_contact(r)  { return { id: r.id, schoolId: r.school_id, naam: r.naam, functie: r.functie || '', type: r.type || 'beslisser', email: r.email || '', telefoon: r.telefoon || '' }; }
 function fromDB_dossier(r)  { return { id: r.id, schoolId: r.school_id, contactId: r.contact_id || '', datum: r.datum, type: r.type || 'notitie', onderwerp: r.onderwerp || '', tekst: r.tekst || '', bronNaam: r.bron_naam || '', bestanden: r.bestanden || [], bijlagen: r.bijlagen || [] }; }
-function fromDB_factuur(r)  { return { id: r.id, schoolId: r.school_id, contactId: r.contact_id, tav: r.tav || '', nummer: r.nummer || '', debiteurnr: r.debiteurnr || '', datum: r.datum, vervaldatum: r.vervaldatum, status: r.status || 'concept', betreft: r.betreft || '', regels: r.regels || [], totaal: r.totaal || 0 }; }
+function fromDB_factuur(r)  { return { id: r.id, schoolId: r.school_id || '', bestuurId: r.bestuur_id || '', contactId: r.contact_id, tav: r.tav || '', nummer: r.nummer || '', debiteurnr: r.debiteurnr || '', datum: r.datum, vervaldatum: r.vervaldatum, status: r.status || 'concept', betreft: r.betreft || '', regels: r.regels || [], totaal: r.totaal || 0 }; }
 function getLocalTrainingDocsMap() {
   try { return JSON.parse(localStorage.getItem('crm_training_bestanden') || '{}'); } catch (e) { return {}; }
 }
@@ -138,7 +138,7 @@ function toDB_bestuur(d)  { return { naam: d.naam, website: d.website || null, a
 function toDB_school(d)   { return { bestuur_id: d.bestuurId || null, naam: d.naam, debiteurnr: d.debiteurnr || null, adres: d.adres || null, postcode: d.postcode || null, plaats: d.plaats || null, website: d.website || null }; }
 function toDB_contact(d)  { return { school_id: d.schoolId, naam: d.naam, functie: d.functie || null, type: d.type || 'beslisser', email: d.email || null, telefoon: d.telefoon || null }; }
 function toDB_dossier(d)  { return { school_id: d.schoolId, contact_id: d.contactId || null, datum: d.datum, type: d.type || 'notitie', onderwerp: d.onderwerp || null, tekst: d.tekst || null, bron_naam: d.bronNaam || null, bestanden: d.bestanden || [] }; }
-function toDB_factuur(d)  { return { school_id: d.schoolId, contact_id: d.contactId || null, tav: d.tav || null, nummer: d.nummer || null, debiteurnr: d.debiteurnr || null, datum: d.datum || null, vervaldatum: d.vervaldatum || null, status: d.status || 'concept', betreft: d.betreft || null, regels: d.regels || [], totaal: d.totaal || 0 }; }
+function toDB_factuur(d)  { return { school_id: d.schoolId || null, bestuur_id: d.bestuurId || null, contact_id: d.contactId || null, tav: d.tav || null, nummer: d.nummer || null, debiteurnr: d.debiteurnr || null, datum: d.datum || null, vervaldatum: d.vervaldatum || null, status: d.status || 'concept', betreft: d.betreft || null, regels: d.regels || [], totaal: d.totaal || 0 }; }
 function toDB_training(d) {
   const payload = {
     naam: d.naam,
@@ -325,6 +325,7 @@ function rebuildIndexes() {
   i.dossiersBySchool  = _groupBy(DB.dossiers || [],  'schoolId');
   i.dossiersByContact = _groupBy(DB.dossiers || [],  'contactId');
   i.facturenBySchool  = _groupBy(DB.facturen || [],  'schoolId');
+  i.facturenByBestuur = _groupBy(DB.facturen || [],  'bestuurId');
   i.facturenByContact = _groupBy(DB.facturen || [],  'contactId');
   i.uitvBySchool      = _groupBy(DB.uitvoeringen || [], 'schoolId');
   i.uitvByContact     = _groupBy(DB.uitvoeringen || [], 'contactId');
@@ -365,7 +366,17 @@ function scholenVanBestuur(id)    { ensureIndexes(); return DB._idx.scholenByBes
 function dossiersVanSchool(id)    { ensureIndexes(); return DB._idx.dossiersBySchool.get(id)   || []; }
 function dossiersVanContact(id)   { ensureIndexes(); return DB._idx.dossiersByContact.get(id)  || []; }
 function facturenVanSchool(id)    { ensureIndexes(); return DB._idx.facturenBySchool.get(id)   || []; }
+function facturenVanBestuur(id)   { ensureIndexes(); return DB._idx.facturenByBestuur.get(id)  || []; }
 function facturenVanContact(id)   { ensureIndexes(); return DB._idx.facturenByContact.get(id)  || []; }
+
+// Geeft de "klantnaam" van een factuur: school als die er is, anders bestuur.
+function factuurKlantNaam(f) {
+  if (!f) return '';
+  const s = f.schoolId ? getSchool(f.schoolId) : null;
+  if (s) return s.naam || '';
+  const b = f.bestuurId ? getBestuur(f.bestuurId) : null;
+  return b?.naam || '';
+}
 function uitvoeringenVanSchool(id)   { ensureIndexes(); return DB._idx.uitvBySchool.get(id)    || []; }
 function uitvoeringenVanContact(id)  { ensureIndexes(); return DB._idx.uitvByContact.get(id)   || []; }
 function uitvoeringenVanTraining(id) { ensureIndexes(); return DB._idx.uitvByTraining.get(id)  || []; }

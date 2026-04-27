@@ -138,7 +138,7 @@ function renderBestuurDetail(id) {
   const scholen  = scholenVanBestuur(id);
   const dossiers = scholen.flatMap(s => dossiersVanSchool(s.id)).filter(d => !isFactuurDossier(d)).sort((a, b) => new Date(b.datum) - new Date(a.datum));
 
-  const tabs = [['scholen', 'Scholen'], ['dossier', 'Dossier'], ['agenda', 'Agenda']];
+  const tabs = [['scholen', 'Scholen'], ['dossier', 'Dossier'], ['agenda', 'Agenda'], ['facturen', 'Facturen']];
   let tabContent = '';
 
   if (bestuurTab === 'scholen') {
@@ -200,6 +200,38 @@ function renderBestuurDetail(id) {
               ${verlopen.map(a => renderAgendaRow(a)).join('')}
             </tbody></table></div>
           </div>` : ''}`}`;
+  } else if (bestuurTab === 'facturen') {
+    const facturen = [...facturenVanBestuur(id)].sort((a, b) => new Date(b.datum) - new Date(a.datum));
+    tabContent = `
+      <div style="display:flex;justify-content:flex-end;margin-bottom:16px">
+        <button class="btn btn-primary" onclick="openFactuurModal('','','','${id}')">${svgIcon('add')} Nieuwe factuur</button>
+      </div>
+      ${facturen.length === 0
+        ? `<div class="card"><div class="empty-state">${svgIcon('invoice', 36)}<p>Nog geen facturen voor dit bestuur</p></div></div>`
+        : `<div class="card"><div class="table-wrap"><table>
+             <thead><tr><th>Nummer</th><th>School</th><th>Betreft</th><th>Datum</th><th>Bedrag</th><th>Status</th><th style="width:130px;text-align:center">Acties</th></tr></thead>
+             <tbody>
+               ${facturen.map(f => {
+                 const s = f.schoolId ? getSchool(f.schoolId) : null;
+                 return `
+                 <tr>
+                   <td style="font-weight:700">${esc(f.nummer)}</td>
+                   <td style="font-size:13px;color:var(--ink3)">${s ? esc(s.naam) : '<span style="font-style:italic;color:var(--navy4)">— op bestuurniveau —</span>'}</td>
+                   <td style="font-size:12.5px;color:var(--navy3);max-width:180px;overflow:hidden;text-overflow:ellipsis;white-space:nowrap">${esc(f.betreft || '')}</td>
+                   <td style="white-space:nowrap">${fmtDateShort(f.datum)}</td>
+                   <td style="font-weight:600">${fmtEuro(f.totaal)}</td>
+                   <td>${badge(f.status)}</td>
+                   <td>
+                     <div style="display:flex;gap:4px;justify-content:center">
+                       <button class="btn btn-ghost btn-icon btn-sm" title="Factuur bekijken" onclick="printFactuur('${f.id}')" style="color:var(--navy);border:1.5px solid var(--bg3)">${svgIcon('eye', 15)}</button>
+                       <button class="btn btn-ghost btn-icon btn-sm" title="Bewerken" onclick="openFactuurModal('${f.schoolId || ''}','${f.id}')">${svgIcon('edit', 14)}</button>
+                       <button class="btn btn-ghost btn-icon btn-sm" title="Verwijderen" onclick="delFactuurOverview('${f.id}')" style="color:var(--s-rood)">${svgIcon('trash', 14)}</button>
+                     </div>
+                   </td>
+                 </tr>`;
+               }).join('')}
+             </tbody>
+           </table></div></div>`}`;
   }
 
   return `
