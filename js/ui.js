@@ -29,7 +29,6 @@ function showModal(title, bodyHTML, footerHTML, lg = false) {
   const el = document.createElement('div');
   el.className = 'modal-overlay';
   el.id = 'modal-overlay';
-  el.onclick = e => { if (e.target === el) closeModal(); };
   el.innerHTML = `
     <div class="modal${lg ? ' modal-lg' : ''}">
       <div class="modal-header">
