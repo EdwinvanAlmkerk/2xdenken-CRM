@@ -364,3 +364,88 @@ async function saveEmailSignature() {
 function getSignature() {
   return DB.emailSettings?.signature || '';
 }
+
+// ── Inbox-bericht automatisch loggen in dossier van contact ──────
+// Idempotent: gebruikt deterministisch ID "inbox-<imap-uid>" zodat herhaalde
+// fetches geen duplicaten maken. Returnt true als er een nieuw item is gelogd.
+const _INBOX_BODY_PLACEHOLDER = '(klik op het bericht in Postvak IN om de volledige inhoud op te halen)';
+
+async function logInboxToDossier(msg) {
+  if (!msg || !msg.from?.email || !msg.uid) return false;
+
+  const contact = getContactByEmail(msg.from.email);
+  if (!contact) return false;
+
+  const dosId = `inbox-${msg.uid}`;
+  if (DB.dossiers.some(d => d.id === dosId)) return false;
+
+  let datum;
+  try {
+    const d = msg.date ? new Date(msg.date) : new Date();
+    datum = isNaN(d.getTime()) ? new Date().toISOString() : d.toISOString();
+  } catch { datum = new Date().toISOString(); }
+
+  const fromDisplay = msg.from.name ? `${msg.from.name} <${msg.from.email}>` : msg.from.email;
+  const subject = msg.subject || '(geen onderwerp)';
+  const bodyText = (msg.body && msg.body.trim()) ? msg.body : _INBOX_BODY_PLACEHOLDER;
+  const tekst = `Van: ${fromDisplay}\nOnderwerp: ${subject}\n\n${bodyText}`;
+  const school = contact.schoolId ? getSchool(contact.schoolId) : null;
+  const bronNaam = `${contact.naam}${school?.naam ? ' — ' + school.naam : ''}`;
+  const onderwerp = `E-mail ontvangen — ${subject}`;
+
+  const payload = {
+    id: dosId,
+    school_id: contact.schoolId || null,
+    contact_id: contact.id,
+    datum,
+    type: 'notitie',
+    onderwerp,
+    tekst,
+    bron_naam: bronNaam,
+    bestanden: [],
+  };
+
+  try {
+    await supa('/rest/v1/dossiers', { method: 'POST', body: JSON.stringify(payload) });
+    DB.dossiers.unshift({
+      id: dosId,
+      schoolId: contact.schoolId || '',
+      contactId: contact.id,
+      datum,
+      type: 'notitie',
+      onderwerp,
+      tekst,
+      bronNaam,
+      bestanden: [],
+      bijlagen: [],
+    });
+    return true;
+  } catch (e) {
+    const err = String(e?.message || e);
+    // 23505 = duplicate key — kan voorkomen als ander apparaat al loggde
+    if (!err.includes('23505') && !err.toLowerCase().includes('duplicate')) {
+      console.warn('Inbox auto-log mislukt voor UID', msg.uid, ':', e);
+    }
+    return false;
+  }
+}
+
+// Update de dossier-tekst met de volledige body als die later geladen wordt
+async function updateInboxDossierBody(msg) {
+  if (!msg || !msg.uid || !msg.body) return;
+  const dosId = `inbox-${msg.uid}`;
+  const existing = DB.dossiers.find(d => d.id === dosId);
+  if (!existing) return;
+  if (!existing.tekst || !existing.tekst.includes(_INBOX_BODY_PLACEHOLDER)) return;
+
+  const fromDisplay = msg.from?.name ? `${msg.from.name} <${msg.from.email}>` : (msg.from?.email || '');
+  const subject = msg.subject || existing.onderwerp.replace(/^E-mail ontvangen — /, '');
+  const newTekst = `Van: ${fromDisplay}\nOnderwerp: ${subject}\n\n${msg.body}`;
+
+  try {
+    await supa(`/rest/v1/dossiers?id=eq.${dosId}`, { method: 'PATCH', body: JSON.stringify({ tekst: newTekst }) });
+    existing.tekst = newTekst;
+  } catch (e) {
+    console.warn('Dossier-body bijwerken mislukt:', e);
+  }
+}

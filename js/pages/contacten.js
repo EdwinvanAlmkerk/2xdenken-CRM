@@ -143,7 +143,96 @@ function renderContactDetail(schoolId, contactId) {
   const agendaItems = [...agendaVanContact(contactId)].sort((a, b) => a.datum.localeCompare(b.datum) || (a.beginTijd || '').localeCompare(b.beginTijd || ''));
   const vandaag = new Date().toISOString().slice(0, 10);
   const komendeAfspraken = agendaItems.filter(a => a.datum >= vandaag);
+  const verlopenAfspraken = agendaItems.filter(a => a.datum < vandaag);
   const uitvoeringen = [...uitvoeringenVanContact(contactId)].sort((a, b) => new Date(b.datum) - new Date(a.datum));
+
+  const tabs = [
+    ['info', 'Overzicht'],
+    ['agenda', `Agenda${agendaItems.length ? ` (${agendaItems.length})` : ''}`],
+    ['trainingen', `Trainingen${uitvoeringen.length ? ` (${uitvoeringen.length})` : ''}`],
+    ['dossier', `Dossier${dossiers.length ? ` (${dossiers.length})` : ''}`],
+  ];
+  let tabContent = '';
+
+  if (contactTab === 'info') {
+    tabContent = `
+      <div class="grid-2">
+        <div class="card">
+          <div class="card-header">
+            <h3>Contactgegevens</h3>
+            <button class="btn btn-ghost btn-sm" onclick="openContactModal('${schoolId}','${contactId}')">${svgIcon('edit', 14)} Bewerken</button>
+          </div>
+          <div class="card-body">
+            <table style="width:100%">
+              <tbody>
+                ${[['Naam', c.naam], ['Functie', c.functie], ['Type', badge(c.type)], ['E-mail', c.email ? `<a href="mailto:${esc(c.email)}">${esc(c.email)}</a>` : null], ['Telefoon', c.telefoon]].filter(([, v]) => v).map(([k, v]) => `<tr><td style="color:var(--ink3);font-size:12px;padding-right:16px;padding-bottom:8px;vertical-align:top;white-space:nowrap">${k}</td><td style="font-size:14px;padding-bottom:8px">${v}</td></tr>`).join('')}
+              </tbody>
+            </table>
+          </div>
+        </div>
+        <div class="card">
+          <div class="card-header"><h3>Snel overzicht</h3></div>
+          <div class="card-body">
+            <div style="display:flex;gap:12px;flex-wrap:wrap">
+              ${[['Dossiernotities', dossiers.length, 'dossier'], ['Afspraken', komendeAfspraken.length, 'agenda'], ['Facturen', facturen.length, null], ['Trainingen', uitvoeringen.length, 'trainingen']].map(([l, n, tab]) => `
+                <div${tab ? ` onclick="setContactTab('${schoolId}','${contactId}','${tab}')" style="cursor:pointer;background:var(--bg);border-radius:8px;padding:14px 18px;flex:1;min-width:80px;transition:background .12s" onmouseover="this.style.background='var(--bg3)'" onmouseout="this.style.background='var(--bg)'"` : ` style="background:var(--bg);border-radius:8px;padding:14px 18px;flex:1;min-width:80px"`}>
+                  <div style="font-size:24px;font-weight:800">${n}</div>
+                  <div style="font-size:12px;color:var(--navy4);margin-top:2px">${l}</div>
+                </div>`).join('')}
+            </div>
+          </div>
+        </div>
+      </div>`;
+  } else if (contactTab === 'agenda') {
+    tabContent = `
+      <div style="display:flex;justify-content:flex-end;gap:8px;margin-bottom:16px">
+        <button class="btn btn-primary" onclick="openAgendaModal('','','${schoolId}','${contactId}')">${svgIcon('calendar')} Afspraak plannen</button>
+      </div>
+      ${agendaItems.length === 0
+        ? `<div class="card"><div class="empty-state">${svgIcon('calendar', 36)}<p>Nog geen afspraken voor deze contactpersoon</p></div></div>`
+        : `${komendeAfspraken.length > 0 ? `<div class="card" style="margin-bottom:16px">
+            <div class="card-header"><h3 style="color:var(--s-blauw)">${svgIcon('calendar', 16)} Komende afspraken</h3></div>
+            <div class="card-body" style="padding:0"><table><tbody>
+              ${komendeAfspraken.map(a => renderAgendaRow(a)).join('')}
+            </tbody></table></div>
+          </div>` : ''}
+          ${verlopenAfspraken.length > 0 ? `<div class="card">
+            <div class="card-header"><h3 style="color:var(--navy4)">${svgIcon('clock', 16)} Verlopen afspraken</h3></div>
+            <div class="card-body" style="padding:0"><table><tbody>
+              ${verlopenAfspraken.map(a => renderAgendaRow(a)).join('')}
+            </tbody></table></div>
+          </div>` : ''}`}`;
+  } else if (contactTab === 'trainingen') {
+    tabContent = `
+      ${c.schoolId ? `<div style="display:flex;justify-content:flex-end;gap:8px;margin-bottom:16px">
+        <button class="btn btn-primary" onclick="openUitvoeringVanContactModal('${c.schoolId}','${contactId}')">${svgIcon('add', 14)} Uitvoering vastleggen</button>
+      </div>` : ''}
+      ${uitvoeringen.length === 0
+        ? `<div class="card"><div class="empty-state">${svgIcon('training', 36)}<p>Nog geen trainingen uitgevoerd met deze contactpersoon</p></div></div>`
+        : `<div class="card"><div class="card-body" style="padding:0"><table>
+             <thead><tr><th>Training</th><th>Datum</th><th>Deelnemers</th><th>Score</th></tr></thead>
+             <tbody>
+               ${uitvoeringen.map(u => {
+                 const t = getTraining(u.trainingId);
+                 return `<tr class="clickable-row" onclick="navigate('training-detail','${u.trainingId}')">
+                   <td style="font-weight:500">${esc(t?.naam || '–')}${t?.type ? ' ' + typeBadge(t.type) : ''}${t?.categorie ? ' ' + catBadge(t.categorie) : ''}</td>
+                   <td>${fmtDateShort(u.datum)}</td>
+                   <td>${u.deelnemers || '–'}</td>
+                   <td>${u.score ? renderStars(u.score) : '–'}</td>
+                 </tr>`;
+               }).join('')}
+             </tbody>
+           </table></div></div>`}`;
+  } else if (contactTab === 'dossier') {
+    tabContent = `
+      <div style="display:flex;justify-content:flex-end;gap:8px;margin-bottom:16px">
+        <button class="btn btn-secondary" onclick="openBestandModalContact('${schoolId}','${contactId}')">${svgIcon('add', 14)} Bestand toevoegen</button>
+        <button class="btn btn-primary" onclick="openDossierModalContact('${schoolId}','${contactId}')">${svgIcon('add', 14)} Notitie toevoegen</button>
+      </div>
+      ${dossiers.length === 0
+        ? `<div class="card"><div class="empty-state">${svgIcon('note', 36)}<p>Nog geen dossiernotities</p></div></div>`
+        : `<div class="dossier-list">${dossiers.map(d => renderDossierItem(d, { delBtn: 'delDossier', delArg: schoolId })).join('')}</div>`}`;
+  }
 
   return `
     <div class="breadcrumb">
@@ -165,77 +254,8 @@ function renderContactDetail(schoolId, contactId) {
         <button class="btn btn-secondary" onclick="openContactModal('${schoolId}','${contactId}')">${svgIcon('edit', 15)} Bewerken</button>
       </div>
     </div>
-    <div class="grid-2">
-      <div class="card">
-        <div class="card-header"><h3>Contactgegevens</h3></div>
-        <div class="card-body">
-          <table style="width:100%">
-            <tbody>
-              ${[['Naam', c.naam], ['Functie', c.functie], ['Type', badge(c.type)], ['E-mail', c.email ? `<a href="mailto:${esc(c.email)}">${esc(c.email)}</a>` : null], ['Telefoon', c.telefoon]].filter(([, v]) => v).map(([k, v]) => `<tr><td style="color:var(--ink3);font-size:12px;padding-right:16px;padding-bottom:8px;vertical-align:top;white-space:nowrap">${k}</td><td style="font-size:14px;padding-bottom:8px">${v}</td></tr>`).join('')}
-            </tbody>
-          </table>
-        </div>
-      </div>
-      <div class="card">
-        <div class="card-header"><h3>Snel overzicht</h3></div>
-        <div class="card-body">
-          <div style="display:flex;gap:12px;flex-wrap:wrap">
-            ${[['Dossiernotities', dossiers.length], ['Afspraken', komendeAfspraken.length], ['Facturen', facturen.length], ['Trainingen', uitvoeringen.length]].map(([l, n]) => `
-              <div style="background:var(--bg);border-radius:8px;padding:14px 18px;flex:1;min-width:80px">
-                <div style="font-size:24px;font-weight:800">${n}</div>
-                <div style="font-size:12px;color:var(--navy4);margin-top:2px">${l}</div>
-              </div>`).join('')}
-          </div>
-        </div>
-      </div>
+    <div class="tabs">
+      ${tabs.map(([k, l]) => `<div class="tab${contactTab === k ? ' active' : ''}" onclick="setContactTab('${schoolId}','${contactId}','${k}')">${l}</div>`).join('')}
     </div>
-    <div class="card" style="margin-bottom:16px">
-      <div class="card-header">
-        <h3>${svgIcon('calendar', 16)} Agenda</h3>
-        <button class="btn btn-primary btn-sm" onclick="openAgendaModal('','','${schoolId}','${contactId}')">${svgIcon('add', 14)} Afspraak plannen</button>
-      </div>
-      <div class="card-body"${agendaItems.length > 0 ? ' style="padding:0"' : ''}>
-        ${agendaItems.length === 0
-          ? `<div class="empty-state">${svgIcon('calendar', 36)}<p>Nog geen afspraken</p></div>`
-          : `<table><tbody>${agendaItems.map(a => renderAgendaRow(a)).join('')}</tbody></table>`}
-      </div>
-    </div>
-    <div class="card" style="margin-bottom:16px">
-      <div class="card-header">
-        <h3>${svgIcon('training', 16)} Trainingen & werkvormen</h3>
-        ${c.schoolId ? `<button class="btn btn-primary btn-sm" onclick="openUitvoeringVanContactModal('${c.schoolId}','${contactId}')">${svgIcon('add', 14)} Uitvoering vastleggen</button>` : ''}
-      </div>
-      <div class="card-body"${uitvoeringen.length > 0 ? ' style="padding:0"' : ''}>
-        ${uitvoeringen.length === 0
-          ? `<div class="empty-state">${svgIcon('training', 36)}<p>Nog geen trainingen uitgevoerd met deze contactpersoon</p></div>`
-          : `<table>
-               <thead><tr><th>Training</th><th>Datum</th><th>Deelnemers</th><th>Score</th></tr></thead>
-               <tbody>
-                 ${uitvoeringen.map(u => {
-                   const t = getTraining(u.trainingId);
-                   return `<tr class="clickable-row" onclick="navigate('training-detail','${u.trainingId}')">
-                     <td style="font-weight:500">${esc(t?.naam || '–')}${t?.type ? ' ' + typeBadge(t.type) : ''}${t?.categorie ? ' ' + catBadge(t.categorie) : ''}</td>
-                     <td>${fmtDateShort(u.datum)}</td>
-                     <td>${u.deelnemers || '–'}</td>
-                     <td>${u.score ? renderStars(u.score) : '–'}</td>
-                   </tr>`;
-                 }).join('')}
-               </tbody>
-             </table>`}
-      </div>
-    </div>
-    <div class="card">
-      <div class="card-header">
-        <h3>Dossier</h3>
-        <div style="display:flex;gap:6px">
-          <button class="btn btn-secondary btn-sm" onclick="openBestandModalContact('${schoolId}','${contactId}')">${svgIcon('add', 14)} Bestand</button>
-          <button class="btn btn-primary btn-sm" onclick="openDossierModalContact('${schoolId}','${contactId}')">${svgIcon('add', 14)} Notitie</button>
-        </div>
-      </div>
-      <div class="card-body">
-        ${dossiers.length === 0
-          ? `<div class="empty-state">${svgIcon('note', 36)}<p>Nog geen dossiernotities</p></div>`
-          : `<div class="dossier-list">${dossiers.map(d => renderDossierItem(d, { delBtn: 'delDossier', delArg: schoolId })).join('')}</div>`}
-      </div>
-    </div>`;
+    ${tabContent}`;
 }

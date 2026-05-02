@@ -296,6 +296,20 @@ class ImapClient {
     return total;
   }
 
+  // Tel het aantal ongelezen berichten in de huidige geselecteerde map
+  async searchUnseen(): Promise<number> {
+    const res = await this.command(`SEARCH UNSEEN`);
+    let count = 0;
+    for (const line of res) {
+      const m = line.match(/^\*\s+SEARCH\b(.*)$/i);
+      if (m) {
+        const ids = m[1].trim();
+        if (ids) count += ids.split(/\s+/).filter(Boolean).length;
+      }
+    }
+    return count;
+  }
+
   // Toggle een IMAP flag (bijv. \Seen) voor een bericht via UID
   async setFlag(uid: number, flag: string, add: boolean): Promise<void> {
     const op = add ? "+FLAGS" : "-FLAGS";
@@ -552,6 +566,14 @@ serve(async (req) => {
     } else {
       total = await client.select(folder);
     }
+    // Server-side ongelezen aantal (heel postvak, niet alleen de laatste N)
+    let unread = 0;
+    try {
+      unread = await client.searchUnseen();
+    } catch (e) {
+      console.log("SEARCH UNSEEN faalde:", (e as Error).message);
+    }
+
     let messages: any[] = [];
 
     if (total > 0) {
@@ -573,6 +595,7 @@ serve(async (req) => {
         read: (m.flags || []).includes("\\Seen"),
       })),
       total,
+      unread,
     }), {
       headers: { ...corsHeaders, "Content-Type": "application/json" },
     });

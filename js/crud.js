@@ -223,6 +223,22 @@ async function delDossierBestuur(did, bestuurId) {
   await delDossier(did, null);
 }
 
+// Ontkoppel een auto-gelogde inbox-mail uit het dossier.
+// Soft-delete: het record blijft bestaan met type='inbox-archived' zodat
+// de auto-log-dedup ervoor zorgt dat de mail niet bij een volgende fetch
+// opnieuw aan het dossier wordt toegevoegd.
+async function unlinkInboxDossier(did) {
+  const d = DB.dossiers.find(x => x.id === did);
+  if (!d) return;
+  if (!confirm('Deze e-mail uit het dossier ontkoppelen?\n\nHet bericht zelf blijft in Postvak IN; alleen de vermelding bij dit contact wordt verborgen.')) return;
+  showLoading();
+  try {
+    await supa(`/rest/v1/dossiers?id=eq.${did}`, { method: 'PATCH', body: JSON.stringify({ type: 'inbox-archived' }) });
+    d.type = 'inbox-archived';
+    renderContent();
+  } catch (e) { toastError(e); } finally { hideLoading(); }
+}
+
 // ── FACTUREN ──────────────────────────────────────────────────────
 async function saveFactuur(fid) {
   const nummer = document.getElementById('f-nr').value.trim();

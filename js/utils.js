@@ -245,8 +245,20 @@ function renderDossierItem(d, opts = {}) {
   const { delBtn, delArg, schoolLabel } = opts;
   const titel = d.onderwerp || '(geen onderwerp)';
   const isBestand = d.type === 'bestand';
-  const typeIcon = isBestand ? '📎' : '📝';
+  const isInboxLogged = typeof d.id === 'string' && d.id.startsWith('inbox-');
+  const typeIcon = isBestand ? '📎' : (isInboxLogged ? '📧' : '📝');
   const typeCls  = isBestand ? 'dossier-type-bestand' : 'dossier-type-notitie';
+  const iconTitle = isBestand ? 'Bestand' : (isInboxLogged ? 'Ontvangen e-mail' : 'Notitie');
+
+  // Inbox-mails krijgen een ontkoppel-actie i.p.v. een hard delete
+  let effDelBtn = delBtn;
+  let effDelArg = delArg;
+  let delTitle = isBestand ? 'Bestand verwijderen' : 'Notitie verwijderen';
+  if (isInboxLogged && delBtn) {
+    effDelBtn = 'unlinkInboxDossier';
+    effDelArg = '';
+    delTitle = 'Ontkoppel deze e-mail uit het dossier';
+  }
 
   let bodyInhoud = '';
   if (isBestand && d.bestanden?.length) {
@@ -261,14 +273,16 @@ function renderDossierItem(d, opts = {}) {
 
   const factuurLink = renderFactuurLinkVoorDossier(d);
 
+  const delHandlerArgs = effDelArg ? `'${d.id}','${effDelArg}'` : `'${d.id}'`;
+
   return `
     <div class="dossier-item ${typeCls}">
       <div class="dossier-header" onclick="toggleDossier(this)">
-        <span class="dossier-type-icon" title="${isBestand ? 'Bestand' : 'Notitie'}">${typeIcon}</span>
+        <span class="dossier-type-icon" title="${iconTitle}">${typeIcon}</span>
         <span class="dossier-toggle">${svgIcon('chevron', 12)}</span>
         <span class="dossier-onderwerp">${esc(titel)}</span>
         <span class="dossier-date">${fmtDate(d.datum)}</span>
-        ${delBtn ? `<button class="btn btn-ghost btn-icon btn-sm" onclick="event.stopPropagation();${delBtn}('${d.id}','${delArg}')">${svgIcon('trash', 13)}</button>` : ''}
+        ${effDelBtn ? `<button class="btn btn-ghost btn-icon btn-sm" title="${delTitle}" onclick="event.stopPropagation();${effDelBtn}(${delHandlerArgs})">${svgIcon('trash', 13)}</button>` : ''}
       </div>
       <div class="dossier-body">
         <div style="font-size:12px;color:var(--navy4);margin-bottom:6px">

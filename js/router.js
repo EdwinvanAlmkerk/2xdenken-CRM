@@ -6,6 +6,7 @@ let page = 'dashboard', pageParam = null, contactParam = null;
 let schoolTab = 'info';
 let bestuurTab = 'scholen';
 let trainingTab = 'info';
+let contactTab = 'info';
 
 const PAGE_LABELS = {
   dashboard: 'Dashboard', agenda: 'Agenda', email: 'E-mail',
@@ -36,6 +37,7 @@ function navigate(p, param = null) {
   if (p === 'school-detail')    schoolTab   = 'info';
   if (p === 'bestuur-detail')   bestuurTab  = 'scholen';
   if (p === 'training-detail')  trainingTab = 'info';
+  if (p === 'contact-detail')   contactTab  = 'info';
   document.getElementById('topbar-title').textContent = PAGE_LABELS[p] || p;
   const isDetail = p.endsWith('-detail');
   document.getElementById('back-btn').style.display = isDetail ? '' : 'none';
@@ -47,6 +49,7 @@ function navigateToContact(schoolId, contactId) {
   page = 'contact-detail';
   pageParam = schoolId;
   contactParam = contactId;
+  contactTab = 'info';
   document.getElementById('topbar-title').textContent = PAGE_LABELS['contact-detail'];
   document.getElementById('back-btn').style.display = '';
   renderNav();
@@ -93,3 +96,4 @@ function renderContent() {
 function setSchoolTab(id, tab)    { schoolTab   = tab; renderContent(); }
 function setBestuurTab(id, tab)   { bestuurTab  = tab; renderContent(); }
 function setTrainingTab(id, tab)  { trainingTab = tab; renderContent(); }
+function setContactTab(schoolId, contactId, tab) { contactTab = tab; renderContent(); }

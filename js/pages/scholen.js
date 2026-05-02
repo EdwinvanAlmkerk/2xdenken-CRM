@@ -218,15 +218,22 @@ function renderSchoolDetail(id) {
                   <div style="margin-top:10px;padding-top:10px;border-top:1px solid var(--bg3)">
                     <div style="font-size:11px;font-weight:700;text-transform:uppercase;letter-spacing:.6px;color:var(--navy4);margin-bottom:8px">Dossiernotities</div>
                     <div style="display:flex;flex-direction:column;gap:8px">
-                      ${cDossiers.map(d => `
-                        <div style="background:var(--bg);border-radius:6px;padding:9px 12px;border-left:3px solid var(--navy3)">
+                      ${cDossiers.map(d => {
+                        const isInbox = typeof d.id === 'string' && d.id.startsWith('inbox-');
+                        const delHandler = isInbox
+                          ? `unlinkInboxDossier('${d.id}')`
+                          : `delDossier('${d.id}','${id}')`;
+                        const delTitle = isInbox ? 'Ontkoppel deze e-mail uit het dossier' : 'Notitie verwijderen';
+                        return `
+                        <div style="background:var(--bg);border-radius:6px;padding:9px 12px;border-left:3px solid ${isInbox ? 'var(--accent2)' : 'var(--navy3)'}">
                           <div style="display:flex;justify-content:space-between;align-items:center;margin-bottom:4px;gap:8px">
-                            <span style="font-size:11px;color:var(--navy4)">${fmtDate(d.datum)}</span>
-                            <button class="btn btn-ghost btn-icon btn-sm" onclick="delDossier('${d.id}','${id}')" style="padding:2px">${svgIcon('trash', 12)}</button>
+                            <span style="font-size:11px;color:var(--navy4)">${isInbox ? '📧 ' : ''}${fmtDate(d.datum)}</span>
+                            <button class="btn btn-ghost btn-icon btn-sm" title="${delTitle}" onclick="${delHandler}" style="padding:2px">${svgIcon('trash', 12)}</button>
                           </div>
                           <div style="font-size:13px;color:var(--navy2);line-height:1.5;white-space:pre-wrap">${esc(d.tekst)}</div>
                           ${renderBijlagen(d, id)}
-                        </div>`).join('')}
+                        </div>`;
+                      }).join('')}
                     </div>
                   </div>` : '';
               })()}

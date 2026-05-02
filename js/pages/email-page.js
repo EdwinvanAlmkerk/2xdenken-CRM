@@ -9,10 +9,13 @@ let _inboxMessages = [];
 let _inboxLoading = false;
 let _inboxError = '';
 let _inboxFetchedOnce = false;
+let _inboxTotal = 0;
+let _inboxUnread = 0;
 let _trashMessages = [];
 let _trashLoading = false;
 let _trashError = '';
 let _trashFetchedOnce = false;
+let _trashTotal = 0;
 let _foldersCollapsed = {};
 
 // ── LocalStorage cache helpers (stale-while-revalidate) ──────────
@@ -50,12 +53,17 @@ async function selectInboxEmail(uid) {
   // Markeer als gelezen (zonder op response te wachten, optimistic update)
   if (msg && !msg.read) {
     msg.read = true;
-    if (imapFolder === 'INBOX') _saveMailCache(INBOX_CACHE_KEY, _inboxMessages);
-    else _saveMailCache(TRASH_CACHE_KEY, _trashMessages);
+    if (imapFolder === 'INBOX') {
+      _inboxUnread = Math.max(0, _inboxUnread - 1);
+      _saveMailCache(INBOX_CACHE_KEY, _inboxMessages);
+    } else {
+      _saveMailCache(TRASH_CACHE_KEY, _trashMessages);
+    }
     renderContent();
     // Server-side synchroniseren (fire-and-forget, maar met rollback bij fout)
     markMailSeen(uid, true, imapFolder).catch(() => {
       msg.read = false;
+      if (imapFolder === 'INBOX') _inboxUnread++;
       renderContent();
     });
   }
@@ -78,6 +86,10 @@ async function selectInboxEmail(uid) {
     if (msg) {
       msg.body = data.body || '';
       msg._bodyLoaded = true;
+      // Update dossier-entry met de volledige body als hij eerder zonder body is gelogd
+      if (imapFolder === 'INBOX' && typeof updateInboxDossierBody === 'function') {
+        updateInboxDossierBody(msg).catch(err => console.warn('Dossier-body update mislukt:', err));
+      }
     }
     renderContent();
   } catch (e) {
@@ -118,6 +130,12 @@ async function deleteMail(uid) {
   // Optimistisch: verwijder lokaal, sluit detailvenster
   const removed = sourceArr.splice(idx, 1)[0];
   _emailSelected = null;
+  if (isTrash) {
+    _trashTotal = Math.max(0, _trashTotal - 1);
+  } else {
+    _inboxTotal = Math.max(0, _inboxTotal - 1);
+    if (removed && !removed.read) _inboxUnread = Math.max(0, _inboxUnread - 1);
+  }
   _saveMailCache(isTrash ? TRASH_CACHE_KEY : INBOX_CACHE_KEY, sourceArr);
   renderContent();
 
@@ -137,6 +155,12 @@ async function deleteMail(uid) {
   } catch (e) {
     // Rollback
     sourceArr.splice(idx, 0, removed);
+    if (isTrash) {
+      _trashTotal++;
+    } else {
+      _inboxTotal++;
+      if (removed && !removed.read) _inboxUnread++;
+    }
     _saveMailCache(isTrash ? TRASH_CACHE_KEY : INBOX_CACHE_KEY, sourceArr);
     alert('Verwijderen mislukt: ' + e.message);
     renderContent();
@@ -152,12 +176,18 @@ async function toggleMailRead(uid) {
   if (!msg) return;
   const newState = !msg.read;
   msg.read = newState;
+  if (imapFolder === 'INBOX') {
+    _inboxUnread = newState ? Math.max(0, _inboxUnread - 1) : _inboxUnread + 1;
+  }
   _saveMailCache(isTrash ? TRASH_CACHE_KEY : INBOX_CACHE_KEY, sourceArr);
   renderContent();
   try {
     await markMailSeen(uid, newState, imapFolder);
   } catch (e) {
     msg.read = !newState; // rollback
+    if (imapFolder === 'INBOX') {
+      _inboxUnread = newState ? _inboxUnread + 1 : Math.max(0, _inboxUnread - 1);
+    }
     alert('Kon leesstatus niet wijzigen: ' + e.message);
     renderContent();
   }
@@ -182,6 +212,7 @@ async function fetchTrash() {
     const data = await res.json();
     if (!res.ok || data.error) throw new Error(data.error || `HTTP ${res.status}`);
     _trashMessages = data.messages || [];
+    _trashTotal = data.total || 0;
     _trashError = '';
     _saveMailCache(TRASH_CACHE_KEY, _trashMessages);
   } catch (e) {
@@ -191,6 +222,23 @@ async function fetchTrash() {
   _trashLoading = false;
   _trashFetchedOnce = true;
   renderContent();
+}
+
+// Achtergrond: log inbox-berichten in dossiers van gematchte contacten
+async function autoLogInboxToDossiers() {
+  if (typeof logInboxToDossier !== 'function') return;
+  let logged = 0;
+  for (const msg of _inboxMessages) {
+    try {
+      if (await logInboxToDossier(msg)) logged++;
+    } catch (e) {
+      console.warn('Auto-log fail voor UID', msg?.uid, e);
+    }
+  }
+  if (logged > 0) {
+    console.log(`${logged} inbox-bericht${logged === 1 ? '' : 'en'} gelogd in contactdossier${logged === 1 ? '' : 's'}`);
+    if (typeof renderContent === 'function') renderContent();
+  }
 }
 
 async function fetchInbox() {
@@ -213,8 +261,12 @@ async function fetchInbox() {
     const data = await res.json();
     if (!res.ok || data.error) throw new Error(data.error || `HTTP ${res.status}`);
     _inboxMessages = data.messages || [];
+    _inboxTotal = data.total || 0;
+    _inboxUnread = data.unread || 0;
     _inboxError = '';
     _saveMailCache(INBOX_CACHE_KEY, _inboxMessages);
+    // Achtergrond-taak: auto-log inbox-berichten van bekende contacten in hun dossier
+    queueMicrotask(() => autoLogInboxToDossiers());
   } catch (e) {
     _inboxError = e.message;
     // Als we cached content hebben, laten we die staan — alleen leegmaken als er echt niets is
@@ -322,10 +374,10 @@ function renderEmailPage() {
             ${esc(emailAddr)}
           </div>
           ${!_foldersCollapsed['account'] ? `
-            ${renderFolder('inbox', 'Postvak IN', 'mail', _inboxMessages.filter(m => !m.read).length)}
+            ${renderFolder('inbox', 'Postvak IN', 'mail', _inboxFetchedOnce ? _inboxUnread : _inboxMessages.filter(m => !m.read).length)}
             ${renderFolder('verzonden', 'Verzonden items', 'chevron', verzondenCount)}
             ${renderFolder('concepten', 'Concepten', 'edit', conceptCount)}
-            ${renderFolder('verwijderd', 'Verwijderde items', 'trash', 0)}
+            ${renderFolder('verwijderd', 'Verwijderde items', 'trash', _trashFetchedOnce ? _trashTotal : _trashMessages.length, { muted: true })}
           ` : ''}
           ` : `
           <!-- Zonder IMAP: alleen CRM-mappen -->
@@ -360,6 +412,27 @@ function renderEmailPage() {
           ${_emailFolder === 'inbox' ? `<button class="btn btn-ghost btn-icon btn-sm" onclick="fetchInbox()" title="Vernieuwen">${_inboxLoading ? '<div class="spinner" style="width:14px;height:14px;border-width:2px"></div>' : svgIcon('settings', 15)}</button>` : ''}
           ${_emailFolder === 'verwijderd' ? `<button class="btn btn-ghost btn-icon btn-sm" onclick="fetchTrash()" title="Vernieuwen">${_trashLoading ? '<div class="spinner" style="width:14px;height:14px;border-width:2px"></div>' : svgIcon('settings', 15)}</button>` : ''}
         </div>
+
+        <!-- Statusregel: totaal + ongelezen -->
+        ${(() => {
+          let html = '';
+          if (_emailFolder === 'inbox') {
+            const total = _inboxFetchedOnce ? _inboxTotal : _inboxMessages.length;
+            const unread = _inboxFetchedOnce ? _inboxUnread : _inboxMessages.filter(m => !m.read).length;
+            html = `<strong style="color:var(--navy3);font-weight:700">${total}</strong> ${total === 1 ? 'bericht' : 'berichten'}` +
+              (unread > 0
+                ? ` · <strong style="color:var(--accent);font-weight:700">${unread}</strong> ongelezen`
+                : (total > 0 ? ` · <span style="color:var(--s-groen)">alles gelezen</span>` : ''));
+          } else if (_emailFolder === 'verwijderd') {
+            const total = _trashFetchedOnce ? _trashTotal : _trashMessages.length;
+            html = `<strong style="color:var(--navy3);font-weight:700">${total}</strong> ${total === 1 ? 'bericht' : 'berichten'}`;
+          } else if (_emailFolder === 'verzonden') {
+            html = `<strong style="color:var(--navy3);font-weight:700">${verzondenCount}</strong> ${verzondenCount === 1 ? 'verzonden bericht' : 'verzonden berichten'}`;
+          } else if (_emailFolder === 'concepten') {
+            html = `<strong style="color:var(--navy3);font-weight:700">${conceptCount}</strong> ${conceptCount === 1 ? 'concept' : 'concepten'}`;
+          }
+          return html ? `<div style="padding:5px 16px;font-size:11.5px;color:var(--navy4);background:rgba(30,45,74,0.025);border-bottom:1px solid rgba(30,45,74,0.07)">${html}</div>` : '';
+        })()}
 
         <!-- Kolom-headers -->
         <div style="display:grid;grid-template-columns:1fr 1.5fr 140px;padding:8px 16px;border-bottom:1px solid rgba(30,45,74,0.14);background:rgba(30,45,74,0.045);font-size:10.5px;font-weight:700;text-transform:uppercase;letter-spacing:.6px;color:var(--navy3)">
@@ -429,12 +502,16 @@ function renderEmailPage() {
 }
 
 // ── Folder item renderen ─────────────────────────────────────────
-function renderFolder(id, label, icon, count) {
+// opts.muted: badge tonen als rustige totalteller i.p.v. opvallende ongelezen-teller
+function renderFolder(id, label, icon, count, opts) {
   const isActive = _emailFolder === id;
-  return `<div onclick="setEmailFolder('${id}')" style="display:flex;align-items:center;gap:8px;padding:7px 12px 7px 24px;cursor:pointer;font-size:13px;font-weight:${isActive ? '700' : '400'};color:${isActive ? 'var(--accent)' : 'var(--navy3)'};background:${isActive ? 'var(--mint)' : 'transparent'};border-left:2px solid ${isActive ? 'var(--accent)' : 'transparent'};transition:all .12s">
+  const muted = opts && opts.muted === true;
+  // Mapnaam wordt vet als er ongelezen items zijn (niet bij muted totalen)
+  const labelBold = isActive || (count > 0 && !muted);
+  return `<div onclick="setEmailFolder('${id}')" style="display:flex;align-items:center;gap:8px;padding:7px 12px 7px 24px;cursor:pointer;font-size:13px;font-weight:${labelBold ? '700' : '400'};color:${isActive ? 'var(--accent)' : 'var(--navy3)'};background:${isActive ? 'var(--mint)' : 'transparent'};border-left:2px solid ${isActive ? 'var(--accent)' : 'transparent'};transition:all .12s">
     ${svgIcon(icon, 14)}
     <span style="flex:1">${label}</span>
-    ${count > 0 ? `<span style="font-size:11px;font-weight:700;color:${isActive ? 'var(--accent)' : 'var(--navy4)'}">${count}</span>` : ''}
+    ${count > 0 ? `<span style="font-size:11px;font-weight:${muted ? '500' : '700'};color:${muted ? 'var(--navy4)' : 'var(--accent)'}">${count}</span>` : ''}
   </div>`;
 }
 

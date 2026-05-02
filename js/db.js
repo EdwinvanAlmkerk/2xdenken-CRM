@@ -322,8 +322,11 @@ function rebuildIndexes() {
   i.trainingCatById  = _byId(DB.trainingCategories || []);
   i.contactenBySchool = _groupBy(DB.contacten || [], 'schoolId');
   i.scholenByBestuur  = _groupBy(DB.scholen || [],   'bestuurId');
-  i.dossiersBySchool  = _groupBy(DB.dossiers || [],  'schoolId');
-  i.dossiersByContact = _groupBy(DB.dossiers || [],  'contactId');
+  // Verberg ontkoppelde inbox-mails (soft-delete tombstones) overal
+  // behalve in dossierById — die blijft compleet voor dedup-checks
+  const visibleDossiers = (DB.dossiers || []).filter(d => d.type !== 'inbox-archived');
+  i.dossiersBySchool  = _groupBy(visibleDossiers, 'schoolId');
+  i.dossiersByContact = _groupBy(visibleDossiers, 'contactId');
   i.facturenBySchool  = _groupBy(DB.facturen || [],  'schoolId');
   i.facturenByBestuur = _groupBy(DB.facturen || [],  'bestuurId');
   i.facturenByContact = _groupBy(DB.facturen || [],  'contactId');
