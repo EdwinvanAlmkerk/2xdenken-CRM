@@ -271,6 +271,7 @@ function renderTrainingenPage(search = '') {
         <button onclick="setTrainingenView('lijst')" title="Lijstweergave"
           style="border:none;padding:7px 11px;cursor:pointer;font-size:12.5px;font-weight:700;display:inline-flex;align-items:center;gap:6px;${_trainingenView==='lijst'?'background:var(--accent);color:white':'background:white;color:var(--navy3)'}">${svgIcon('list', 14)} Lijst</button>
       </div>
+      <button class="btn btn-secondary" onclick="openUitvoeringenExportModal()" title="Excel/PDF van uitgevoerde trainingen" style="border-color:var(--groen);color:var(--groen);font-weight:700">${svgIcon('download', 15)} Uitvoeringen exporteren</button>
       <button class="btn btn-primary" onclick="openTrainingModal()">${svgIcon('add')} Nieuwe training</button>
     </div>
 
@@ -591,4 +592,281 @@ function pickStar(n) {
   });
   const lbl = document.getElementById('star-label');
   if (lbl) lbl.textContent = n + ' / 5';
+}
+
+// ── Uitvoeringen-export (Excel/PDF) ─────────────────────────────
+function _getUitvoeringJaren() {
+  const set = new Set();
+  for (const u of (DB.uitvoeringen || [])) {
+    if (u?.datum) {
+      const j = new Date(u.datum).getFullYear();
+      if (!isNaN(j)) set.add(j);
+    }
+  }
+  return [...set].sort((a, b) => b - a);
+}
+
+function _filterUitvoeringen(f) {
+  const items = (DB.uitvoeringen || []).filter(u => {
+    if (f.jaar && f.jaar !== 'alle') {
+      const j = u?.datum ? new Date(u.datum).getFullYear() : null;
+      if (j !== Number(f.jaar)) return false;
+    }
+    if (f.schoolId && f.schoolId !== 'alle' && u.schoolId !== f.schoolId) return false;
+    if (f.trainingId && f.trainingId !== 'alle' && u.trainingId !== f.trainingId) return false;
+    return true;
+  });
+  return items.sort((a, b) => new Date(b.datum || 0) - new Date(a.datum || 0));
+}
+
+function _exportFilterDescription(f) {
+  const parts = [];
+  parts.push(f.jaar === 'alle' ? 'Alle jaren' : `Jaar ${f.jaar}`);
+  if (f.schoolId !== 'alle') parts.push(`School: ${getSchool(f.schoolId)?.naam || '–'}`);
+  if (f.trainingId !== 'alle') parts.push(`Training: ${getTraining(f.trainingId)?.naam || '–'}`);
+  return parts.join(' · ');
+}
+
+function _getExportFilters() {
+  return {
+    jaar: document.getElementById('exp-jaar')?.value || 'alle',
+    schoolId: document.getElementById('exp-school')?.value || 'alle',
+    trainingId: document.getElementById('exp-training')?.value || 'alle',
+  };
+}
+
+function updateExportUitvoeringenCount() {
+  const f = _getExportFilters();
+  const items = _filterUitvoeringen(f);
+  const el = document.getElementById('exp-preview');
+  if (!el) return;
+  const aantal = items.length;
+  const scholen = new Set(items.map(u => u.schoolId)).size;
+  const trainingen = new Set(items.map(u => u.trainingId)).size;
+  el.innerHTML = aantal === 0
+    ? `<span style="color:var(--navy4)">Geen uitvoeringen gevonden voor deze filters.</span>`
+    : `<strong>${aantal}</strong> uitvoering${aantal === 1 ? '' : 'en'} · ${scholen} scho${scholen === 1 ? 'ol' : 'len'} · ${trainingen} training${trainingen === 1 ? '' : 'en'}`;
+}
+
+function openUitvoeringenExportModal() {
+  if (!DB.uitvoeringen?.length) {
+    showToast('Er zijn nog geen uitvoeringen om te exporteren', 'error');
+    return;
+  }
+  const jaren = _getUitvoeringJaren();
+  const scholen = [...(DB.scholen || [])].sort((a, b) => a.naam.localeCompare(b.naam, 'nl'));
+  const trainingen = [...(DB.trainingen || [])].sort((a, b) => a.naam.localeCompare(b.naam, 'nl'));
+
+  showModal('Uitvoeringen exporteren',
+    `<p style="font-size:13px;color:var(--navy3);margin-bottom:16px">Filter de uitvoeringen die je wilt exporteren. Laat een filter op "alle" om alles mee te nemen.</p>
+     <div class="form-row">
+       <div class="form-group">
+         <label>Jaar</label>
+         <select id="exp-jaar" onchange="updateExportUitvoeringenCount()">
+           <option value="alle">Alle jaren</option>
+           ${jaren.map(j => `<option value="${j}">${j}</option>`).join('')}
+         </select>
+       </div>
+       <div class="form-group">
+         <label>School</label>
+         <select id="exp-school" onchange="updateExportUitvoeringenCount()">
+           <option value="alle">Alle scholen</option>
+           ${scholen.map(s => `<option value="${s.id}">${esc(s.naam)}</option>`).join('')}
+         </select>
+       </div>
+     </div>
+     <div class="form-group">
+       <label>Training / Werkvorm</label>
+       <select id="exp-training" onchange="updateExportUitvoeringenCount()">
+         <option value="alle">Alle trainingen</option>
+         ${trainingen.map(t => `<option value="${t.id}">${esc(t.naam)}</option>`).join('')}
+       </select>
+     </div>
+     <div id="exp-preview" style="background:var(--bg);border-radius:8px;padding:12px 16px;font-size:13px;color:var(--navy3);margin-top:6px"></div>`,
+    `<button class="btn btn-secondary" onclick="closeModal()">Annuleren</button>
+     <button class="btn" onclick="exportUitvoeringenPDF()" style="background:#FBF3E0;color:#9B6B00;font-weight:700">${svgIcon('print', 14)} PDF / Afdrukken</button>
+     <button class="btn btn-primary" onclick="exportUitvoeringenExcel()" style="background:#2E7D52">${svgIcon('download', 14)} Excel (CSV)</button>`);
+
+  updateExportUitvoeringenCount();
+}
+
+function exportUitvoeringenExcel() {
+  const f = _getExportFilters();
+  const items = _filterUitvoeringen(f);
+  if (!items.length) { showToast('Geen uitvoeringen om te exporteren', 'error'); return; }
+
+  const Q = s => '"' + String(s ?? '').replace(/"/g, '""').replace(/\r?\n/g, ' ').replace(/\t/g, ' ') + '"';
+  const titel = 'Uitvoeringenoverzicht 2xDenken';
+
+  const headers = ['Datum', 'School', 'Bestuur', 'Plaats', 'Training', 'Type', 'Categorie',
+    'Contactpersoon', 'Functie', 'Deelnemers', 'Score (1-5)', 'Evaluatie', 'Wat ging goed', 'Wat kon beter'];
+  const cols = headers.length;
+  const empty = Array(cols).fill('');
+
+  const rows = [
+    [Q(titel), ...Array(cols - 1).fill('')],
+    [Q(_exportFilterDescription(f)), ...Array(cols - 1).fill('')],
+    empty,
+    headers.map(Q),
+    ...items.map(u => {
+      const school = getSchool(u.schoolId);
+      const best = school ? getBestuur(school.bestuurId) : null;
+      const training = getTraining(u.trainingId);
+      const contact = u.contactId ? getContact(u.contactId) : null;
+      return [
+        Q(u.datum ? new Date(u.datum).toLocaleDateString('nl-NL') : ''),
+        Q(school?.naam || ''),
+        Q(best?.naam || ''),
+        Q(school?.plaats || ''),
+        Q(training?.naam || ''),
+        Q(trainingTypeLabel(training?.type)),
+        Q(trainingCategoryLabel(training?.categorie)),
+        Q(contact?.naam || ''),
+        Q(contact?.functie || ''),
+        Q(u.deelnemers ?? ''),
+        Q(u.score ?? ''),
+        Q(u.evaluatie || ''),
+        Q(u.watGingGoed || ''),
+        Q(u.watKonBeter || ''),
+      ];
+    }),
+    empty,
+    [Q(`Geëxporteerd op: ${new Date().toLocaleDateString('nl-NL')} | Aantal uitvoeringen: ${items.length}`), ...Array(cols - 1).fill('')],
+  ];
+
+  const csv  = '﻿' + rows.map(r => r.join(';')).join('\r\n');
+  const blob = new Blob([csv], { type: 'text/csv;charset=utf-8;' });
+  const url  = URL.createObjectURL(blob);
+  const a    = document.createElement('a');
+  const ds = new Date().toISOString().slice(0, 10);
+  a.href = url;
+  a.download = `2xDenken_uitvoeringen_${ds}.csv`;
+  document.body.appendChild(a);
+  a.click();
+  document.body.removeChild(a);
+  URL.revokeObjectURL(url);
+  showToast(`${items.length} uitvoering${items.length === 1 ? '' : 'en'} geëxporteerd`);
+}
+
+function exportUitvoeringenPDF() {
+  const f = _getExportFilters();
+  const items = _filterUitvoeringen(f);
+  if (!items.length) { showToast('Geen uitvoeringen om te exporteren', 'error'); return; }
+
+  const filterDesc = _exportFilterDescription(f);
+  const exportDate = new Date().toLocaleDateString('nl-NL', { day: 'numeric', month: 'long', year: 'numeric' });
+  const totaalScores = items.filter(u => u.score);
+  const avg = totaalScores.length
+    ? (totaalScores.reduce((s, u) => s + u.score, 0) / totaalScores.length).toFixed(1)
+    : null;
+  const uniekeScholen = new Set(items.map(u => u.schoolId)).size;
+  const uniekeTrainingen = new Set(items.map(u => u.trainingId)).size;
+  const totaalDeelnemers = items.reduce((s, u) => s + (Number(u.deelnemers) || 0), 0);
+
+  const rowsHtml = items.map(u => {
+    const school = getSchool(u.schoolId);
+    const training = getTraining(u.trainingId);
+    const contact = u.contactId ? getContact(u.contactId) : null;
+    const stars = u.score ? '★'.repeat(u.score) + '<span style="color:#ccc">' + '★'.repeat(5 - u.score) + '</span>' : '<span style="color:#bbb">–</span>';
+    return `<tr>
+      <td class="nowrap">${u.datum ? new Date(u.datum).toLocaleDateString('nl-NL') : '–'}</td>
+      <td><strong>${esc(school?.naam || '–')}</strong>${school?.plaats ? `<div class="sub">${esc(school.plaats)}</div>` : ''}</td>
+      <td>${esc(training?.naam || '–')}<div class="sub">${esc(trainingTypeLabel(training?.type))}</div></td>
+      <td>${contact ? esc(contact.naam) : '<span style="color:#bbb">–</span>'}${contact?.functie ? `<div class="sub">${esc(contact.functie)}</div>` : ''}</td>
+      <td class="nowrap right">${u.deelnemers ?? '–'}</td>
+      <td class="nowrap"><span class="stars">${stars}</span></td>
+      <td>${u.evaluatie ? esc(u.evaluatie) : '<span style="color:#bbb">–</span>'}</td>
+    </tr>`;
+  }).join('');
+
+  const html = `<!DOCTYPE html>
+<html lang="nl">
+<head>
+<meta charset="UTF-8"/>
+<title>Uitvoeringenoverzicht — 2xDenken</title>
+<link href="https://fonts.googleapis.com/css2?family=Nunito:wght@400;600;700;800&display=swap" rel="stylesheet">
+<style>
+  *{box-sizing:border-box;margin:0;padding:0}
+  :root{--teal:#2C8C8A;--teal-l:#E8F3F2;--ink:#2A2F3A;--ink-l:#5A6270;--ink-xl:#8B92A0;--line:#E8E4DC;--bg:#FAF7F2}
+  body{font-family:'Nunito',Arial,sans-serif;font-size:9.5pt;color:var(--ink);background:#fff;line-height:1.45}
+  @page{size:A4 landscape;margin:12mm}
+  @media print{.no-print{display:none!important}}
+  .page{padding:18px 22px}
+  .header{display:flex;justify-content:space-between;align-items:flex-end;margin-bottom:14px;padding-bottom:10px;border-bottom:2px solid var(--teal)}
+  h1{font-size:18pt;font-weight:800;color:var(--teal);letter-spacing:-0.3px}
+  .subtitle{font-size:10pt;color:var(--ink-l);margin-top:2px}
+  .meta{font-size:9pt;color:var(--ink-l);text-align:right;line-height:1.6}
+  .stats{display:grid;grid-template-columns:repeat(4,1fr);gap:10px;margin-bottom:16px}
+  .stat{background:var(--teal-l);border-radius:6px;padding:9px 12px}
+  .stat-label{font-size:8pt;color:var(--ink-l);text-transform:uppercase;letter-spacing:0.6px;font-weight:700}
+  .stat-value{font-size:14pt;font-weight:800;color:var(--teal);margin-top:1px}
+  table{width:100%;border-collapse:collapse;font-size:9pt}
+  thead th{background:var(--bg);font-size:8.5pt;font-weight:700;color:var(--ink-l);text-transform:uppercase;letter-spacing:0.5px;text-align:left;padding:8px 10px;border-bottom:2px solid var(--line)}
+  thead th.right{text-align:right}
+  tbody td{padding:8px 10px;vertical-align:top;border-bottom:1px solid var(--line)}
+  tbody tr:nth-child(even){background:#FAFAF7}
+  td.nowrap{white-space:nowrap}
+  td.right{text-align:right}
+  .sub{font-size:8pt;color:var(--ink-xl);margin-top:1px}
+  .stars{color:#E4A800;font-size:10pt;letter-spacing:1px}
+  .footer{margin-top:14px;padding-top:10px;border-top:1px solid var(--line);font-size:8pt;color:var(--ink-xl);text-align:center}
+  .print-bar{margin:10px 22px 0;display:flex;gap:10px}
+  .pbtn{padding:9px 18px;border:none;border-radius:6px;font-family:'Nunito',sans-serif;font-size:12px;cursor:pointer;font-weight:700}
+  .pb-p{background:var(--teal);color:white}
+  .pb-s{background:#f0f0f0;color:#333;border:1px solid #ccc}
+</style>
+</head>
+<body>
+<div class="no-print print-bar">
+  <button class="pbtn pb-p" onclick="window.print()">🖨 Afdrukken / Opslaan als PDF</button>
+  <button class="pbtn pb-s" onclick="window.close()">Sluiten</button>
+</div>
+<div class="page">
+  <div class="header">
+    <div>
+      <h1>Uitvoeringenoverzicht</h1>
+      <div class="subtitle">${esc(filterDesc)}</div>
+    </div>
+    <div class="meta">
+      <strong style="color:var(--ink)">2xDenken</strong><br/>
+      Geëxporteerd op ${esc(exportDate)}
+    </div>
+  </div>
+
+  <div class="stats">
+    <div class="stat"><div class="stat-label">Uitvoeringen</div><div class="stat-value">${items.length}</div></div>
+    <div class="stat"><div class="stat-label">Scholen bereikt</div><div class="stat-value">${uniekeScholen}</div></div>
+    <div class="stat"><div class="stat-label">Trainingen</div><div class="stat-value">${uniekeTrainingen}</div></div>
+    <div class="stat"><div class="stat-label">${avg !== null ? 'Gem. score' : 'Deelnemers'}</div><div class="stat-value">${avg !== null ? avg + ' / 5' : totaalDeelnemers}</div></div>
+  </div>
+
+  <table>
+    <thead>
+      <tr>
+        <th>Datum</th>
+        <th>School</th>
+        <th>Training</th>
+        <th>Contactpersoon</th>
+        <th class="right">Deelnemers</th>
+        <th>Score</th>
+        <th>Evaluatie</th>
+      </tr>
+    </thead>
+    <tbody>${rowsHtml}</tbody>
+  </table>
+
+  <div class="footer">2xDenken — Uitvoeringenoverzicht — Pagina <span class="pageNum"></span></div>
+</div>
+</body>
+</html>`;
+
+  const w = window.open('', '_blank');
+  if (!w) {
+    showToast('Pop-up geblokkeerd. Sta pop-ups toe voor deze site.', 'error');
+    return;
+  }
+  w.document.open();
+  w.document.write(html);
+  w.document.close();
+  closeModal();
 }
