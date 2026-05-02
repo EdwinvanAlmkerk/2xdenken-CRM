@@ -148,8 +148,8 @@ function renderContactDetail(schoolId, contactId) {
 
   const tabs = [
     ['info', 'Overzicht'],
-    ['agenda', `Agenda${agendaItems.length ? ` (${agendaItems.length})` : ''}`],
-    ['trainingen', `Trainingen${uitvoeringen.length ? ` (${uitvoeringen.length})` : ''}`],
+    ['agenda', 'Agenda'],
+    ['trainingen', 'Trainingen'],
     ['dossier', 'Dossier'],
   ];
   let tabContent = '';
