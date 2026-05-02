@@ -278,11 +278,3 @@ window.addEventListener('keydown', e => {
 //    stille auto-login meer plaatsvindt.
 localStorage.removeItem('crm_session');
 initPasswordRecoveryFromUrl();
-
-// Kopieer login-logo naar sidebar zodat dezelfde afbeelding zichtbaar is
-// linksboven na inloggen (zonder de base64-data te dupliceren in de HTML).
-(function syncSidebarLogo() {
-  const src = document.querySelector('.login-logo img')?.getAttribute('src');
-  const target = document.getElementById('sidebar-brand-logo');
-  if (src && target) target.src = src;
-})();
