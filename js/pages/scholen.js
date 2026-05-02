@@ -198,7 +198,7 @@ function renderSchoolDetail(id) {
             <div class="contact-card">
               <div style="display:flex;justify-content:space-between;align-items:flex-start">
                 <div>
-                  <div class="contact-name">${esc(c.naam)}</div>
+                  <div class="contact-name" onclick="navigateToContact('${id}','${c.id}')" style="cursor:pointer" title="Open contactpersoon">${esc(c.naam)}</div>
                   <div class="contact-role">${esc(c.functie || '')}</div>
                   ${badge(c.type)}
                 </div>
