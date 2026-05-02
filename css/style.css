@@ -191,6 +191,7 @@ body::before {
   padding: 0 28px; height: 60px;
   display: flex; align-items: center; justify-content: space-between; flex-shrink: 0;
   box-shadow: 0 1px 4px rgba(30,45,74,0.04);
+  position: relative; z-index: 20;
 }
 .topbar-left { display: flex; align-items: center; gap: 10px; }
 .topbar-title { font-size: 20px; font-weight: 700; color: var(--text); letter-spacing: -0.3px; }
