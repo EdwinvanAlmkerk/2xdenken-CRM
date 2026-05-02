@@ -214,6 +214,8 @@ let _trainingenView = (() => {
   try { return localStorage.getItem('crm_trainingen_view') === 'lijst' ? 'lijst' : 'tegels'; }
   catch (e) { return 'tegels'; }
 })();
+let _trainingSortCol = 'naam';
+let _trainingSortDir = 'asc';
 
 const _renderTrainingenDeb = debounce(() => smartRender(() => renderTrainingenPage(document.getElementById('search-trainingen')?.value || '')), 140);
 function searchTrainingen(v) { _renderTrainingenDeb(); }
@@ -223,6 +225,47 @@ function setTrainingenView(v) {
   _trainingenView = v === 'lijst' ? 'lijst' : 'tegels';
   try { localStorage.setItem('crm_trainingen_view', _trainingenView); } catch (e) {}
   smartRender(() => renderTrainingenPage(document.getElementById('search-trainingen')?.value || ''));
+}
+function sortTrainingen(col) {
+  if (_trainingSortCol === col) {
+    _trainingSortDir = _trainingSortDir === 'asc' ? 'desc' : 'asc';
+  } else {
+    _trainingSortCol = col;
+    _trainingSortDir = (col === 'uitvoeringen' || col === 'score') ? 'desc' : 'asc';
+  }
+  smartRender(() => renderTrainingenPage(document.getElementById('search-trainingen')?.value || ''));
+}
+
+function _trainingAvgScore(trainingId) {
+  const scored = (DB.uitvoeringen || []).filter(u => u.trainingId === trainingId && u.score);
+  if (!scored.length) return null;
+  return scored.reduce((s, u) => s + u.score, 0) / scored.length;
+}
+
+function _sortTrainingenList(list) {
+  const dir = _trainingSortDir === 'asc' ? 1 : -1;
+  return [...list].sort((a, b) => {
+    switch (_trainingSortCol) {
+      case 'naam':       return dir * (a.naam || '').localeCompare(b.naam || '', 'nl');
+      case 'type':       return dir * trainingTypeLabel(a.type).localeCompare(trainingTypeLabel(b.type), 'nl');
+      case 'categorie':  return dir * trainingCategoryLabel(a.categorie).localeCompare(trainingCategoryLabel(b.categorie), 'nl');
+      case 'uitvoeringen': {
+        const av = uitvoeringenVanTraining(a.id).length;
+        const bv = uitvoeringenVanTraining(b.id).length;
+        return dir * (av - bv);
+      }
+      case 'score': {
+        const av = _trainingAvgScore(a.id);
+        const bv = _trainingAvgScore(b.id);
+        // null altijd onderaan, ongeacht richting
+        if (av === null && bv === null) return 0;
+        if (av === null) return 1;
+        if (bv === null) return -1;
+        return dir * (av - bv);
+      }
+      default: return 0;
+    }
+  });
 }
 
 function renderTrainingenPage(search = '') {
@@ -285,20 +328,29 @@ function renderTrainingenPage(search = '') {
         </div>
       </div>` : (filtered.length === 0 ? `
       <div class="card"><div class="empty-state"><p>Geen trainingen gevonden met deze filters.</p></div></div>` : (
-      _trainingenView === 'lijst' ? `
+      _trainingenView === 'lijst' ? (() => {
+        const sorted = _sortTrainingenList(filtered);
+        const arrow = col => _trainingSortCol !== col
+          ? `<span style="opacity:.25;margin-left:4px;font-size:10px">⇅</span>`
+          : _trainingSortDir === 'asc'
+            ? `<span style="margin-left:4px;font-size:10px;color:var(--navy)">▲</span>`
+            : `<span style="margin-left:4px;font-size:10px;color:var(--navy)">▼</span>`;
+        const th = (col, label, align = 'left') =>
+          `<th style="cursor:pointer;user-select:none;white-space:nowrap;text-align:${align}" onclick="sortTrainingen('${col}')">${label}${arrow(col)}</th>`;
+        return `
       <div class="card">
         <div class="table-wrap">
           <table>
             <thead><tr>
-              <th>Naam</th>
-              <th>Type</th>
-              <th>Categorie</th>
-              <th style="text-align:right">Uitvoeringen</th>
-              <th>Score</th>
+              ${th('naam', 'Naam')}
+              ${th('type', 'Type')}
+              ${th('categorie', 'Categorie')}
+              ${th('uitvoeringen', 'Uitvoeringen', 'right')}
+              ${th('score', 'Score')}
               <th></th>
             </tr></thead>
             <tbody>
-              ${filtered.map(t => {
+              ${sorted.map(t => {
                 const uitv = uitvoeringenVanTraining(t.id);
                 const scored = uitv.filter(u => u.score);
                 const avgScore = scored.length
@@ -322,7 +374,8 @@ function renderTrainingenPage(search = '') {
             </tbody>
           </table>
         </div>
-      </div>` : `
+      </div>`;
+      })() : `
       <div style="display:grid;grid-template-columns:repeat(auto-fill,minmax(300px,1fr));gap:16px">
         ${filtered.map(t => {
           const uitv = uitvoeringenVanTraining(t.id);
