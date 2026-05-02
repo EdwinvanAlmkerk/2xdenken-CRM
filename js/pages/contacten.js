@@ -150,7 +150,7 @@ function renderContactDetail(schoolId, contactId) {
     ['info', 'Overzicht'],
     ['agenda', `Agenda${agendaItems.length ? ` (${agendaItems.length})` : ''}`],
     ['trainingen', `Trainingen${uitvoeringen.length ? ` (${uitvoeringen.length})` : ''}`],
-    ['dossier', `Dossier${dossiers.length ? ` (${dossiers.length})` : ''}`],
+    ['dossier', 'Dossier'],
   ];
   let tabContent = '';
 
