@@ -296,6 +296,27 @@ class ImapClient {
     return total;
   }
 
+  // Haal alle IMAP-mappen op via LIST. Skipt mappen met \Noselect.
+  async listFolders(): Promise<Array<{ name: string; flags: string[]; delimiter: string }>> {
+    const res = await this.command(`LIST "" "*"`);
+    const folders: Array<{ name: string; flags: string[]; delimiter: string }> = [];
+    for (const line of res) {
+      if (!line.startsWith("* LIST")) continue;
+      // * LIST (\HasNoChildren \Sent) "/" "Sent"
+      const m = line.match(/^\*\s+LIST\s+\(([^)]*)\)\s+("([^"]*)"|NIL)\s+(.+)$/);
+      if (!m) continue;
+      const flagsStr = m[1] || "";
+      const delimiter = m[3] || "";
+      let name = (m[4] || "").trim();
+      if (name.startsWith('"') && name.endsWith('"')) name = name.slice(1, -1);
+      // Unescape quoted-string escapes
+      name = name.replace(/\\"/g, '"').replace(/\\\\/g, "\\");
+      const flags = flagsStr.split(/\s+/).filter(Boolean);
+      folders.push({ name, flags, delimiter });
+    }
+    return folders;
+  }
+
   // Tel het aantal ongelezen berichten in de huidige geselecteerde map
   async searchUnseen(): Promise<number> {
     const res = await this.command(`SEARCH UNSEEN`);
@@ -480,6 +501,15 @@ serve(async (req) => {
     const client = new ImapClient();
     await client.connect(settings.imap_host, settings.imap_port || 993);
     await client.login(settings.email_user, settings.email_pass);
+
+    // ── Maplijst ophalen (alle IMAP-folders) ──
+    if (action === "folders") {
+      const folders = await client.listFolders();
+      await client.logout();
+      return new Response(JSON.stringify({ folders }), {
+        headers: { ...corsHeaders, "Content-Type": "application/json" },
+      });
+    }
 
     // ── Flag toggle (mark als gelezen / ongelezen) ──
     if (action === "mark" && uid) {

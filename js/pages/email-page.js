@@ -18,9 +18,29 @@ let _trashFetchedOnce = false;
 let _trashTotal = 0;
 let _foldersCollapsed = {};
 
+// ── Dynamische IMAP-mappen (alle mappen behalve INBOX en Trash) ──
+let _imapFolders = [];           // [{ name, flags, delimiter }]
+let _imapFoldersLoading = false;
+let _imapFoldersFetchedOnce = false;
+// Eén "actieve" dynamische map state — bij wisselen wordt deze gereset en
+// opnieuw gevuld. Cache per map in localStorage zodat heen-en-weer schakelen
+// snel een eerste paint geeft.
+let _dynFolder = '';
+let _dynMessages = [];
+let _dynLoading = false;
+let _dynError = '';
+let _dynFetchedOnce = false;
+let _dynTotal = 0;
+let _dynUnread = 0;
+
 // ── LocalStorage cache helpers (stale-while-revalidate) ──────────
 const INBOX_CACHE_KEY = '_crm_inbox_cache_v1';
 const TRASH_CACHE_KEY = '_crm_trash_cache_v1';
+const IMAP_FOLDERS_CACHE_KEY = '_crm_imap_folders_v1';
+function _dynCacheKey(folderName) {
+  // Sanitiseer naam voor localStorage key (geen rare chars)
+  return `_crm_imap_dyn_${String(folderName).replace(/[^a-zA-Z0-9_-]/g, '_')}_v1`;
+}
 function _loadMailCache(key) {
   try {
     const raw = localStorage.getItem(key);
@@ -33,7 +53,26 @@ function _saveMailCache(key, messages) {
   try { localStorage.setItem(key, JSON.stringify(messages)); } catch { /* quota of privacy mode */ }
 }
 
-function setEmailFolder(f) { _emailFolder = f; _emailSelected = null; _emailFilter = 'alles'; renderContent(); }
+function setEmailFolder(f) {
+  // Wisselen naar een dynamische IMAP-map: reset/herinitieer de actieve dyn-state
+  if (typeof f === 'string' && f.startsWith('imap:')) {
+    const folderName = f.slice(5);
+    if (_dynFolder !== folderName) {
+      _dynFolder = folderName;
+      _dynFetchedOnce = false;
+      _dynLoading = false;
+      _dynError = '';
+      _dynTotal = 0;
+      _dynUnread = 0;
+      const cached = _loadMailCache(_dynCacheKey(folderName));
+      _dynMessages = cached || [];
+    }
+  }
+  _emailFolder = f;
+  _emailSelected = null;
+  _emailFilter = 'alles';
+  renderContent();
+}
 function setEmailFilter(f) { _emailFilter = f; renderContent(); }
 const _renderEmailDeb = debounce(() => smartRender(() => renderEmailPage()), 140);
 function searchEmail(v) { _emailSearch = v; _renderEmailDeb(); }
@@ -45,8 +84,9 @@ async function selectInboxEmail(uid) {
 
   // Kies juiste array + IMAP-map op basis van huidige folder
   const isTrash = _emailFolder === 'verwijderd';
-  const sourceArr = isTrash ? _trashMessages : _inboxMessages;
-  const imapFolder = isTrash ? '__trash__' : 'INBOX';
+  const isDyn = typeof _emailFolder === 'string' && _emailFolder.startsWith('imap:');
+  const sourceArr = isTrash ? _trashMessages : (isDyn ? _dynMessages : _inboxMessages);
+  const imapFolder = isTrash ? '__trash__' : (isDyn ? _dynFolder : 'INBOX');
 
   const msg = sourceArr.find(m => (m.uid || m.seq) == uid);
 
@@ -56,6 +96,9 @@ async function selectInboxEmail(uid) {
     if (imapFolder === 'INBOX') {
       _inboxUnread = Math.max(0, _inboxUnread - 1);
       _saveMailCache(INBOX_CACHE_KEY, _inboxMessages);
+    } else if (isDyn) {
+      _dynUnread = Math.max(0, _dynUnread - 1);
+      _saveMailCache(_dynCacheKey(_dynFolder), _dynMessages);
     } else {
       _saveMailCache(TRASH_CACHE_KEY, _trashMessages);
     }
@@ -64,6 +107,7 @@ async function selectInboxEmail(uid) {
     markMailSeen(uid, true, imapFolder).catch(() => {
       msg.read = false;
       if (imapFolder === 'INBOX') _inboxUnread++;
+      else if (isDyn) _dynUnread++;
       renderContent();
     });
   }
@@ -117,13 +161,15 @@ async function markMailSeen(uid, seen, imapFolder = 'INBOX') {
 // Verwijder een IMAP bericht: vanuit inbox → naar Trash, vanuit Trash → permanent
 async function deleteMail(uid) {
   const isTrash = _emailFolder === 'verwijderd';
+  const isDyn = typeof _emailFolder === 'string' && _emailFolder.startsWith('imap:');
   const confirmMsg = isTrash
     ? 'Dit bericht wordt permanent verwijderd. Doorgaan?'
     : 'Dit bericht verplaatsen naar Verwijderde items?';
   if (!confirm(confirmMsg)) return;
 
-  const sourceArr = isTrash ? _trashMessages : _inboxMessages;
-  const imapFolder = isTrash ? '__trash__' : 'INBOX';
+  const sourceArr = isTrash ? _trashMessages : (isDyn ? _dynMessages : _inboxMessages);
+  const imapFolder = isTrash ? '__trash__' : (isDyn ? _dynFolder : 'INBOX');
+  const cacheKey = isTrash ? TRASH_CACHE_KEY : (isDyn ? _dynCacheKey(_dynFolder) : INBOX_CACHE_KEY);
   const idx = sourceArr.findIndex(m => (m.uid || m.seq) == uid);
   if (idx === -1) return;
 
@@ -132,11 +178,14 @@ async function deleteMail(uid) {
   _emailSelected = null;
   if (isTrash) {
     _trashTotal = Math.max(0, _trashTotal - 1);
+  } else if (isDyn) {
+    _dynTotal = Math.max(0, _dynTotal - 1);
+    if (removed && !removed.read) _dynUnread = Math.max(0, _dynUnread - 1);
   } else {
     _inboxTotal = Math.max(0, _inboxTotal - 1);
     if (removed && !removed.read) _inboxUnread = Math.max(0, _inboxUnread - 1);
   }
-  _saveMailCache(isTrash ? TRASH_CACHE_KEY : INBOX_CACHE_KEY, sourceArr);
+  _saveMailCache(cacheKey, sourceArr);
   renderContent();
 
   try {
@@ -148,7 +197,7 @@ async function deleteMail(uid) {
     });
     const data = await res.json().catch(() => ({}));
     if (!res.ok || data.error) throw new Error(data.error || `HTTP ${res.status}`);
-    // Als we uit de inbox verwijderden, is de trash-cache nu verouderd — forceer refresh bij volgende opening
+    // Als we ergens-anders-dan-trash verwijderden, is de trash-cache verouderd
     if (!isTrash) {
       _trashFetchedOnce = false;
     }
@@ -157,11 +206,14 @@ async function deleteMail(uid) {
     sourceArr.splice(idx, 0, removed);
     if (isTrash) {
       _trashTotal++;
+    } else if (isDyn) {
+      _dynTotal++;
+      if (removed && !removed.read) _dynUnread++;
     } else {
       _inboxTotal++;
       if (removed && !removed.read) _inboxUnread++;
     }
-    _saveMailCache(isTrash ? TRASH_CACHE_KEY : INBOX_CACHE_KEY, sourceArr);
+    _saveMailCache(cacheKey, sourceArr);
     alert('Verwijderen mislukt: ' + e.message);
     renderContent();
   }
@@ -170,23 +222,33 @@ async function deleteMail(uid) {
 // Toggle-functie voor de "Markeer als ongelezen/gelezen" knop in de detailweergave
 async function toggleMailRead(uid) {
   const isTrash = _emailFolder === 'verwijderd';
-  const sourceArr = isTrash ? _trashMessages : _inboxMessages;
-  const imapFolder = isTrash ? '__trash__' : 'INBOX';
+  const isDyn = typeof _emailFolder === 'string' && _emailFolder.startsWith('imap:');
+  const sourceArr = isTrash ? _trashMessages : (isDyn ? _dynMessages : _inboxMessages);
+  const imapFolder = isTrash ? '__trash__' : (isDyn ? _dynFolder : 'INBOX');
+  const cacheKey = isTrash ? TRASH_CACHE_KEY : (isDyn ? _dynCacheKey(_dynFolder) : INBOX_CACHE_KEY);
   const msg = sourceArr.find(m => (m.uid || m.seq) == uid);
   if (!msg) return;
   const newState = !msg.read;
   msg.read = newState;
-  if (imapFolder === 'INBOX') {
-    _inboxUnread = newState ? Math.max(0, _inboxUnread - 1) : _inboxUnread + 1;
+  if (!isTrash) {
+    if (isDyn) {
+      _dynUnread = newState ? Math.max(0, _dynUnread - 1) : _dynUnread + 1;
+    } else {
+      _inboxUnread = newState ? Math.max(0, _inboxUnread - 1) : _inboxUnread + 1;
+    }
   }
-  _saveMailCache(isTrash ? TRASH_CACHE_KEY : INBOX_CACHE_KEY, sourceArr);
+  _saveMailCache(cacheKey, sourceArr);
   renderContent();
   try {
     await markMailSeen(uid, newState, imapFolder);
   } catch (e) {
     msg.read = !newState; // rollback
-    if (imapFolder === 'INBOX') {
-      _inboxUnread = newState ? _inboxUnread + 1 : Math.max(0, _inboxUnread - 1);
+    if (!isTrash) {
+      if (isDyn) {
+        _dynUnread = newState ? _dynUnread + 1 : Math.max(0, _dynUnread - 1);
+      } else {
+        _inboxUnread = newState ? _inboxUnread + 1 : Math.max(0, _inboxUnread - 1);
+      }
     }
     alert('Kon leesstatus niet wijzigen: ' + e.message);
     renderContent();
@@ -277,6 +339,72 @@ async function fetchInbox() {
   renderContent();
 }
 
+// Haal de complete IMAP-maplijst op (eenmalig per sessie, daarna cache)
+async function fetchImapFolders() {
+  if (!DB.emailSettings?.imapHost) {
+    _imapFoldersFetchedOnce = true;
+    return;
+  }
+  _imapFoldersLoading = true;
+  try {
+    const res = await fetch(`${SUPA_URL}/functions/v1/fetch-emails?action=folders`, {
+      headers: {
+        'apikey': SUPA_KEY,
+        'Authorization': `Bearer ${currentSession?.access_token || SUPA_KEY}`,
+      },
+    });
+    const data = await res.json();
+    if (!res.ok || data.error) throw new Error(data.error || `HTTP ${res.status}`);
+    _imapFolders = Array.isArray(data.folders) ? data.folders : [];
+    try { localStorage.setItem(IMAP_FOLDERS_CACHE_KEY, JSON.stringify(_imapFolders)); } catch { /* quota */ }
+  } catch (e) {
+    console.warn('IMAP-maplijst ophalen mislukt:', e);
+  }
+  _imapFoldersLoading = false;
+  _imapFoldersFetchedOnce = true;
+  renderContent();
+}
+
+// Haal berichten op uit een willekeurige IMAP-map (niet INBOX of trash)
+async function fetchDynFolder(folderName) {
+  if (!DB.emailSettings?.imapHost) {
+    _dynError = 'Configureer eerst je e-mailserver in Instellingen';
+    _dynFetchedOnce = true;
+    renderContent();
+    return;
+  }
+  if (!folderName) return;
+  _dynLoading = true; _dynError = '';
+  if (_dynMessages.length === 0) renderContent();
+  try {
+    const res = await fetch(`${SUPA_URL}/functions/v1/fetch-emails?folder=${encodeURIComponent(folderName)}&limit=20`, {
+      headers: {
+        'apikey': SUPA_KEY,
+        'Authorization': `Bearer ${currentSession?.access_token || SUPA_KEY}`,
+      },
+    });
+    const data = await res.json();
+    if (!res.ok || data.error) throw new Error(data.error || `HTTP ${res.status}`);
+    // Race-bescherming: gebruiker kan ondertussen naar andere map gewisseld zijn
+    if (_dynFolder !== folderName) return;
+    _dynMessages = data.messages || [];
+    _dynTotal = data.total || 0;
+    _dynUnread = data.unread || 0;
+    _dynError = '';
+    _saveMailCache(_dynCacheKey(folderName), _dynMessages);
+  } catch (e) {
+    if (_dynFolder === folderName) {
+      _dynError = e.message;
+      if (_dynMessages.length === 0) _dynMessages = [];
+    }
+  }
+  if (_dynFolder === folderName) {
+    _dynLoading = false;
+    _dynFetchedOnce = true;
+    renderContent();
+  }
+}
+
 function renderEmailPage() {
   const hasConfig = DB.emailSettings?.imapHost && DB.emailSettings?.emailUser && DB.emailSettings?.emailPass;
 
@@ -295,6 +423,20 @@ function renderEmailPage() {
       if (cached) _trashMessages = cached;
     }
     fetchTrash();
+  }
+  // Maplijst eerste keer ophalen (eenmalig per sessie, met cache fallback)
+  if (hasConfig && !_imapFoldersFetchedOnce && !_imapFoldersLoading) {
+    if (_imapFolders.length === 0) {
+      try {
+        const cached = JSON.parse(localStorage.getItem(IMAP_FOLDERS_CACHE_KEY) || 'null');
+        if (Array.isArray(cached)) _imapFolders = cached;
+      } catch { /* ignore */ }
+    }
+    fetchImapFolders();
+  }
+  // Dynamische map openen: laad bij eerste view
+  if (hasConfig && typeof _emailFolder === 'string' && _emailFolder.startsWith('imap:') && !_dynFetchedOnce && !_dynLoading) {
+    fetchDynFolder(_dynFolder);
   }
   const emailAddr = DB.emailSettings?.emailUser || 'E-mail';
   const conceptCount = DB.emailLog.filter(e => e.status === 'concept').length;
@@ -322,6 +464,16 @@ function renderEmailPage() {
       body: m.body || '', datum: m.date || '', status: 'verwijderd', _isInbox: true,
       read: true, _bodyLoaded: m._bodyLoaded || false,
     }));
+  } else if (typeof _emailFolder === 'string' && _emailFolder.startsWith('imap:')) {
+    items = _dynMessages.map(m => ({
+      id: m.uid || m.seq,
+      aanEmail: m.from?.email || '',
+      aanNaam: m.from?.name || m.from?.email || '',
+      onderwerp: m.subject || '(geen onderwerp)',
+      body: m.body || '', datum: m.date || '', status: 'imap', _isInbox: true,
+      read: m.read || false, _bodyLoaded: m._bodyLoaded || false,
+    }));
+    if (_emailFilter === 'ongelezen') items = items.filter(e => !e.read);
   } else {
     items = DB.emailLog.filter(e => {
       if (_emailFolder === 'verzonden') return e.status === 'verzonden';
@@ -344,8 +496,9 @@ function renderEmailPage() {
   items.sort((a, b) => new Date(b.datum) - new Date(a.datum));
 
   // Geselecteerd item (loose equality omdat IMAP-id's numbers zijn)
+  const isImapFolder = _emailFolder === 'inbox' || _emailFolder === 'verwijderd' || (typeof _emailFolder === 'string' && _emailFolder.startsWith('imap:'));
   let selected = null;
-  if (_emailFolder === 'inbox' || _emailFolder === 'verwijderd') {
+  if (isImapFolder) {
     selected = _emailSelected ? items.find(e => String(e.id) === String(_emailSelected)) : null;
   } else {
     selected = _emailSelected ? DB.emailLog.find(e => e.id === _emailSelected) : null;
@@ -378,6 +531,7 @@ function renderEmailPage() {
             ${renderFolder('verzonden', 'Verzonden items', 'chevron', verzondenCount)}
             ${renderFolder('concepten', 'Concepten', 'edit', conceptCount)}
             ${renderFolder('verwijderd', 'Verwijderde items', 'trash', _trashFetchedOnce ? _trashTotal : _trashMessages.length, { muted: true })}
+            ${renderImapExtraFolders()}
           ` : ''}
           ` : `
           <!-- Zonder IMAP: alleen CRM-mappen -->
@@ -411,6 +565,7 @@ function renderEmailPage() {
           </div>
           ${_emailFolder === 'inbox' ? `<button class="btn btn-ghost btn-icon btn-sm" onclick="fetchInbox()" title="Vernieuwen">${_inboxLoading ? '<div class="spinner" style="width:14px;height:14px;border-width:2px"></div>' : svgIcon('settings', 15)}</button>` : ''}
           ${_emailFolder === 'verwijderd' ? `<button class="btn btn-ghost btn-icon btn-sm" onclick="fetchTrash()" title="Vernieuwen">${_trashLoading ? '<div class="spinner" style="width:14px;height:14px;border-width:2px"></div>' : svgIcon('settings', 15)}</button>` : ''}
+          ${typeof _emailFolder === 'string' && _emailFolder.startsWith('imap:') ? `<button class="btn btn-ghost btn-icon btn-sm" onclick="fetchDynFolder('${esc(_dynFolder)}')" title="Vernieuwen">${_dynLoading ? '<div class="spinner" style="width:14px;height:14px;border-width:2px"></div>' : svgIcon('settings', 15)}</button>` : ''}
         </div>
 
         <!-- Statusregel: totaal + ongelezen -->
@@ -430,13 +585,20 @@ function renderEmailPage() {
             html = `<strong style="color:var(--navy3);font-weight:700">${verzondenCount}</strong> ${verzondenCount === 1 ? 'verzonden bericht' : 'verzonden berichten'}`;
           } else if (_emailFolder === 'concepten') {
             html = `<strong style="color:var(--navy3);font-weight:700">${conceptCount}</strong> ${conceptCount === 1 ? 'concept' : 'concepten'}`;
+          } else if (typeof _emailFolder === 'string' && _emailFolder.startsWith('imap:')) {
+            const total = _dynFetchedOnce ? _dynTotal : _dynMessages.length;
+            const unread = _dynFetchedOnce ? _dynUnread : _dynMessages.filter(m => !m.read).length;
+            html = `<strong style="color:var(--navy3);font-weight:700">${total}</strong> ${total === 1 ? 'bericht' : 'berichten'}` +
+              (unread > 0
+                ? ` · <strong style="color:var(--accent);font-weight:700">${unread}</strong> ongelezen`
+                : (total > 0 ? ` · <span style="color:var(--s-groen)">alles gelezen</span>` : ''));
           }
           return html ? `<div style="padding:5px 16px;font-size:11.5px;color:var(--navy4);background:rgba(30,45,74,0.025);border-bottom:1px solid rgba(30,45,74,0.07)">${html}</div>` : '';
         })()}
 
         <!-- Kolom-headers -->
         <div style="display:grid;grid-template-columns:1fr 1.5fr 140px;padding:8px 16px;border-bottom:1px solid rgba(30,45,74,0.14);background:rgba(30,45,74,0.045);font-size:10.5px;font-weight:700;text-transform:uppercase;letter-spacing:.6px;color:var(--navy3)">
-          <span>${(_emailFolder === 'inbox' || _emailFolder === 'verwijderd') ? 'Van' : 'Aan'}</span>
+          <span>${(_emailFolder === 'inbox' || _emailFolder === 'verwijderd' || (typeof _emailFolder === 'string' && _emailFolder.startsWith('imap:'))) ? 'Van' : 'Aan'}</span>
           <span>Onderwerp</span>
           <span style="text-align:right">Ontvangen</span>
         </div>
@@ -462,6 +624,16 @@ function renderEmailPage() {
             ? `<div style="text-align:center;padding:40px 20px;color:var(--s-rood)">
                 <p style="font-size:13px">${esc(_trashError)}</p>
                 <button class="btn btn-secondary btn-sm" style="margin-top:12px" onclick="fetchTrash()">Opnieuw</button>
+              </div>`
+            : (typeof _emailFolder === 'string' && _emailFolder.startsWith('imap:') && _dynLoading && items.length === 0)
+            ? `<div style="text-align:center;padding:40px 20px;color:var(--navy4)">
+                <div class="spinner" style="margin:0 auto 12px;width:28px;height:28px;border-width:2px"></div>
+                <p style="font-size:13px">Map laden...</p>
+              </div>`
+            : (typeof _emailFolder === 'string' && _emailFolder.startsWith('imap:') && _dynError && items.length === 0)
+            ? `<div style="text-align:center;padding:40px 20px;color:var(--s-rood)">
+                <p style="font-size:13px">${esc(_dynError)}</p>
+                <button class="btn btn-secondary btn-sm" style="margin-top:12px" onclick="fetchDynFolder('${esc(_dynFolder)}')">Opnieuw</button>
               </div>`
             : items.length === 0
             ? `<div style="text-align:center;padding:40px 20px;color:var(--navy4)">
@@ -513,6 +685,66 @@ function renderFolder(id, label, icon, count, opts) {
     <span style="flex:1">${label}</span>
     ${count > 0 ? `<span style="font-size:11px;font-weight:${muted ? '500' : '700'};color:${muted ? 'var(--navy4)' : 'var(--accent)'}">${count}</span>` : ''}
   </div>`;
+}
+
+// ── Extra IMAP-mappen (niet INBOX of Trash, die staan al boven) ──
+function renderImapExtraFolders() {
+  if (!_imapFolders || _imapFolders.length === 0) return '';
+  const extras = _imapFolders.filter(f => {
+    const flags = (f.flags || []).map(x => x.toLowerCase());
+    if (flags.includes('\\noselect')) return false;
+    if (flags.includes('\\nonexistent')) return false;
+    if (f.name === 'INBOX') return false;
+    if (flags.includes('\\trash')) return false;
+    return true;
+  });
+  if (extras.length === 0) return '';
+  // Bekende mappen op nette volgorde, eigen mappen daarna
+  const order = (f) => {
+    const flags = (f.flags || []).map(x => x.toLowerCase());
+    if (flags.includes('\\sent')) return 1;
+    if (flags.includes('\\drafts')) return 2;
+    if (flags.includes('\\archive')) return 3;
+    if (flags.includes('\\junk')) return 4;
+    if (flags.includes('\\flagged')) return 5;
+    if (flags.includes('\\important')) return 6;
+    if (flags.includes('\\all')) return 7;
+    return 9;
+  };
+  extras.sort((a, b) => {
+    const oa = order(a), ob = order(b);
+    if (oa !== ob) return oa - ob;
+    return a.name.localeCompare(b.name, 'nl');
+  });
+  return `
+    <div style="margin-top:6px;padding:6px 12px 4px;font-weight:600;color:var(--navy4);font-size:10.5px;text-transform:uppercase;letter-spacing:.5px">Andere mappen</div>
+    ${extras.map(f => {
+      const key = `imap:${f.name}`;
+      const isActive = _emailFolder === key;
+      const flags = (f.flags || []).map(x => x.toLowerCase());
+      let label = f.name;
+      let icon = 'mail';
+      if (flags.includes('\\sent')) { label = 'Verzonden (server)'; icon = 'chevron'; }
+      else if (flags.includes('\\drafts')) { label = 'Concepten (server)'; icon = 'edit'; }
+      else if (flags.includes('\\junk')) { label = 'Spam'; icon = 'trash'; }
+      else if (flags.includes('\\archive')) { label = 'Archief'; icon = 'mail'; }
+      else if (flags.includes('\\all')) { label = 'Alle berichten'; icon = 'mail'; }
+      else if (flags.includes('\\flagged')) { label = 'Met vlag'; icon = 'mail'; }
+      else if (flags.includes('\\important')) { label = 'Belangrijk'; icon = 'mail'; }
+      else if (f.delimiter && label.includes(f.delimiter)) {
+        // Hierarchische naam korter maken — laatste segment
+        label = label.split(f.delimiter).pop();
+      }
+      // Teller tonen alleen voor actieve map (anders is hij toch 0 tot je 'm opent)
+      const showCount = isActive && _dynFetchedOnce && _dynUnread > 0;
+      const onclick = `setEmailFolder('imap:${esc(f.name).replace(/'/g, "\\'")}')`;
+      return `<div onclick="${onclick}" style="display:flex;align-items:center;gap:8px;padding:7px 12px 7px 24px;cursor:pointer;font-size:13px;font-weight:${isActive || showCount ? '700' : '400'};color:${isActive ? 'var(--accent)' : 'var(--navy3)'};background:${isActive ? 'var(--mint)' : 'transparent'};border-left:2px solid ${isActive ? 'var(--accent)' : 'transparent'};transition:all .12s">
+        ${svgIcon(icon, 14)}
+        <span style="flex:1;white-space:nowrap;overflow:hidden;text-overflow:ellipsis" title="${esc(f.name)}">${esc(label)}</span>
+        ${showCount ? `<span style="font-size:11px;font-weight:700;color:var(--accent)">${_dynUnread}</span>` : ''}
+      </div>`;
+    }).join('')}
+  `;
 }
 
 // ── E-mail detail ────────────────────────────────────────────────
