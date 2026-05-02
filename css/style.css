@@ -259,8 +259,9 @@ td {
   vertical-align: middle; color: var(--navy3);
 }
 tr:last-child td { border-bottom: none; }
-.clickable-row { cursor: pointer; }
-.clickable-row:hover td { background: rgba(26,184,184,0.06); }
+.clickable-row { cursor: pointer; transition: background-color .12s ease; }
+.clickable-row:hover td { background: rgba(26,184,184,0.13); }
+.clickable-row:hover td:first-child { box-shadow: inset 3px 0 0 var(--accent); }
 
 /* ═══ FORMS ═══ */
 .form-group { margin-bottom: 18px; }

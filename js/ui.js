@@ -39,6 +39,18 @@ function showModal(title, bodyHTML, footerHTML, lg = false) {
       ${footerHTML ? `<div class="modal-footer">${footerHTML}</div>` : ''}
     </div>`;
   document.body.appendChild(el);
+
+  // Enter in een input-veld triggert de primaire actie (eerste .btn-primary in de footer).
+  // Textarea/select/button overslaan zodat hun normale Enter-gedrag intact blijft.
+  el.addEventListener('keydown', (e) => {
+    if (e.key !== 'Enter' || e.shiftKey || e.ctrlKey || e.metaKey || e.altKey || e.isComposing) return;
+    const t = e.target;
+    if (!t || t.tagName !== 'INPUT' || t.isContentEditable) return;
+    const primary = el.querySelector('.modal-footer .btn-primary');
+    if (!primary || primary.disabled) return;
+    e.preventDefault();
+    primary.click();
+  });
 }
 
 function closeModal() {
