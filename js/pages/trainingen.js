@@ -210,11 +210,20 @@ function renderStars(score, interactive = false, fid = '') {
 
 let _trainingTypeFilter = 'alle';
 let _trainingCategoryFilter = 'alle';
+let _trainingenView = (() => {
+  try { return localStorage.getItem('crm_trainingen_view') === 'lijst' ? 'lijst' : 'tegels'; }
+  catch (e) { return 'tegels'; }
+})();
 
 const _renderTrainingenDeb = debounce(() => smartRender(() => renderTrainingenPage(document.getElementById('search-trainingen')?.value || '')), 140);
 function searchTrainingen(v) { _renderTrainingenDeb(); }
 function setTrainingTypeFilter(v) { _trainingTypeFilter = v || 'alle'; smartRender(() => renderTrainingenPage(document.getElementById('search-trainingen')?.value || '')); }
 function setTrainingCategoryFilter(v) { _trainingCategoryFilter = v || 'alle'; smartRender(() => renderTrainingenPage(document.getElementById('search-trainingen')?.value || '')); }
+function setTrainingenView(v) {
+  _trainingenView = v === 'lijst' ? 'lijst' : 'tegels';
+  try { localStorage.setItem('crm_trainingen_view', _trainingenView); } catch (e) {}
+  smartRender(() => renderTrainingenPage(document.getElementById('search-trainingen')?.value || ''));
+}
 
 function renderTrainingenPage(search = '') {
   if (!DB.trainingen)   DB.trainingen   = [];
@@ -256,6 +265,12 @@ function renderTrainingenPage(search = '') {
           ${categoryOptions.map(t => `<option value="${t.id}"${_trainingCategoryFilter === t.id ? ' selected' : ''}>${esc(t.naam)}</option>`).join('')}
         </select>
       </div>
+      <div role="group" aria-label="Weergave" style="display:inline-flex;background:white;border:2px solid var(--bg3);border-radius:var(--r);overflow:hidden">
+        <button onclick="setTrainingenView('tegels')" title="Tegelweergave"
+          style="border:none;padding:7px 11px;cursor:pointer;font-size:12.5px;font-weight:700;display:inline-flex;align-items:center;gap:6px;${_trainingenView==='tegels'?'background:var(--accent);color:white':'background:white;color:var(--navy3)'}">${svgIcon('board', 14)} Tegels</button>
+        <button onclick="setTrainingenView('lijst')" title="Lijstweergave"
+          style="border:none;padding:7px 11px;cursor:pointer;font-size:12.5px;font-weight:700;display:inline-flex;align-items:center;gap:6px;${_trainingenView==='lijst'?'background:var(--accent);color:white':'background:white;color:var(--navy3)'}">${svgIcon('list', 14)} Lijst</button>
+      </div>
       <button class="btn btn-primary" onclick="openTrainingModal()">${svgIcon('add')} Nieuwe training</button>
     </div>
 
@@ -267,34 +282,73 @@ function renderTrainingenPage(search = '') {
           <p style="margin-top:6px">Voeg je eerste training of werkvorm toe</p>
           <button class="btn btn-primary" onclick="openTrainingModal()" style="margin-top:16px">${svgIcon('add')} Nieuwe training</button>
         </div>
+      </div>` : (filtered.length === 0 ? `
+      <div class="card"><div class="empty-state"><p>Geen trainingen gevonden met deze filters.</p></div></div>` : (
+      _trainingenView === 'lijst' ? `
+      <div class="card">
+        <div class="table-wrap">
+          <table>
+            <thead><tr>
+              <th>Naam</th>
+              <th>Type</th>
+              <th>Categorie</th>
+              <th style="text-align:right">Uitvoeringen</th>
+              <th>Score</th>
+              <th></th>
+            </tr></thead>
+            <tbody>
+              ${filtered.map(t => {
+                const uitv = uitvoeringenVanTraining(t.id);
+                const scored = uitv.filter(u => u.score);
+                const avgScore = scored.length
+                  ? Math.round(scored.reduce((s, u) => s + u.score, 0) / scored.length * 10) / 10
+                  : null;
+                return `<tr class="clickable-row" onclick="navigate('training-detail','${t.id}')">
+                  <td style="font-weight:600;color:var(--navy)">
+                    <span style="display:inline-block;width:8px;height:8px;border-radius:50%;background:${getTrainingTypeInfo(t.type).color};margin-right:8px;vertical-align:middle"></span>${esc(t.naam)}
+                  </td>
+                  <td>${typeBadge(t.type)}</td>
+                  <td>${catBadge(t.categorie)}</td>
+                  <td style="text-align:right;color:var(--navy3);font-size:13px">${uitv.length}</td>
+                  <td>${avgScore !== null ? `<div style="display:inline-flex;align-items:center;gap:4px">${renderStars(Math.round(avgScore))}<span style="font-size:12px;color:var(--navy3);font-weight:700;margin-left:3px">${avgScore.toFixed(1)}</span></div>` : `<span style="font-size:12px;color:var(--navy4)">–</span>`}</td>
+                  <td onclick="event.stopPropagation()" style="width:50px">
+                    <div class="row-actions">
+                      <button class="btn btn-ghost btn-icon btn-sm btn-del" title="Verwijderen" onclick="delTraining('${t.id}')" style="color:var(--s-rood)">${svgIcon('trash', 14)}</button>
+                    </div>
+                  </td>
+                </tr>`;
+              }).join('')}
+            </tbody>
+          </table>
+        </div>
       </div>` : `
-    <div style="display:grid;grid-template-columns:repeat(auto-fill,minmax(300px,1fr));gap:16px">
-      ${filtered.map(t => {
-        const uitv = uitvoeringenVanTraining(t.id);
-        const avgScore = uitv.filter(u => u.score).length
-          ? Math.round(uitv.filter(u => u.score).reduce((s, u) => s + u.score, 0) / uitv.filter(u => u.score).length * 10) / 10
-          : null;
-        return `
-        <div class="card" style="cursor:pointer;transition:box-shadow .15s;border-top:4px solid ${getTrainingTypeInfo(t.type).color};position:relative"
-             onclick="navigate('training-detail','${t.id}')"
-             onmouseover="this.style.boxShadow='var(--shl)'" onmouseout="this.style.boxShadow=''">
-          <button class="btn btn-ghost btn-icon btn-sm" title="Training verwijderen"
-                  onclick="event.stopPropagation();delTraining('${t.id}')"
-                  style="position:absolute;top:8px;right:8px;color:var(--s-rood);opacity:.65">${svgIcon('trash', 14)}</button>
-          <div class="card-body" style="padding:18px 20px">
-            <div style="display:flex;justify-content:space-between;align-items:flex-start;gap:8px;margin-bottom:10px;padding-right:28px">
-              <div style="font-size:15px;font-weight:800;color:var(--navy);line-height:1.3">${esc(t.naam)}</div>
-              <div style="display:flex;gap:6px;flex-wrap:wrap;justify-content:flex-end">${typeBadge(t.type)}${catBadge(t.categorie)}</div>
+      <div style="display:grid;grid-template-columns:repeat(auto-fill,minmax(300px,1fr));gap:16px">
+        ${filtered.map(t => {
+          const uitv = uitvoeringenVanTraining(t.id);
+          const avgScore = uitv.filter(u => u.score).length
+            ? Math.round(uitv.filter(u => u.score).reduce((s, u) => s + u.score, 0) / uitv.filter(u => u.score).length * 10) / 10
+            : null;
+          return `
+          <div class="card" style="cursor:pointer;transition:box-shadow .15s;border-top:4px solid ${getTrainingTypeInfo(t.type).color};position:relative"
+               onclick="navigate('training-detail','${t.id}')"
+               onmouseover="this.style.boxShadow='var(--shl)'" onmouseout="this.style.boxShadow=''">
+            <button class="btn btn-ghost btn-icon btn-sm" title="Training verwijderen"
+                    onclick="event.stopPropagation();delTraining('${t.id}')"
+                    style="position:absolute;top:8px;right:8px;color:var(--s-rood);opacity:.65">${svgIcon('trash', 14)}</button>
+            <div class="card-body" style="padding:18px 20px">
+              <div style="display:flex;justify-content:space-between;align-items:flex-start;gap:8px;margin-bottom:10px;padding-right:28px">
+                <div style="font-size:15px;font-weight:800;color:var(--navy);line-height:1.3">${esc(t.naam)}</div>
+                <div style="display:flex;gap:6px;flex-wrap:wrap;justify-content:flex-end">${typeBadge(t.type)}${catBadge(t.categorie)}</div>
+              </div>
+              ${t.omschrijving ? `<div style="font-size:13px;color:var(--navy3);line-height:1.55;margin-bottom:12px;display:-webkit-box;-webkit-line-clamp:2;-webkit-box-orient:vertical;overflow:hidden">${esc(t.omschrijving)}</div>` : ''}
+              <div style="display:flex;align-items:center;justify-content:space-between;margin-top:8px;padding-top:10px;border-top:1px solid var(--bg3)">
+                <span style="font-size:12px;color:var(--navy4);font-weight:600">${uitv.length} uitvoering${uitv.length === 1 ? '' : 'en'}</span>
+                ${avgScore !== null ? `<div style="display:flex;align-items:center;gap:4px">${renderStars(Math.round(avgScore))}<span style="font-size:12px;color:var(--navy3);font-weight:700;margin-left:3px">${avgScore.toFixed(1)}</span></div>` : `<span style="font-size:12px;color:var(--navy4)">Nog niet uitgevoerd</span>`}
+              </div>
             </div>
-            ${t.omschrijving ? `<div style="font-size:13px;color:var(--navy3);line-height:1.55;margin-bottom:12px;display:-webkit-box;-webkit-line-clamp:2;-webkit-box-orient:vertical;overflow:hidden">${esc(t.omschrijving)}</div>` : ''}
-            <div style="display:flex;align-items:center;justify-content:space-between;margin-top:8px;padding-top:10px;border-top:1px solid var(--bg3)">
-              <span style="font-size:12px;color:var(--navy4);font-weight:600">${uitv.length} uitvoering${uitv.length === 1 ? '' : 'en'}</span>
-              ${avgScore !== null ? `<div style="display:flex;align-items:center;gap:4px">${renderStars(Math.round(avgScore))}<span style="font-size:12px;color:var(--navy3);font-weight:700;margin-left:3px">${avgScore.toFixed(1)}</span></div>` : `<span style="font-size:12px;color:var(--navy4)">Nog niet uitgevoerd</span>`}
-            </div>
-          </div>
-        </div>`;
-      }).join('')}
-    </div>`}`;
+          </div>`;
+        }).join('')}
+      </div>`))}`;
 }
 
 function renderTrainingDetail(id) {
