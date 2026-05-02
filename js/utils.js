@@ -311,6 +311,12 @@ function isFactuurDossier(d) {
   return !!findFactuurVoorDossier(d);
 }
 
+// Auto-gelogde inbox-e-mail: hoort alleen thuis op de contact-detailpagina,
+// niet bij de school of in algemene dossier-overzichten.
+function isInboxLogged(d) {
+  return !!(d && typeof d.id === 'string' && d.id.startsWith('inbox-'));
+}
+
 function renderFactuurLinkVoorDossier(d) {
   const factuur = findFactuurVoorDossier(d);
   if (!factuur) return '';

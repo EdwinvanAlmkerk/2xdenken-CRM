@@ -213,7 +213,7 @@ function renderSchoolDetail(id) {
                 ${c.telefoon ? `<div class="c-row">${svgIcon('phone', 13)} <a href="tel:${esc(c.telefoon)}">${esc(c.telefoon)}</a></div>` : ''}
               </div>
               ${(() => {
-                const cDossiers = dossiersVanContact(c.id).filter(d => !isFactuurDossier(d)).sort((a, b) => new Date(b.datum) - new Date(a.datum));
+                const cDossiers = dossiersVanContact(c.id).filter(d => !isFactuurDossier(d) && !isInboxLogged(d)).sort((a, b) => new Date(b.datum) - new Date(a.datum));
                 return cDossiers.length > 0 ? `
                   <div style="margin-top:10px;padding-top:10px;border-top:1px solid var(--bg3)">
                     <div style="font-size:11px;font-weight:700;text-transform:uppercase;letter-spacing:.6px;color:var(--navy4);margin-bottom:8px">Dossiernotities</div>

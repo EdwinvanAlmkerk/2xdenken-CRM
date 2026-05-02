@@ -323,9 +323,12 @@ function rebuildIndexes() {
   i.contactenBySchool = _groupBy(DB.contacten || [], 'schoolId');
   i.scholenByBestuur  = _groupBy(DB.scholen || [],   'bestuurId');
   // Verberg ontkoppelde inbox-mails (soft-delete tombstones) overal
-  // behalve in dossierById — die blijft compleet voor dedup-checks
+  // behalve in dossierById — die blijft compleet voor dedup-checks.
+  // Auto-gelogde inbox-mails komen alleen in dossiersByContact, niet bij
+  // de school: ze horen thuis op de contact-detailpagina.
   const visibleDossiers = (DB.dossiers || []).filter(d => d.type !== 'inbox-archived');
-  i.dossiersBySchool  = _groupBy(visibleDossiers, 'schoolId');
+  const schoolDossiers = visibleDossiers.filter(d => !(typeof d.id === 'string' && d.id.startsWith('inbox-')));
+  i.dossiersBySchool  = _groupBy(schoolDossiers, 'schoolId');
   i.dossiersByContact = _groupBy(visibleDossiers, 'contactId');
   i.facturenBySchool  = _groupBy(DB.facturen || [],  'schoolId');
   i.facturenByBestuur = _groupBy(DB.facturen || [],  'bestuurId');
