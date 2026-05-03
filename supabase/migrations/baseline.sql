@@ -29,14 +29,15 @@ CREATE TABLE IF NOT EXISTS scholen (
 
 -- ── CONTACTEN ─────────────────────────────────────────────────────
 CREATE TABLE IF NOT EXISTS contacten (
-  id         text PRIMARY KEY,
-  school_id  text REFERENCES scholen(id) ON DELETE CASCADE,
-  naam       text NOT NULL,
-  functie    text DEFAULT ''::text,
-  type       text DEFAULT 'beslisser'::text,
-  email      text DEFAULT ''::text,
-  telefoon   text DEFAULT ''::text,
-  created_at timestamptz DEFAULT now()
+  id            text PRIMARY KEY,
+  school_id     text REFERENCES scholen(id) ON DELETE CASCADE,
+  naam          text NOT NULL,
+  functie       text DEFAULT ''::text,
+  type          text DEFAULT 'beslisser'::text,
+  email         text DEFAULT ''::text,
+  telefoon      text DEFAULT ''::text,
+  geboortedatum date,
+  created_at    timestamptz DEFAULT now()
 );
 
 -- ── DOSSIERS (notities + bestanden) ───────────────────────────────
@@ -201,4 +202,11 @@ CREATE TABLE IF NOT EXISTS outlook_settings (
   days_future   integer DEFAULT 180,
   calendar_name text,
   updated_at    timestamptz DEFAULT now()
+);
+
+-- ── DASHBOARD-INSTELLINGEN (widget-zichtbaarheid en -volgorde) ───
+CREATE TABLE IF NOT EXISTS dashboard_settings (
+  id         text PRIMARY KEY,
+  widgets    jsonb NOT NULL DEFAULT '[]'::jsonb,
+  updated_at timestamptz DEFAULT now()
 );

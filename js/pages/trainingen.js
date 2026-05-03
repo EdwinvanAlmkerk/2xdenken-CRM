@@ -208,22 +208,27 @@ function renderStars(score, interactive = false, fid = '') {
   }).join('');
 }
 
-let _trainingTypeFilter = 'alle';
-let _trainingCategoryFilter = 'alle';
+let _trainingTypeFilter = prefGet('training.typeFilter', 'alle');
+let _trainingCategoryFilter = prefGet('training.categoryFilter', 'alle');
 let _trainingenView = (() => {
-  try { return localStorage.getItem('crm_trainingen_view') === 'lijst' ? 'lijst' : 'tegels'; }
-  catch (e) { return 'tegels'; }
+  // legacy key, blijft compatibel
+  try {
+    const v = localStorage.getItem('crm_trainingen_view');
+    if (v === 'lijst' || v === 'tegels') return v;
+  } catch (e) {}
+  return prefGet('training.view', 'tegels');
 })();
-let _trainingSortCol = 'naam';
-let _trainingSortDir = 'asc';
+let _trainingSortCol = prefGet('training.sortCol', 'naam');
+let _trainingSortDir = prefGet('training.sortDir', 'asc');
 
 const _renderTrainingenDeb = debounce(() => smartRender(() => renderTrainingenPage(document.getElementById('search-trainingen')?.value || '')), 140);
 function searchTrainingen(v) { _renderTrainingenDeb(); }
-function setTrainingTypeFilter(v) { _trainingTypeFilter = v || 'alle'; smartRender(() => renderTrainingenPage(document.getElementById('search-trainingen')?.value || '')); }
-function setTrainingCategoryFilter(v) { _trainingCategoryFilter = v || 'alle'; smartRender(() => renderTrainingenPage(document.getElementById('search-trainingen')?.value || '')); }
+function setTrainingTypeFilter(v) { _trainingTypeFilter = v || 'alle'; prefSet('training.typeFilter', _trainingTypeFilter); smartRender(() => renderTrainingenPage(document.getElementById('search-trainingen')?.value || '')); }
+function setTrainingCategoryFilter(v) { _trainingCategoryFilter = v || 'alle'; prefSet('training.categoryFilter', _trainingCategoryFilter); smartRender(() => renderTrainingenPage(document.getElementById('search-trainingen')?.value || '')); }
 function setTrainingenView(v) {
   _trainingenView = v === 'lijst' ? 'lijst' : 'tegels';
   try { localStorage.setItem('crm_trainingen_view', _trainingenView); } catch (e) {}
+  prefSet('training.view', _trainingenView);
   smartRender(() => renderTrainingenPage(document.getElementById('search-trainingen')?.value || ''));
 }
 function sortTrainingen(col) {
@@ -233,6 +238,8 @@ function sortTrainingen(col) {
     _trainingSortCol = col;
     _trainingSortDir = (col === 'uitvoeringen' || col === 'score') ? 'desc' : 'asc';
   }
+  prefSet('training.sortCol', _trainingSortCol);
+  prefSet('training.sortDir', _trainingSortDir);
   smartRender(() => renderTrainingenPage(document.getElementById('search-trainingen')?.value || ''));
 }
 

@@ -2,13 +2,15 @@
 // BESTUREN
 // ════════════════════════════════════════════════════════════════
 let _bestuurSearch  = '';
-let _bestuurSortCol = 'naam';
-let _bestuurSortDir = 'asc';
+let _bestuurSortCol = prefGet('bestuur.sortCol', 'naam');
+let _bestuurSortDir = prefGet('bestuur.sortDir', 'asc');
 let _bestuurPage    = 1;
 
 function sortBesturen(col) {
   if (_bestuurSortCol === col) { _bestuurSortDir = _bestuurSortDir === 'asc' ? 'desc' : 'asc'; }
   else { _bestuurSortCol = col; _bestuurSortDir = 'asc'; }
+  prefSet('bestuur.sortCol', _bestuurSortCol);
+  prefSet('bestuur.sortDir', _bestuurSortDir);
   _bestuurPage = 1;
   renderContent();
 }

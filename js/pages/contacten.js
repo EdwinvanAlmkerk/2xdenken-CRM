@@ -2,13 +2,15 @@
 // CONTACTEN
 // ════════════════════════════════════════════════════════════════
 let _contactenSearch  = '';
-let _contactenSortCol = 'naam';
-let _contactenSortDir = 'asc';
+let _contactenSortCol = prefGet('contacten.sortCol', 'naam');
+let _contactenSortDir = prefGet('contacten.sortDir', 'asc');
 let _contactenPage    = 1;
 
 function sortContacten(col) {
   if (_contactenSortCol === col) { _contactenSortDir = _contactenSortDir === 'asc' ? 'desc' : 'asc'; }
   else { _contactenSortCol = col; _contactenSortDir = 'asc'; }
+  prefSet('contacten.sortCol', _contactenSortCol);
+  prefSet('contacten.sortDir', _contactenSortDir);
   _contactenPage = 1;
   renderContent();
 }

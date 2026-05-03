@@ -39,6 +39,18 @@ function svgIcon(name, size = 16) {
   return `<svg viewBox="0 0 24 24" width="${size}" height="${size}" fill="currentColor" style="flex-shrink:0">${ICONS[name] || ''}</svg>`;
 }
 
+// ── User-preferences (filter-/sortkeuzes per pagina, persistent in localStorage) ──
+const PREF_PREFIX = 'crm_pref_';
+function prefGet(key, def) {
+  try {
+    const v = localStorage.getItem(PREF_PREFIX + key);
+    return v === null ? def : v;
+  } catch (e) { return def; }
+}
+function prefSet(key, value) {
+  try { localStorage.setItem(PREF_PREFIX + key, String(value)); } catch (e) {}
+}
+
 // ── Formatting ────────────────────────────────────────────────────
 function fmtDate(iso) {
   if (!iso) return '–';

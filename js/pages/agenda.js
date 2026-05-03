@@ -1,9 +1,9 @@
 // ════════════════════════════════════════════════════════════════
 // AGENDA — Dag / Week / Maand / Lijst weergaven
 // ════════════════════════════════════════════════════════════════
-let _agendaView   = 'week'; // 'dag', 'week', 'maand', 'lijst'
+let _agendaView   = prefGet('agenda.view', 'week'); // 'dag', 'week', 'maand', 'lijst'
 let _agendaDate   = new Date();
-let _agendaFilter = 'komend';
+let _agendaFilter = prefGet('agenda.filter', 'komend');
 let _agendaSearch = '';
 
 // ── Outlook agenda sync state ───────────────────────────────────
@@ -208,12 +208,13 @@ function agendaVandaag() {
 
 function setAgendaView(v) {
   _agendaView = v;
+  prefSet('agenda.view', v);
   renderContent();
 }
 
 const _renderAgendaDeb = debounce(() => smartRender(() => renderAgendaPage()), 140);
 function searchAgenda(v) { _agendaSearch = v; _renderAgendaDeb(); }
-function filterAgenda(v) { _agendaFilter = v; renderContent(); }
+function filterAgenda(v) { _agendaFilter = v; prefSet('agenda.filter', v); renderContent(); }
 
 // ── Items ophalen voor een datumreeks ────────────────────────────
 function getItemsForDate(iso) {

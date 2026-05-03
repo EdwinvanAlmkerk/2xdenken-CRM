@@ -1,11 +1,11 @@
 // ════════════════════════════════════════════════════════════════
 // FACTUREN
 // ════════════════════════════════════════════════════════════════
-let _factuurFilter  = 'alle';
-let _factuurJaar    = String(new Date().getFullYear());
+let _factuurFilter  = prefGet('factuur.filter', 'alle');
+let _factuurJaar    = prefGet('factuur.jaar', String(new Date().getFullYear()));
 let _factuurSearch  = '';
-let _factuurSortCol = 'datum';
-let _factuurSortDir = 'desc';
+let _factuurSortCol = prefGet('factuur.sortCol', 'datum');
+let _factuurSortDir = prefGet('factuur.sortDir', 'desc');
 let _factuurPage    = 1;
 let _regels         = [];
 let _uitvScore      = 0;
@@ -15,14 +15,16 @@ function gotoFacturenPage(p) { _factuurPage = p; smartRender(() => renderFacture
 function sortFacturen(col) {
   if (_factuurSortCol === col) { _factuurSortDir = _factuurSortDir === 'asc' ? 'desc' : 'asc'; }
   else { _factuurSortCol = col; _factuurSortDir = col === 'bedrag' ? 'desc' : 'asc'; }
+  prefSet('factuur.sortCol', _factuurSortCol);
+  prefSet('factuur.sortDir', _factuurSortDir);
   _factuurPage = 1;
   smartRender(() => renderFacturenPage(_factuurSearch));
 }
 
 const _renderFacturenDeb = debounce(() => smartRender(() => renderFacturenPage(_factuurSearch)), 140);
 function filterFacturen(v)   { _factuurSearch = v; _factuurPage = 1; _renderFacturenDeb(); }
-function setFactuurFilter(f) { _factuurFilter = f; _factuurPage = 1; smartRender(() => renderFacturenPage(_factuurSearch)); }
-function setFactuurJaar(j)   { _factuurJaar   = j; _factuurPage = 1; smartRender(() => renderFacturenPage(_factuurSearch)); }
+function setFactuurFilter(f) { _factuurFilter = f; prefSet('factuur.filter', f); _factuurPage = 1; smartRender(() => renderFacturenPage(_factuurSearch)); }
+function setFactuurJaar(j)   { _factuurJaar   = j; prefSet('factuur.jaar', j);   _factuurPage = 1; smartRender(() => renderFacturenPage(_factuurSearch)); }
 
 function renderFacturenPage(search = '') {
   const jaren = [...new Set(DB.facturen.map(f => getFactuurJaar(f)).filter(Boolean))].sort().reverse();

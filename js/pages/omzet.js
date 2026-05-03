@@ -2,20 +2,22 @@
 // OMZET — Per school per periode, met grafiek
 // ════════════════════════════════════════════════════════════════
 
-let _omzetJaar     = String(new Date().getFullYear());
-let _omzetStatus   = 'gefactureerd'; // 'gefactureerd' = verzonden+betaald, 'betaald', 'alle'
-let _omzetSortCol  = 'bedrag';
-let _omzetSortDir  = 'desc';
+let _omzetJaar     = prefGet('omzet.jaar', String(new Date().getFullYear()));
+let _omzetStatus   = prefGet('omzet.status', 'gefactureerd'); // 'gefactureerd' = verzonden+betaald, 'betaald', 'alle'
+let _omzetSortCol  = prefGet('omzet.sortCol', 'bedrag');
+let _omzetSortDir  = prefGet('omzet.sortDir', 'desc');
 let _omzetTopOnly  = true;
 
 const OMZET_TOP_N = 15;
 
-function setOmzetJaar(v)   { _omzetJaar = v; smartRender(renderOmzetPage); }
-function setOmzetStatus(v) { _omzetStatus = v; smartRender(renderOmzetPage); }
+function setOmzetJaar(v)   { _omzetJaar = v; prefSet('omzet.jaar', v); smartRender(renderOmzetPage); }
+function setOmzetStatus(v) { _omzetStatus = v; prefSet('omzet.status', v); smartRender(renderOmzetPage); }
 function toggleOmzetAlle() { _omzetTopOnly = !_omzetTopOnly; smartRender(renderOmzetPage); }
 function sortOmzet(col) {
   if (_omzetSortCol === col) { _omzetSortDir = _omzetSortDir === 'asc' ? 'desc' : 'asc'; }
   else { _omzetSortCol = col; _omzetSortDir = col === 'school' ? 'asc' : 'desc'; }
+  prefSet('omzet.sortCol', _omzetSortCol);
+  prefSet('omzet.sortDir', _omzetSortDir);
   smartRender(renderOmzetPage);
 }
 

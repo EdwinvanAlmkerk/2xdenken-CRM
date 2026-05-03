@@ -88,7 +88,7 @@ async function delSchool(id) {
 async function saveContact(schoolId, cid) {
   const naam = document.getElementById('f-naam').value.trim();
   if (!naam) return alert('Naam is verplicht');
-  const data = { naam, functie: document.getElementById('f-func').value.trim(), type: document.getElementById('f-type').value, email: document.getElementById('f-email').value.trim(), telefoon: document.getElementById('f-tel').value.trim(), schoolId };
+  const data = { naam, functie: document.getElementById('f-func').value.trim(), type: document.getElementById('f-type').value, email: document.getElementById('f-email').value.trim(), telefoon: document.getElementById('f-tel').value.trim(), geboortedatum: document.getElementById('f-geb')?.value || '', schoolId };
   showLoading();
   try {
     if (cid) {
@@ -770,5 +770,30 @@ async function delEmailTemplate(id) {
     DB.emailTemplates = DB.emailTemplates.filter(t => t.id !== id);
     closeModal(); renderContent();
   } catch (e) { toastError(e); } finally { hideLoading(); }
+}
+
+// ── DASHBOARD-INSTELLINGEN ───────────────────────────────────────
+// Bewaart de widget-volgorde en zichtbaarheid in Supabase (single-row
+// onder id='main'). Valt stilletjes terug op alleen localStorage als
+// de tabel ontbreekt — `renderDashboard()` leest sowieso eerst uit
+// `DB.dashboardSettings` en daarna uit localStorage.
+async function saveDashboardConfig(widgets) {
+  const payload = { id: 'main', ...toDB_dashboardSettings({ widgets }) };
+  try { localStorage.setItem('crm_pref_dashboard.widgets', JSON.stringify(widgets)); } catch {}
+  if (!HAS_DASHBOARD_SETTINGS_TABLE) {
+    DB.dashboardSettings = { id: 'main', widgets, updatedAt: payload.updated_at };
+    return;
+  }
+  try {
+    await supa('/rest/v1/dashboard_settings?on_conflict=id', {
+      method: 'POST',
+      headers: { Prefer: 'resolution=merge-duplicates,return=minimal' },
+      body: JSON.stringify(payload)
+    });
+    DB.dashboardSettings = { id: 'main', widgets, updatedAt: payload.updated_at };
+  } catch (e) {
+    // Stille fallback — localStorage heeft de wijziging al.
+    DB.dashboardSettings = { id: 'main', widgets, updatedAt: payload.updated_at };
+  }
 }
 

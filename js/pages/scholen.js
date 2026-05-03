@@ -2,13 +2,15 @@
 // SCHOLEN
 // ════════════════════════════════════════════════════════════════
 let _scholenSearch  = '';
-let _scholenSortCol = 'naam';
-let _scholenSortDir = 'asc';
+let _scholenSortCol = prefGet('scholen.sortCol', 'naam');
+let _scholenSortDir = prefGet('scholen.sortDir', 'asc');
 let _scholenPage    = 1;
 
 function sortScholen(col) {
   if (_scholenSortCol === col) { _scholenSortDir = _scholenSortDir === 'asc' ? 'desc' : 'asc'; }
   else { _scholenSortCol = col; _scholenSortDir = 'asc'; }
+  prefSet('scholen.sortCol', _scholenSortCol);
+  prefSet('scholen.sortDir', _scholenSortDir);
   _scholenPage = 1;
   renderContent();
 }
@@ -397,7 +399,8 @@ function openContactModal(schoolId, cid = '') {
        </div>
      </div>
      <div class="form-group"><label>E-mailadres</label><input type="email" id="f-email" value="${esc(c?.email || '')}" placeholder="jan@school.nl"/></div>
-     <div class="form-group"><label>Telefoonnummer</label><input type="tel" id="f-tel" value="${esc(c?.telefoon || '')}" placeholder="+31 6 12345678"/></div>`,
+     <div class="form-group"><label>Telefoonnummer</label><input type="tel" id="f-tel" value="${esc(c?.telefoon || '')}" placeholder="+31 6 12345678"/></div>
+     ${HAS_CONTACTEN_GEBOORTEDATUM_COLUMN ? `<div class="form-group"><label>Geboortedatum (optioneel)</label><input type="date" id="f-geb" value="${esc(c?.geboortedatum || '')}"/></div>` : ''}`,
     `<button class="btn btn-secondary" onclick="closeModal()">Annuleren</button>
      ${c ? `<button class="btn" style="background:#FDE8E8;color:#C0392B;font-weight:700" onclick="delContact('${cid}','${schoolId}')">Verwijderen</button>` : ''}
      <button class="btn btn-primary" onclick="saveContact('${schoolId}','${cid}')">Opslaan</button>`);

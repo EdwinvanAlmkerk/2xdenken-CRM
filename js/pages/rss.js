@@ -11,8 +11,8 @@
 // Items worden niet in de database opgeslagen — ze worden bij elk laden
 // opnieuw uit de feed gehaald. Alleen de lees-status persisteert.
 
-let _rssActiveFeed = 'alle';            // 'alle' | feedId
-let _rssActiveFilter = 'alle';          // 'alle' | 'ongelezen'
+let _rssActiveFeed = prefGet('rss.activeFeed', 'alle');     // 'alle' | feedId
+let _rssActiveFilter = prefGet('rss.activeFilter', 'alle'); // 'alle' | 'ongelezen'
 let _rssSelectedItemId = null;          // "feedId::itemGuid"
 let _rssItemsByFeed = {};               // { feedId: [items] }
 let _rssLoadingFeeds = new Set();
@@ -308,12 +308,14 @@ async function rssMarkAllRead() {
 // ── Selectie & filters ─────────────────────────────────────────
 function rssSelectFeed(feedId) {
   _rssActiveFeed = feedId;
+  prefSet('rss.activeFeed', feedId);
   _rssSelectedItemId = null;
   renderContent();
 }
 
 function rssSetFilter(filter) {
   _rssActiveFilter = filter;
+  prefSet('rss.activeFilter', filter);
   _rssSelectedItemId = null;
   renderContent();
 }
@@ -389,7 +391,7 @@ async function delRssFeed(id) {
     DB.rssFeeds = DB.rssFeeds.filter(f => f.id !== id);
     DB.rssItemsRead = DB.rssItemsRead.filter(r => r.feedId !== id);
     delete _rssItemsByFeed[id];
-    if (_rssActiveFeed === id) _rssActiveFeed = 'alle';
+    if (_rssActiveFeed === id) { _rssActiveFeed = 'alle'; prefSet('rss.activeFeed', 'alle'); }
     _rssReadIndex = null;
     closeModal();
     renderContent();
@@ -405,6 +407,11 @@ async function delRssFeed(id) {
 function renderRssPage() {
   // Trigger eerste laad als nog niet gedaan
   const feeds = DB.rssFeeds || [];
+  // Defensief: als de bewaarde feed-ID niet meer bestaat (verwijderd in andere sessie), val terug op 'alle'
+  if (_rssActiveFeed !== 'alle' && !feeds.some(f => f.id === _rssActiveFeed)) {
+    _rssActiveFeed = 'alle';
+    prefSet('rss.activeFeed', 'alle');
+  }
   if (feeds.length && !Object.keys(_rssItemsByFeed).length) {
     loadAllRssFeeds(false).then(() => { if (page === 'rss') renderContent(); });
   }
@@ -575,6 +582,8 @@ function openDashboardNewsItem(idx) {
   if (!it) return;
   _rssActiveFeed = 'alle';
   _rssActiveFilter = 'alle';
+  prefSet('rss.activeFeed', 'alle');
+  prefSet('rss.activeFilter', 'alle');
   _rssSelectedItemId = `${it.feedId}::${it.guid}`;
   _rssMarkRead(it.feedId, it.guid);
   navigate('rss');

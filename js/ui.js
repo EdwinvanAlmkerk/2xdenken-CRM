@@ -171,3 +171,39 @@ function exportBackup() {
 function importBackup() {
   alert('Import is uitgeschakeld in de Supabase versie. Data staat al in de cloud.');
 }
+
+// ── Quick-add FAB ────────────────────────────────────────────────
+// Drijvende plus-knop rechtsonder die een mini-menu opent met
+// snelkoppelingen voor het direct aanmaken van een afspraak/factuur/
+// school/bestuur/training, ongeacht de huidige pagina.
+function toggleQuickAdd(force) {
+  const el = document.getElementById('quick-add');
+  if (!el) return;
+  const open = typeof force === 'boolean' ? force : !el.classList.contains('open');
+  el.classList.toggle('open', open);
+}
+
+function closeQuickAdd() { toggleQuickAdd(false); }
+
+function quickAdd(action) {
+  closeQuickAdd();
+  switch (action) {
+    case 'agenda':   if (typeof openAgendaModal === 'function')  openAgendaModal();        break;
+    case 'factuur':  if (typeof openFactuurModal === 'function') openFactuurModal('');     break;
+    case 'school':   if (typeof openSchoolModal === 'function')  openSchoolModal();        break;
+    case 'bestuur':  if (typeof openBestuurModal === 'function') openBestuurModal();       break;
+    case 'training': if (typeof openTrainingModal === 'function') openTrainingModal();     break;
+  }
+}
+
+// Klik buiten het menu of Escape sluit het menu.
+document.addEventListener('click', (e) => {
+  const wrap = document.getElementById('quick-add');
+  if (!wrap || !wrap.classList.contains('open')) return;
+  if (!wrap.contains(e.target)) closeQuickAdd();
+});
+document.addEventListener('keydown', (e) => {
+  if (e.key !== 'Escape') return;
+  const wrap = document.getElementById('quick-add');
+  if (wrap && wrap.classList.contains('open')) closeQuickAdd();
+});
