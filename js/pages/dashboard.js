@@ -15,7 +15,8 @@ function renderDashboard() {
   const facturenLopendJaar = DB.facturen.filter(f => getFactuurJaar(f) === huidigJaar);
   const totaalFacturenLopendJaar = facturenLopendJaar.reduce((s, f) => s + (Number(f.totaal) || 0), 0);
   const openFacturen   = facturenLopendJaar.filter(f => f.status === 'verzonden').length;
-  const recentDossiers = DB.dossiers.filter(d => d.type !== 'inbox-archived' && !isFactuurDossier(d) && !isInboxLogged(d)).sort((a, b) => new Date(b.datum) - new Date(a.datum)).slice(0, 6);
+  const latestNews = typeof rssLatestItems === 'function' ? rssLatestItems(6) : [];
+  const heeftFeeds = (DB.rssFeeds || []).length > 0;
   const vandaag = new Date().toISOString().slice(0, 10);
   if (DB.outlookSettings?.icsUrl && !_outlookFetchedOnce && !_outlookLoading) {
     if (_outlookEvents.length === 0) {
@@ -86,11 +87,26 @@ function renderDashboard() {
         </div>
       </div>
       <div class="card">
-        <div class="card-header"><h3>Recente dossiernotities</h3></div>
+        <div class="card-header">
+          <h3>${svgIcon('note', 16)} Laatste nieuws</h3>
+          <button class="btn btn-secondary btn-sm" onclick="navigate('rss')">Alle nieuws</button>
+        </div>
         <div class="card-body">
-          ${recentDossiers.length === 0
-            ? `<div class="empty-state">${svgIcon('note', 36)}<p>Nog geen notities</p></div>`
-            : `<div class="dossier-list">${recentDossiers.map(d => renderDossierItem(d)).join('')}</div>`}
+          ${!heeftFeeds
+            ? `<div class="empty-state">${svgIcon('note', 36)}<p>Nog geen feeds toegevoegd</p>
+                 <button class="btn btn-primary btn-sm" onclick="navigate('rss')" style="margin-top:10px">${svgIcon('add', 14)} Feeds beheren</button>
+               </div>`
+            : latestNews.length === 0
+              ? `<div class="empty-state">${svgIcon('note', 36)}<p>Nieuws wordt geladen…</p></div>`
+              : `<div style="display:flex;flex-direction:column;gap:8px">${latestNews.map((it, idx) => `
+                  <div onclick="openDashboardNewsItem(${idx})"
+                       style="cursor:pointer;padding:10px 12px;border-radius:8px;background:var(--mint1);transition:background .15s"
+                       onmouseover="this.style.background='var(--mint2)'"
+                       onmouseout="this.style.background='var(--mint1)'">
+                    <div style="font-size:10.5px;color:var(--navy4);font-weight:700;text-transform:uppercase;letter-spacing:.4px;margin-bottom:3px">${esc(it.feedNaam)} · ${_rssRelativeTime(it.pubDateMs)}</div>
+                    <div style="font-size:13.5px;font-weight:600;color:var(--navy);line-height:1.3">${esc(it.title)}</div>
+                    ${it.summary ? `<div style="font-size:12px;color:var(--navy3);line-height:1.45;margin-top:4px;display:-webkit-box;-webkit-line-clamp:2;-webkit-box-orient:vertical;overflow:hidden">${esc(it.summary)}</div>` : ''}
+                  </div>`).join('')}</div>`}
         </div>
       </div>
     </div>`;

@@ -22,6 +22,14 @@ let _rssVisibleItemsCache = [];         // bewaard tussen render en click — on
 
 const RSS_FETCH_PATH = '/functions/v1/fetch-rss';
 const RSS_RELOAD_INTERVAL_MS = 5 * 60 * 1000;
+const RSS_MAX_AGE_MS = 30 * 24 * 60 * 60 * 1000; // 30 dagen
+
+// Items zonder geldige pubDate (pubDateMs === 0) worden getoond — die filter-uit
+// zou complete feeds onzichtbaar maken als parsen mislukt.
+function _rssItemRecent(item) {
+  if (!item.pubDateMs) return true;
+  return Date.now() - item.pubDateMs <= RSS_MAX_AGE_MS;
+}
 
 // ── Lees-status index ──────────────────────────────────────────
 function _rssBuildReadIndex() {
@@ -218,6 +226,7 @@ function _rssGetVisibleItems() {
     const data = _rssItemsByFeed[f.id];
     if (!data || data.error) continue;
     for (const it of data) {
+      if (!_rssItemRecent(it)) continue;
       const read = rssIsRead(f.id, it.guid);
       if (_rssActiveFilter === 'ongelezen' && read) continue;
       acc.push({ ...it, feedId: f.id, feedNaam: f.naam, isRead: read });
@@ -231,7 +240,10 @@ function _rssCountUnread(feedId) {
   const data = _rssItemsByFeed[feedId];
   if (!data || data.error) return 0;
   let n = 0;
-  for (const it of data) if (!rssIsRead(feedId, it.guid)) n++;
+  for (const it of data) {
+    if (!_rssItemRecent(it)) continue;
+    if (!rssIsRead(feedId, it.guid)) n++;
+  }
   return n;
 }
 
@@ -447,14 +459,31 @@ function renderRssPage() {
       </aside>
 
       <section class="rss-list card">
-        ${items.length === 0 ? `
-          <div class="empty-state" style="padding:40px 20px">
-            <p style="font-size:14px;color:var(--navy4)">${
-              _rssActiveFilter === 'ongelezen'
-                ? 'Geen ongelezen artikelen.'
-                : 'Geen artikelen gevonden voor deze selectie.'
-            }</p>
-          </div>` : items.map((it, idx) => _rssListItemHtml(it, idx)).join('')}
+        ${(() => {
+          // Speciaal bericht als geselecteerde feed een fout heeft
+          if (_rssActiveFeed !== 'alle') {
+            const data = _rssItemsByFeed[_rssActiveFeed];
+            if (data && data.error) {
+              return `
+                <div class="empty-state" style="padding:40px 20px">
+                  <p style="font-size:14px;font-weight:700;color:var(--s-rood);margin-bottom:6px">⚠ Deze feed kon niet geladen worden</p>
+                  <p style="font-size:12.5px;color:var(--navy3);margin-bottom:14px">${esc(data.error)}</p>
+                  <p style="font-size:12px;color:var(--navy4);max-width:340px;margin:0 auto">Controleer de feed-URL — de bronserver gaf bovenstaande fout terug. Veel sites publiceren hun RSS op een ander pad dan je verwacht.</p>
+                </div>`;
+            }
+          }
+          if (items.length === 0) {
+            return `
+              <div class="empty-state" style="padding:40px 20px">
+                <p style="font-size:14px;color:var(--navy4)">${
+                  _rssActiveFilter === 'ongelezen'
+                    ? 'Geen ongelezen artikelen.'
+                    : 'Geen artikelen gevonden voor deze selectie.'
+                }</p>
+              </div>`;
+          }
+          return items.map((it, idx) => _rssListItemHtml(it, idx)).join('');
+        })()}
       </section>
 
       <article class="rss-article card">
@@ -469,12 +498,13 @@ function renderRssPage() {
 
 function _rssFeedSidebarItem({ id, naam, categorie, count, isAll, error, loading }) {
   const active = _rssActiveFeed === id;
+  const shortErr = error ? (error.length > 40 ? error.slice(0, 39) + '…' : error) : '';
   return `
     <div class="rss-feed-item${active ? ' active' : ''}" onclick="rssSelectFeed('${id}')">
       <div class="rss-feed-item-main">
         <div class="rss-feed-name">${esc(naam)}${loading ? ' <span style="font-size:10px;color:var(--navy4);font-weight:500">⟳</span>' : ''}</div>
         ${categorie ? `<div class="rss-feed-cat">${esc(categorie)}</div>` : ''}
-        ${error ? `<div class="rss-feed-error" title="${esc(error)}">⚠ Fout bij laden</div>` : ''}
+        ${error ? `<div class="rss-feed-error" title="${esc(error)}">⚠ ${esc(shortErr)}</div>` : ''}
       </div>
       <div class="rss-feed-item-side">
         ${count > 0 ? `<span class="rss-badge">${count}</span>` : ''}
@@ -514,6 +544,40 @@ function _rssArticleHtml(item) {
     <div class="rss-article-body">
       ${_rssSanitizeHtml(item.contentHtml)}
     </div>`;
+}
+
+// ── Publieke helpers voor het dashboard ───────────────────────
+let _rssDashboardCache = [];
+
+function rssLatestItems(limit = 6) {
+  // Trigger laden als nog niet gebeurd; resultaat komt via renderContent.
+  if ((DB.rssFeeds || []).length && !Object.keys(_rssItemsByFeed).length) {
+    loadAllRssFeeds(false).then(() => {
+      if (page === 'dashboard' || page === 'rss') renderContent();
+    });
+  }
+  const items = [];
+  for (const f of DB.rssFeeds || []) {
+    const data = _rssItemsByFeed[f.id];
+    if (!data || data.error) continue;
+    for (const it of data) {
+      if (!_rssItemRecent(it)) continue;
+      items.push({ ...it, feedId: f.id, feedNaam: f.naam });
+    }
+  }
+  items.sort((a, b) => b.pubDateMs - a.pubDateMs);
+  _rssDashboardCache = items.slice(0, limit);
+  return _rssDashboardCache;
+}
+
+function openDashboardNewsItem(idx) {
+  const it = _rssDashboardCache[idx];
+  if (!it) return;
+  _rssActiveFeed = 'alle';
+  _rssActiveFilter = 'alle';
+  _rssSelectedItemId = `${it.feedId}::${it.guid}`;
+  _rssMarkRead(it.feedId, it.guid);
+  navigate('rss');
 }
 
 function _rssRelativeTime(ms) {
