@@ -33,3 +33,10 @@ npm-debug.log*
 *.docx
 Backup*.txt
 TECHNICAL_DOCUMENTATION.md
+
+# Lokale tijdelijke bestanden en CLI-state
+.tmp/
+supabase/.temp/
+
+# Claude Code persoonlijke permissies (niet delen)
+.claude/settings.local.json
