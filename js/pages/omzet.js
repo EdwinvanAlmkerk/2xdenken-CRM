@@ -106,7 +106,7 @@ function _omzetBarChart(rows) {
   return `
     <div class="card" style="margin-bottom:18px">
       <div class="card-header" style="display:flex;justify-content:space-between;align-items:center;flex-wrap:wrap;gap:10px">
-        <h3>Omzet per school${_omzetTopOnly && sorted.length > OMZET_TOP_N ? ` <span style="font-weight:500;color:var(--navy4);font-size:13px">— Top ${OMZET_TOP_N} van ${sorted.length}</span>` : ''}</h3>
+        <h3>Omzet overzicht${_omzetTopOnly && sorted.length > OMZET_TOP_N ? ` <span style="font-weight:500;color:var(--navy4);font-size:13px">— Top ${OMZET_TOP_N} van ${sorted.length}</span>` : ''}</h3>
         ${sorted.length > OMZET_TOP_N ? `<button class="btn btn-secondary btn-sm" onclick="toggleOmzetAlle()">${_omzetTopOnly ? 'Toon alle' : 'Toon top ' + OMZET_TOP_N}</button>` : ''}
       </div>
       <div class="card-body" style="padding:18px 24px">

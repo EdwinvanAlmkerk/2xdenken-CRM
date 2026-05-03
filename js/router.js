@@ -12,7 +12,7 @@ const PAGE_LABELS = {
   dashboard: 'Dashboard', agenda: 'Agenda', email: 'E-mail', rss: 'Nieuws & RSS',
   besturen: 'Besturen', 'bestuur-detail': 'Bestuur',
   scholen: 'Scholen', 'school-detail': 'School', contacten: 'Alle contacten', 'contact-detail': 'Contactpersoon',
-  facturen: 'Facturen', omzet: 'Omzet per school', trainingen: 'Trainingen & Werkvormen', 'training-detail': 'Training',
+  facturen: 'Facturen', omzet: 'Omzet overzicht', trainingen: 'Trainingen & Werkvormen', 'training-detail': 'Training',
   instellingen: 'Instellingen'
 };
 
@@ -29,7 +29,7 @@ const NAV_ITEMS = [
   { id: 'trainingen',   label: 'Trainingen & Werkvormen',  icon: 'training', also: ['training-detail'] },
   { section: 'Financieel' },
   { id: 'facturen',     label: 'Facturen',               icon: 'invoice' },
-  { id: 'omzet',        label: 'Omzet per school',      icon: 'euro' },
+  { id: 'omzet',        label: 'Omzet overzicht',       icon: 'euro' },
   { section: 'Beheer' },
   { id: 'instellingen', label: 'Instellingen',           icon: 'settings' },
 ];
