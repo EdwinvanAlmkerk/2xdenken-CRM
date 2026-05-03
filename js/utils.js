@@ -51,6 +51,46 @@ function prefSet(key, value) {
   try { localStorage.setItem(PREF_PREFIX + key, String(value)); } catch (e) {}
 }
 
+// ── Naam-formatting (achternaam eerst, NL tussenvoegsels) ────────
+// Zet "A. Bouchmal" om naar "Bouchmal A." en "Jan de Vries" naar
+// "de Vries Jan". De sort-key plaatst tussenvoegsels achteraan zodat
+// "de Vries" onder de V wordt gesorteerd, conform NL-conventie.
+const _NL_TUSSENVOEGSELS = new Set([
+  'van', 'de', 'der', 'den', 'ten', 'ter', 'te', 'op', 'aan',
+  'in', 'von', 'el', 'al', "'t", "d'", 'da', 'di', 'do', 'la', 'le', 'du'
+]);
+function _splitNaam(naam) {
+  const tokens = String(naam || '').trim().split(/\s+/).filter(Boolean);
+  if (tokens.length < 2) return { voor: '', achter: tokens.join(' '), tussen: '' };
+  let achternaamStart = tokens.length - 1;
+  for (let i = 1; i < tokens.length; i++) {
+    if (_NL_TUSSENVOEGSELS.has(tokens[i].toLowerCase().replace(/\.$/, ''))) {
+      achternaamStart = i; break;
+    }
+  }
+  const voor = tokens.slice(0, achternaamStart).join(' ');
+  const achterTokens = tokens.slice(achternaamStart);
+  // Splits tussenvoegsels van de eigenlijke achternaam
+  const tussen = [];
+  let i = 0;
+  while (i < achterTokens.length && _NL_TUSSENVOEGSELS.has(achterTokens[i].toLowerCase().replace(/\.$/, ''))) {
+    tussen.push(achterTokens[i]); i++;
+  }
+  const achter = achterTokens.slice(i).join(' ');
+  return { voor, achter, tussen: tussen.join(' ') };
+}
+function formatNaamAchternaamEerst(naam) {
+  const { voor, achter, tussen } = _splitNaam(naam);
+  if (!achter) return naam || '';
+  if (!voor) return [tussen, achter].filter(Boolean).join(' ');
+  return [tussen, achter, voor].filter(Boolean).join(' ');
+}
+function naamSortKey(naam) {
+  const { voor, achter } = _splitNaam(naam);
+  // Sorteer op pure achternaam (zonder tussenvoegsels), dan op voornaam
+  return ((achter || '') + ' ' + (voor || '')).toLowerCase();
+}
+
 // ── Formatting ────────────────────────────────────────────────────
 function fmtDate(iso) {
   if (!iso) return '–';

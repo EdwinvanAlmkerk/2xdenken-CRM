@@ -39,7 +39,7 @@ function renderContacten(search = '') {
   filtered = [...filtered].sort((a, b) => {
     const sa = getSchool(a.schoolId);
     const sb = getSchool(b.schoolId);
-    if (_contactenSortCol === 'naam')    return dir * a.naam.localeCompare(b.naam, 'nl');
+    if (_contactenSortCol === 'naam')    return dir * naamSortKey(a.naam).localeCompare(naamSortKey(b.naam), 'nl');
     if (_contactenSortCol === 'functie') return dir * (a.functie || '').localeCompare(b.functie || '', 'nl');
     if (_contactenSortCol === 'type')    return dir * (a.type || '').localeCompare(b.type || '', 'nl');
     if (_contactenSortCol === 'school')  return dir * (sa?.naam || '').localeCompare(sb?.naam || '', 'nl');
@@ -67,7 +67,7 @@ function renderContacten(search = '') {
               : pageSlice.map(c => {
                   const s = getSchool(c.schoolId);
                   return `<tr class="clickable-row" onclick="navigateToContact('${s?.id || ''}','${c.id}')">
-                    <td style="font-weight:500">${esc(c.naam)}</td>
+                    <td style="font-weight:500">${esc(formatNaamAchternaamEerst(c.naam))}</td>
                     <td>${esc(c.functie || '—')}</td>
                     <td>${badge(c.type)}</td>
                     <td style="font-size:13px;color:var(--ink3)">${esc(s?.naam || '—')}</td>
@@ -94,7 +94,7 @@ function exportContactenExcel() {
       || c.naam.toLowerCase().includes(q)
       || (c.functie || '').toLowerCase().includes(q)
       || (c.email || '').toLowerCase().includes(q))
-    .sort((a, b) => a.naam.localeCompare(b.naam, 'nl'));
+    .sort((a, b) => naamSortKey(a.naam).localeCompare(naamSortKey(b.naam), 'nl'));
 
   const Q = s => '"' + String(s ?? '').replace(/"/g, '""') + '"';
   const titel = 'Contactenoverzicht 2xDenken';
@@ -108,7 +108,7 @@ function exportContactenExcel() {
       const s = getSchool(c.schoolId);
       const b = s ? getBestuur(s.bestuurId) : null;
       return [
-        Q(c.naam),
+        Q(formatNaamAchternaamEerst(c.naam)),
         Q(c.functie),
         Q(typeNL[c.type] || c.type || ''),
         Q(c.email),
