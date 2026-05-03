@@ -2,7 +2,7 @@
 // INSTELLINGEN — Tab-gebaseerde compacte layout
 // ════════════════════════════════════════════════════════════════
 
-let _instellingenTab = prefGet('instellingen.tab', 'categorieen'); // 'categorieen' | 'email' | 'agenda'
+let _instellingenTab = prefGet('instellingen.tab', 'categorieen'); // 'categorieen' | 'email' | 'agenda' | 'backup'
 
 function setInstellingenTab(t) {
   _instellingenTab = t;
@@ -18,12 +18,14 @@ function renderInstellingen() {
     ['categorieen', `${svgIcon('list', 14)} Categorieën`],
     ['email',       `${svgIcon('mail', 14)} E-mail`],
     ['agenda',      `${svgIcon('calendar', 14)} Agenda`],
+    ['backup',      `${svgIcon('download', 14)} Backup`],
   ];
 
   let body = '';
   if (_instellingenTab === 'categorieen')   body = renderInstellingenCategorieen();
   else if (_instellingenTab === 'email')    body = renderInstellingenEmail();
   else if (_instellingenTab === 'agenda')   body = renderInstellingenAgenda();
+  else if (_instellingenTab === 'backup')   body = renderInstellingenBackup();
   else { _instellingenTab = 'categorieen'; body = renderInstellingenCategorieen(); }
 
   return `
@@ -196,6 +198,353 @@ function renderInstellingenAgenda() {
         </div>
       </div>
     </div>`;
+}
+
+// ── Tab: Backup ─────────────────────────────────────────────────
+// Periode-state. Niet persistent — gebruiker kiest steeds opnieuw.
+let _backupPreset    = '12months';   // '12months' | 'thisyear' | 'lastyear' | '3years' | 'all' | 'custom'
+let _backupFromDate  = '';
+let _backupToDate    = '';
+let _backupExportXlsx = true;
+let _backupExportJson = true;
+
+function setBackupPreset(p) {
+  _backupPreset = p;
+  // Bij 'custom' tonen we velden; anders berekenen we direct.
+  if (p === 'custom') {
+    if (!_backupFromDate || !_backupToDate) {
+      const { from, to } = _backupComputePeriod('12months');
+      _backupFromDate = from;
+      _backupToDate = to;
+    }
+  }
+  renderContent();
+}
+function setBackupFromDate(v) { _backupFromDate = v; }
+function setBackupToDate(v)   { _backupToDate = v; }
+function setBackupFormat(fmt, on) {
+  if (fmt === 'xlsx') _backupExportXlsx = !!on;
+  if (fmt === 'json') _backupExportJson = !!on;
+}
+
+function _backupComputePeriod(preset = _backupPreset) {
+  const now = new Date();
+  const today = now.toISOString().slice(0, 10);
+  switch (preset) {
+    case 'thisyear': return { from: `${now.getFullYear()}-01-01`, to: today };
+    case 'lastyear': {
+      const y = now.getFullYear() - 1;
+      return { from: `${y}-01-01`, to: `${y}-12-31` };
+    }
+    case '3years': {
+      const d = new Date(now); d.setFullYear(d.getFullYear() - 3);
+      return { from: d.toISOString().slice(0, 10), to: today };
+    }
+    case '12months': {
+      const d = new Date(now); d.setMonth(d.getMonth() - 12);
+      return { from: d.toISOString().slice(0, 10), to: today };
+    }
+    case 'all':    return { from: '', to: '' };
+    case 'custom': return { from: _backupFromDate, to: _backupToDate };
+    default:       return { from: '', to: '' };
+  }
+}
+
+function renderInstellingenBackup() {
+  const { from, to } = _backupComputePeriod();
+  const presetLabel = (k, l) => `<label class="qa-preset" style="display:inline-flex;align-items:center;gap:6px;padding:6px 12px;border-radius:6px;cursor:pointer;border:1px solid ${_backupPreset === k ? 'var(--accent)' : 'rgba(30,45,74,0.12)'};background:${_backupPreset === k ? 'rgba(26,184,184,0.10)' : 'white'};font-size:12.5px;font-weight:${_backupPreset === k ? '600' : '500'};color:${_backupPreset === k ? 'var(--accent)' : 'var(--navy3)'}">
+    <input type="radio" name="bkp-preset" value="${k}" ${_backupPreset === k ? 'checked' : ''} onchange="setBackupPreset('${k}')" style="display:none"/>
+    ${esc(l)}
+  </label>`;
+
+  // Aantallen die in deze periode mee zouden gaan (live preview)
+  const counts = _backupCounts(from, to);
+
+  return `
+    <div style="max-width:780px">
+      <div class="card">
+        <div class="card-header">
+          <h3>${svgIcon('download', 16)} Systeembackup</h3>
+        </div>
+        <div class="card-body">
+          <p style="font-size:13px;color:var(--navy3);margin-bottom:14px;line-height:1.5">
+            Exporteer al je CRM-data voor archivering of inzage. <strong>Excel</strong> is leesbaar buiten het systeem (één tabblad per soort), <strong>JSON</strong> bevat de complete ruwe data en is geschikt voor een eventuele restore.
+          </p>
+
+          <div class="form-group">
+            <label>Periode</label>
+            <div style="display:flex;gap:6px;flex-wrap:wrap">
+              ${presetLabel('12months', 'Laatste 12 maanden')}
+              ${presetLabel('thisyear', 'Dit jaar')}
+              ${presetLabel('lastyear', 'Vorig jaar')}
+              ${presetLabel('3years', 'Laatste 3 jaar')}
+              ${presetLabel('all', 'Alles')}
+              ${presetLabel('custom', 'Eigen periode…')}
+            </div>
+          </div>
+
+          ${_backupPreset === 'custom' ? `
+            <div class="form-row">
+              <div class="form-group"><label>Van</label><input type="date" id="f-bkp-from" value="${esc(_backupFromDate)}" onchange="setBackupFromDate(this.value)"/></div>
+              <div class="form-group"><label>Tot en met</label><input type="date" id="f-bkp-to" value="${esc(_backupToDate)}" onchange="setBackupToDate(this.value)"/></div>
+            </div>` : ''}
+
+          <div class="form-group">
+            <label>Formaat</label>
+            <div style="display:flex;gap:14px;flex-wrap:wrap">
+              <label style="display:inline-flex;align-items:center;gap:8px;cursor:pointer;font-size:13px">
+                <input type="checkbox" id="f-bkp-xlsx" ${_backupExportXlsx ? 'checked' : ''} onchange="setBackupFormat('xlsx', this.checked)"/>
+                Excel (.xlsx) — leesbaar in Excel/Numbers/Sheets
+              </label>
+              <label style="display:inline-flex;align-items:center;gap:8px;cursor:pointer;font-size:13px">
+                <input type="checkbox" id="f-bkp-json" ${_backupExportJson ? 'checked' : ''} onchange="setBackupFormat('json', this.checked)"/>
+                JSON (.json) — complete restore-vorm
+              </label>
+            </div>
+          </div>
+
+          <div style="margin-top:14px;padding:12px 14px;background:var(--mint1);border-radius:var(--r);font-size:12.5px;color:var(--navy)">
+            <strong>Wat wordt geëxporteerd:</strong>
+            <div style="display:grid;grid-template-columns:repeat(auto-fit,minmax(180px,1fr));gap:6px 18px;margin-top:8px;color:var(--navy3)">
+              <div>Besturen: <strong>${counts.besturen}</strong></div>
+              <div>Scholen: <strong>${counts.scholen}</strong></div>
+              <div>Contacten: <strong>${counts.contacten}</strong></div>
+              <div>Trainingen: <strong>${counts.trainingen}</strong></div>
+              <div>Facturen: <strong>${counts.facturen}</strong></div>
+              <div>Dossiers: <strong>${counts.dossiers}</strong></div>
+              <div>Uitvoeringen: <strong>${counts.uitvoeringen}</strong></div>
+              <div>Agenda: <strong>${counts.agenda}</strong></div>
+              <div>E-mailtemplates: <strong>${counts.emailTemplates}</strong></div>
+              <div>E-maillog: <strong>${counts.emailLog}</strong></div>
+            </div>
+            ${(from || to) ? `<div style="margin-top:8px;font-size:11.5px;color:var(--navy4)">Periode-filter actief op datumgevoelige tabellen: <strong>${from || 'begin'}</strong> t/m <strong>${to || 'nu'}</strong>. Masterdata (besturen, scholen, contacten, trainingen, templates) wordt altijd compleet meegenomen.</div>` : `<div style="margin-top:8px;font-size:11.5px;color:var(--navy4)">Geen periode-filter — alle data wordt meegenomen.</div>`}
+          </div>
+
+          <div style="display:flex;gap:8px;margin-top:16px">
+            <button class="btn btn-primary" onclick="runSysteemBackup()">${svgIcon('download', 14)} Backup downloaden</button>
+          </div>
+        </div>
+      </div>
+    </div>`;
+}
+
+function _backupCounts(from, to) {
+  const filt = items => _filterByDateRange(items, from, to, 'datum');
+  return {
+    besturen:       (DB.besturen || []).length,
+    scholen:        (DB.scholen || []).length,
+    contacten:      (DB.contacten || []).length,
+    trainingen:     (DB.trainingen || []).length,
+    emailTemplates: (DB.emailTemplates || []).length,
+    facturen:       filt(DB.facturen || []).length,
+    dossiers:       filt(DB.dossiers || []).length,
+    uitvoeringen:   filt(DB.uitvoeringen || []).length,
+    agenda:         filt(DB.agenda || []).length,
+    emailLog:       filt(DB.emailLog || []).length,
+  };
+}
+
+function _filterByDateRange(items, from, to, key = 'datum') {
+  if (!from && !to) return items;
+  return items.filter(i => {
+    const d = i[key];
+    if (!d) return false;
+    if (from && d < from) return false;
+    if (to && d > to) return false;
+    return true;
+  });
+}
+
+// ── Backup uitvoeren ────────────────────────────────────────────
+function runSysteemBackup() {
+  if (!_backupExportXlsx && !_backupExportJson) {
+    showToast('Kies minstens één formaat (Excel of JSON)', 'error');
+    return;
+  }
+  const { from, to } = _backupComputePeriod();
+  if (_backupPreset === 'custom') {
+    if (!from || !to) { showToast('Vul beide datums in', 'error'); return; }
+    if (from > to)    { showToast('Van-datum moet voor tot-datum liggen', 'error'); return; }
+  }
+
+  const data = _backupBuildDataset(from, to);
+  const stamp = new Date().toISOString().slice(0, 10);
+  const filenameBase = `2xdenken-backup-${stamp}`;
+
+  if (_backupExportXlsx) _backupDownloadXlsx(data, `${filenameBase}.xlsx`);
+  if (_backupExportJson) _backupDownloadJson(data, from, to, `${filenameBase}.json`);
+
+  const formats = [_backupExportXlsx && 'Excel', _backupExportJson && 'JSON'].filter(Boolean).join(' + ');
+  showToast(`Backup ${formats} gedownload`, 'success');
+}
+
+// Bouwt het volledige dataset op — in-memory, gefilterd op datum waar relevant.
+function _backupBuildDataset(from, to) {
+  const filt = (items, key = 'datum') => _filterByDateRange(items, from, to, key);
+  const bestuurMap = Object.fromEntries((DB.besturen || []).map(b => [b.id, b]));
+  const schoolMap  = Object.fromEntries((DB.scholen || []).map(s => [s.id, s]));
+  const contactMap = Object.fromEntries((DB.contacten || []).map(c => [c.id, c]));
+  const trainMap   = Object.fromEntries((DB.trainingen || []).map(t => [t.id, t]));
+  const factuurMap = Object.fromEntries((DB.facturen || []).map(f => [f.id, f]));
+
+  return {
+    besturen:           (DB.besturen || []).slice(),
+    scholen:            (DB.scholen || []).slice(),
+    contacten:          (DB.contacten || []).slice(),
+    trainingen:         (DB.trainingen || []).slice(),
+    trainingTypes:      (DB.trainingTypes || []).slice(),
+    trainingCategories: (DB.trainingCategories || []).slice(),
+    agendaTypes:        (DB.agendaTypes || []).slice(),
+    emailTemplates:     (DB.emailTemplates || []).slice(),
+    facturen:           filt(DB.facturen || []),
+    dossiers:           filt(DB.dossiers || []),
+    uitvoeringen:       filt(DB.uitvoeringen || []),
+    agenda:             filt(DB.agenda || []),
+    emailLog:           filt(DB.emailLog || []),
+    _maps: { bestuurMap, schoolMap, contactMap, trainMap, factuurMap },
+  };
+}
+
+// XLSX-export: één tabblad per entiteit met menselijk-leesbare kolomnamen.
+function _backupDownloadXlsx(data, filename) {
+  const wb = XLSX.utils.book_new();
+  const { bestuurMap, schoolMap, contactMap, trainMap } = data._maps;
+
+  const addSheet = (name, rows) => {
+    const ws = XLSX.utils.json_to_sheet(rows.length ? rows : [{ '(geen rijen)': '' }]);
+    XLSX.utils.book_append_sheet(wb, ws, name.slice(0, 31)); // sheet name max 31 chars
+  };
+
+  addSheet('Besturen', data.besturen.map(b => ({
+    'ID': b.id, 'Naam': b.naam, 'Debiteurnummer': b.debiteurnr || '',
+    'Website': b.website || '', 'Adres': b.adres || '',
+  })));
+
+  addSheet('Scholen', data.scholen.map(s => ({
+    'ID': s.id, 'Bestuur': bestuurMap[s.bestuurId]?.naam || '', 'Naam': s.naam,
+    'Debiteurnummer': s.debiteurnr || '', 'Adres': s.adres || '',
+    'Postcode': s.postcode || '', 'Plaats': s.plaats || '', 'Website': s.website || '',
+  })));
+
+  addSheet('Contacten', data.contacten.map(c => ({
+    'ID': c.id, 'School': schoolMap[c.schoolId]?.naam || '', 'Naam': c.naam,
+    'Functie': c.functie || '', 'Type': c.type || '', 'E-mail': c.email || '',
+    'Telefoon': c.telefoon || '', 'Geboortedatum': c.geboortedatum || '',
+  })));
+
+  addSheet('Trainingen', data.trainingen.map(t => ({
+    'ID': t.id, 'Naam': t.naam, 'Type': t.type || '', 'Categorie': t.categorie || '',
+    'Omschrijving': t.omschrijving || '',
+    'Aantal links': (t.links || []).length,
+    'Aantal bestanden': (t.bestanden || []).length,
+  })));
+
+  addSheet('Facturen', data.facturen.map(f => ({
+    'ID': f.id, 'Nummer': f.nummer || '', 'Datum': f.datum || '',
+    'Vervaldatum': f.vervaldatum || '', 'Status': f.status || '',
+    'School': schoolMap[f.schoolId]?.naam || '',
+    'Bestuur': bestuurMap[f.bestuurId]?.naam || (f.schoolId ? bestuurMap[schoolMap[f.schoolId]?.bestuurId]?.naam || '' : ''),
+    'T.a.v.': f.tav || '', 'Contact': contactMap[f.contactId]?.naam || '',
+    'Debiteurnummer': f.debiteurnr || '', 'Betreft': f.betreft || '',
+    'Totaal (EUR)': Number(f.totaal) || 0,
+    'Aantal regels': (f.regels || []).length,
+  })));
+
+  // Factuurregels — apart tabblad zodat het leesbaar blijft
+  const regelRows = [];
+  for (const f of data.facturen) {
+    for (const r of (f.regels || [])) {
+      regelRows.push({
+        'Factuurnummer': f.nummer || '', 'Factuurdatum': f.datum || '',
+        'School': schoolMap[f.schoolId]?.naam || '',
+        'Omschrijving': r.omschrijving || '', 'Toelichting': r.toelichting || '',
+        'Datum': r.datum || '', 'Uren': Number(r.uren) || 0,
+        'Bedrag (EUR)': Number(r.bedrag) || 0,
+      });
+    }
+  }
+  addSheet('Factuurregels', regelRows);
+
+  addSheet('Dossiers', data.dossiers.map(d => ({
+    'Datum': d.datum || '', 'School': schoolMap[d.schoolId]?.naam || '',
+    'Contact': contactMap[d.contactId]?.naam || '', 'Type': d.type || '',
+    'Onderwerp': d.onderwerp || '',
+    'Tekst': (d.tekst || '').replace(/\s+/g, ' ').trim(),
+    'Bron': d.bronNaam || '',
+    'Aantal bestanden': (d.bestanden || []).length,
+  })));
+
+  addSheet('Uitvoeringen', data.uitvoeringen.map(u => ({
+    'Datum': u.datum || '', 'Training': trainMap[u.trainingId]?.naam || '',
+    'School': schoolMap[u.schoolId]?.naam || '',
+    'Contact': contactMap[u.contactId]?.naam || '',
+    'Deelnemers': u.deelnemers || '', 'Score': u.score || '',
+    'Wat ging goed': (u.watGingGoed || '').replace(/\s+/g, ' ').trim(),
+    'Wat kon beter': (u.watKonBeter || '').replace(/\s+/g, ' ').trim(),
+    'Evaluatie': (u.evaluatie || '').replace(/\s+/g, ' ').trim(),
+  })));
+
+  addSheet('Agenda', data.agenda.map(a => ({
+    'Datum': a.datum || '', 'Begin': a.beginTijd || '', 'Eind': a.eindTijd || '',
+    'Titel': a.titel || '', 'Type': a.type || '',
+    'School': schoolMap[a.schoolId]?.naam || '',
+    'Bestuur': bestuurMap[a.bestuurId]?.naam || '',
+    'Contact': contactMap[a.contactId]?.naam || '',
+    'Locatie': a.locatie || '',
+    'Notitie': (a.notitie || '').replace(/\s+/g, ' ').trim(),
+  })));
+
+  addSheet('E-mailtemplates', data.emailTemplates.map(t => ({
+    'Naam': t.naam, 'Categorie': t.categorie || '', 'Onderwerp': t.onderwerp || '',
+    'Body': (t.body || '').replace(/\s+/g, ' ').trim(),
+  })));
+
+  addSheet('E-maillog', data.emailLog.map(e => ({
+    'Datum': e.datum || '', 'Aan': e.aanEmail || '', 'Aan-naam': e.aanNaam || '',
+    'Onderwerp': e.onderwerp || '', 'Status': e.status || '',
+    'School': schoolMap[e.schoolId]?.naam || '',
+    'Contact': contactMap[e.contactId]?.naam || '',
+    'Factuur': e.factuurId || '',
+  })));
+
+  // Categorie-tabbladen (klein, voor referentie)
+  addSheet('Trainingtypes', data.trainingTypes.map(t => ({ 'ID': t.id, 'Naam': t.naam, 'Kleur': t.kleur || '' })));
+  addSheet('Trainingscategorieën', data.trainingCategories.map(t => ({ 'ID': t.id, 'Naam': t.naam, 'Kleur': t.kleur || '' })));
+  addSheet('Agendatypes', data.agendaTypes.map(t => ({ 'ID': t.id, 'Naam': t.naam, 'Kleur': t.kleur || '' })));
+
+  XLSX.writeFile(wb, filename);
+}
+
+// JSON-export: ruwe data (camelCase) plus metadata. Restore-baar.
+function _backupDownloadJson(data, from, to, filename) {
+  const payload = {
+    meta: {
+      generated_at: new Date().toISOString(),
+      app: '2xDenken CRM',
+      version: 1,
+      period_from: from || null,
+      period_to: to || null,
+    },
+    besturen:           data.besturen,
+    scholen:            data.scholen,
+    contacten:          data.contacten,
+    trainingen:         data.trainingen,
+    trainingTypes:      data.trainingTypes,
+    trainingCategories: data.trainingCategories,
+    agendaTypes:        data.agendaTypes,
+    emailTemplates:     data.emailTemplates,
+    facturen:           data.facturen,
+    dossiers:           data.dossiers,
+    uitvoeringen:       data.uitvoeringen,
+    agenda:             data.agenda,
+    emailLog:           data.emailLog,
+  };
+  const blob = new Blob([JSON.stringify(payload, null, 2)], { type: 'application/json;charset=utf-8' });
+  const url = URL.createObjectURL(blob);
+  const a = document.createElement('a');
+  a.href = url; a.download = filename;
+  document.body.appendChild(a); a.click(); document.body.removeChild(a);
+  URL.revokeObjectURL(url);
 }
 
 function openTrainingTypeModal(id = '') {
