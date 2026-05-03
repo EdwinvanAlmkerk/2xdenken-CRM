@@ -404,13 +404,26 @@ input:disabled, select:disabled { opacity: .5; cursor: not-allowed; }
 .grid-2 { display: grid; grid-template-columns: 1fr 1fr; gap: 20px; }
 .grid-3 { display: grid; grid-template-columns: repeat(3, 1fr); gap: 16px; }
 
+/* Dashboard KPIs — compactere variant (1 rij van 6, wraps bij smal scherm) */
+.dashboard-kpis {
+  display: grid;
+  grid-template-columns: repeat(6, 1fr);
+  gap: 10px;
+}
+@media (max-width: 1100px) {
+  .dashboard-kpis { grid-template-columns: repeat(3, 1fr); }
+}
+@media (max-width: 680px) {
+  .dashboard-kpis { grid-template-columns: repeat(2, 1fr); }
+}
+
 /* ═══ DASHBOARD — KPI CARDS ═══ */
 .stat-card {
   background: var(--card-bg);
   border: 1px solid var(--card-border);
   backdrop-filter: blur(16px);
-  border-radius: 18px; padding: 22px 24px;
-  display: flex; align-items: center; gap: 16px;
+  border-radius: 14px; padding: 12px 14px;
+  display: flex; align-items: center; gap: 10px;
   position: relative; overflow: hidden;
   box-shadow: var(--sh);
   transition: transform .2s, box-shadow .2s;
@@ -437,15 +450,15 @@ input:disabled, select:disabled { opacity: .5; cursor: not-allowed; }
 .stat-card:nth-child(6) { animation-delay: 0.29s; }
 
 .stat-icon {
-  width: 42px; height: 42px; border-radius: 12px;
+  width: 34px; height: 34px; border-radius: 10px;
   display: flex; align-items: center; justify-content: center; flex-shrink: 0;
 }
 .si-orange { background: rgba(249,115,22,0.12); color: var(--kpi-orange); }
 .si-blue   { background: rgba(26,184,184,0.12); color: var(--kpi-teal); }
 .si-green  { background: rgba(22,163,74,0.12); color: var(--kpi-green); }
 .si-gold   { background: rgba(217,119,6,0.12); color: var(--kpi-amber); }
-.stat-value { font-size: 30px; font-weight: 700; line-height: 1; color: var(--text); letter-spacing: -1px; }
-.stat-label { font-size: 11px; color: var(--muted); margin-top: 3px; text-transform: uppercase; letter-spacing: 1px; font-weight: 600; }
+.stat-value { font-size: 22px; font-weight: 700; line-height: 1.05; color: var(--text); letter-spacing: -0.5px; }
+.stat-label { font-size: 10px; color: var(--muted); margin-top: 2px; text-transform: uppercase; letter-spacing: 0.6px; font-weight: 600; }
 
 @keyframes fadeUp {
   from { opacity: 0; transform: translateY(14px); }
@@ -552,7 +565,7 @@ input:disabled, select:disabled { opacity: .5; cursor: not-allowed; }
   border: 1px solid var(--card-border);
   backdrop-filter: blur(16px);
   border-radius: var(--r2);
-  padding: 24px 28px; margin-bottom: 22px;
+  padding: 14px 22px; margin-bottom: 14px;
   display: flex; align-items: center; justify-content: space-between;
   position: relative; overflow: hidden;
   box-shadow: var(--sh);
@@ -569,7 +582,13 @@ input:disabled, select:disabled { opacity: .5; cursor: not-allowed; }
   background: radial-gradient(circle, rgba(108,92,231,0.10), transparent 70%);
   right: 130px; bottom: -50px;
 }
-.welcome-text h2 { font-size: 22px; font-weight: 700; color: var(--text); position: relative; z-index: 1; }
+.welcome-text h2 { font-size: 18px; font-weight: 700; color: var(--text); position: relative; z-index: 1; }
+.welcome-text p { font-size: 12.5px; }
+/* Compactere empty-state binnen kleinere kaarten */
+.empty-state-compact {
+  text-align: center; padding: 18px 16px; color: var(--muted);
+  font-size: 13px;
+}
 .welcome-text p { font-size: 13px; color: var(--muted); margin-top: 4px; position: relative; z-index: 1; }
 
 /* ═══ LOGIN ═══ */

@@ -49,14 +49,14 @@ function renderDashboard() {
       </div>
       ${(naam.toLowerCase().includes('jorieke') || (currentUser?.email || '').toLowerCase().includes('jorieke')) ? `<img src="img/jorieke.jpg" alt="" style="width:56px;height:56px;border-radius:50%;object-fit:cover;border:2px solid rgba(26,184,184,0.3);flex-shrink:0;position:relative;z-index:1"/>` : ''}
     </div>
-    <div class="grid-3" style="margin-bottom:24px">
+    <div class="dashboard-kpis" style="margin-bottom:14px">
       ${stats.map(([cls, icon, val, lbl]) => `
         <div class="stat-card">
-          <div class="stat-icon ${cls}">${svgIcon(icon, 22)}</div>
+          <div class="stat-icon ${cls}">${svgIcon(icon, 18)}</div>
           <div><div class="stat-value">${esc(String(val))}</div><div class="stat-label">${esc(lbl)}</div></div>
         </div>`).join('')}
     </div>
-    <div class="grid-2" style="margin-bottom:24px">
+    <div class="grid-2" style="margin-bottom:14px">
       <div class="card">
         <div class="card-header">
           <h3>${svgIcon('calendar', 16)} Afspraken vandaag</h3>
@@ -64,7 +64,7 @@ function renderDashboard() {
         </div>
         <div class="card-body">
           ${afsprakenVandaag.length === 0
-            ? `<div class="empty-state">${svgIcon('calendar', 36)}<p>Geen afspraken vandaag</p></div>`
+            ? `<div class="empty-state-compact">Geen afspraken vandaag</div>`
             : `<div style="display:flex;flex-direction:column;gap:10px">${afsprakenVandaag.map(a => {
                 const school = getSchool(a.schoolId);
                 const tijdStr = a.beginTijd ? fmtTijd(a.beginTijd) : 'Hele dag';
