@@ -8,7 +8,7 @@ let _omzetSortCol  = prefGet('omzet.sortCol', 'bedrag');
 let _omzetSortDir  = prefGet('omzet.sortDir', 'desc');
 let _omzetTopOnly  = true;
 
-const OMZET_TOP_N = 15;
+const OMZET_TOP_N = 10;
 
 function setOmzetJaar(v)   { _omzetJaar = v; prefSet('omzet.jaar', v); smartRender(renderOmzetPage); }
 function setOmzetStatus(v) { _omzetStatus = v; prefSet('omzet.status', v); smartRender(renderOmzetPage); }
