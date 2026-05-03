@@ -7,7 +7,7 @@
   <link rel="preconnect" href="https://fonts.googleapis.com" />
   <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin />
   <link href="https://fonts.googleapis.com/css2?family=Outfit:wght@300;400;500;600;700&display=swap" rel="stylesheet" />
-  <link rel="stylesheet" href="css/style.css?v=20260503-widgets" />
+  <link rel="stylesheet" href="css/style.css?v=20260503-mobile" />
   <script src="https://cdnjs.cloudflare.com/ajax/libs/html2pdf.js/0.10.2/html2pdf.bundle.min.js"></script>
   <script src="https://cdnjs.cloudflare.com/ajax/libs/xlsx/0.18.5/xlsx.full.min.js"></script>
 </head>
@@ -60,7 +60,8 @@
 
 <!-- APP SHELL -->
 <div id="app" style="display:none">
-  <aside class="sidebar">
+  <div class="sidebar-backdrop" id="sidebar-backdrop" onclick="closeSidebar()"></div>
+  <aside class="sidebar" id="sidebar">
     <div class="sidebar-logo" style="align-items:flex-start">
       <div>
         <div class="sidebar-logo-text">2 <em>x</em> denken</div>
@@ -79,6 +80,9 @@
   <main class="main">
     <div class="topbar">
       <div class="topbar-left">
+        <button class="hamburger-btn" onclick="toggleSidebar()" aria-label="Menu openen">
+          <svg viewBox="0 0 24 24" width="22" height="22" fill="currentColor"><path d="M3 6h18v2H3V6zm0 5h18v2H3v-2zm0 5h18v2H3v-2z"/></svg>
+        </button>
         <button id="back-btn" class="btn btn-ghost btn-icon" onclick="goBack()" style="display:none">
           <svg viewBox="0 0 24 24" width="18" height="18" fill="currentColor"><path d="M20 11H7.83l5.59-5.59L12 4l-8 8 8 8 1.41-1.41L7.83 13H20v-2z"/></svg>
         </button>
@@ -128,8 +132,8 @@
 <script src="js/config.js?v=20260420-linkify"></script>
 <script src="js/utils.js?v=20260503-prefs"></script>
 <script src="js/db.js?v=20260503-widgets"></script>
-<script src="js/ui.js?v=20260503-quickadd"></script>
-<script src="js/router.js?v=20260503-rss"></script>
+<script src="js/ui.js?v=20260503-mobile"></script>
+<script src="js/router.js?v=20260503-mobile"></script>
 <script src="js/crud.js?v=20260503-widgets"></script>
 <script src="js/email.js?v=20260420-linkify"></script>
 <script src="js/pages/dashboard.js?v=20260503-widgets"></script>

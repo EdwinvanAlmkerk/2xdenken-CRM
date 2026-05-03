@@ -43,6 +43,7 @@ function navigate(p, param = null) {
   document.getElementById('topbar-title').textContent = PAGE_LABELS[p] || p;
   const isDetail = p.endsWith('-detail');
   document.getElementById('back-btn').style.display = isDetail ? '' : 'none';
+  if (typeof closeSidebar === 'function') closeSidebar();
   renderNav();
   renderContent();
 }
@@ -54,6 +55,7 @@ function navigateToContact(schoolId, contactId) {
   contactTab = 'info';
   document.getElementById('topbar-title').textContent = PAGE_LABELS['contact-detail'];
   document.getElementById('back-btn').style.display = '';
+  if (typeof closeSidebar === 'function') closeSidebar();
   renderNav();
   renderContent();
 }

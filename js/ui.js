@@ -207,3 +207,23 @@ document.addEventListener('keydown', (e) => {
   const wrap = document.getElementById('quick-add');
   if (wrap && wrap.classList.contains('open')) closeQuickAdd();
 });
+
+// ── Mobile sidebar drawer ────────────────────────────────────────
+// Op kleine schermen (<=900px) is de sidebar verborgen achter een
+// hamburger-knop in de topbar. toggleSidebar() schuift hem in/uit
+// en toont een backdrop. Klik op backdrop of Escape sluit de drawer.
+function toggleSidebar(force) {
+  const sb = document.getElementById('sidebar');
+  const bd = document.getElementById('sidebar-backdrop');
+  if (!sb || !bd) return;
+  const open = typeof force === 'boolean' ? force : !sb.classList.contains('open');
+  sb.classList.toggle('open', open);
+  bd.classList.toggle('visible', open);
+}
+function closeSidebar() { toggleSidebar(false); }
+
+document.addEventListener('keydown', (e) => {
+  if (e.key !== 'Escape') return;
+  const sb = document.getElementById('sidebar');
+  if (sb && sb.classList.contains('open')) closeSidebar();
+});
