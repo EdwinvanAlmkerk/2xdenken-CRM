@@ -18,7 +18,9 @@ let DB = {
   trainingCategories: [],
   emailTemplates: [],
   emailLog: [],
-  emailSettings: null
+  emailSettings: null,
+  rssFeeds: [],
+  rssItemsRead: []
 };
 
 function uid() {
@@ -132,6 +134,8 @@ function fromDB_emailTemplate(r) { return { id: r.id, naam: r.naam, onderwerp: r
 function fromDB_emailLog(r) { return { id: r.id, templateId: r.template_id || '', schoolId: r.school_id || '', contactId: r.contact_id || '', factuurId: r.factuur_id || '', aanEmail: r.aan_email || '', aanNaam: r.aan_naam || '', onderwerp: r.onderwerp || '', body: r.body || '', status: r.status || 'verzonden', datum: r.datum }; }
 function fromDB_emailSettings(r) { return { id: r.id, imapHost: r.imap_host || '', imapPort: r.imap_port || 993, smtpHost: r.smtp_host || '', smtpPort: r.smtp_port || 587, emailUser: r.email_user || '', emailPass: r.email_pass || '', emailFrom: r.email_from || '', signature: r.signature || '', updatedAt: r.updated_at }; }
 function fromDB_outlookSettings(r) { return { id: r.id, icsUrl: r.ics_url || '', daysPast: r.days_past ?? 30, daysFuture: r.days_future ?? 180, calendarName: r.calendar_name || '', updatedAt: r.updated_at }; }
+function fromDB_rssFeed(r)   { return { id: r.id, naam: r.naam, url: r.url, categorie: r.categorie || '', sortering: r.sortering || 0, createdAt: r.created_at }; }
+function fromDB_rssItemRead(r) { return { id: r.id, feedId: r.feed_id, itemGuid: r.item_guid, readAt: r.read_at }; }
 
 // ── camelCase → snake_case for writes ────────────────────────────
 function toDB_bestuur(d)  { return { naam: d.naam, website: d.website || null, adres: d.adres || null, debiteurnr: d.debiteurnr || null }; }
@@ -155,12 +159,13 @@ function toDB_training(d) {
 }
 function toDB_uitv(d)     { return { training_id: d.trainingId, school_id: d.schoolId, contact_id: d.contactId || null, datum: d.datum || null, deelnemers: d.deelnemers ? parseInt(d.deelnemers) : null, score: d.score || null, evaluatie: d.evaluatie || null, wat_ging_goed: d.watGingGoed || null, wat_kon_beter: d.watKonBeter || null }; }
 function toDB_agenda(d)   { return { titel: d.titel, datum: d.datum, begin_tijd: d.beginTijd || null, eind_tijd: d.eindTijd || null, type: d.type || 'afspraak', school_id: d.schoolId || null, contact_id: d.contactId || null, bestuur_id: d.bestuurId || null, locatie: d.locatie || null, notitie: d.notitie || null }; }
+function toDB_rssFeed(d)  { return { naam: d.naam, url: d.url, categorie: d.categorie || null, sortering: d.sortering ?? 0 }; }
 
 // ── Load all data from Supabase ───────────────────────────────────
 async function loadAllData() {
   showLoading();
   try {
-    const [besturen, scholen, contacten, dossiers, facturen, trainingen, uitvoeringen, agenda, agendaTypes, trainingTypes, trainingCategories, _trainingBestandenProbe, _trainingLinksProbe, emailTemplates, emailLog, emailSettingsArr, outlookSettingsArr] = await Promise.all([
+    const [besturen, scholen, contacten, dossiers, facturen, trainingen, uitvoeringen, agenda, agendaTypes, trainingTypes, trainingCategories, _trainingBestandenProbe, _trainingLinksProbe, emailTemplates, emailLog, emailSettingsArr, outlookSettingsArr, rssFeeds, rssItemsRead] = await Promise.all([
       supa('/rest/v1/besturen?select=*&order=naam'),
       supa('/rest/v1/scholen?select=*&order=naam'),
       supa('/rest/v1/contacten?select=*&order=naam'),
@@ -186,6 +191,8 @@ async function loadAllData() {
       supa('/rest/v1/email_log?select=*&order=datum.desc'),
       supa('/rest/v1/email_settings?select=*&id=eq.main'),
       supa('/rest/v1/outlook_settings?select=*&id=eq.main').catch(() => []),
+      supa('/rest/v1/rss_feeds?select=*&order=sortering,naam').catch(() => []),
+      supa('/rest/v1/rss_items_read?select=*').catch(() => []),
     ]);
     DB.besturen     = (besturen || []).map(fromDB_bestuur);
     DB.scholen      = (scholen || []).map(fromDB_school);
@@ -202,6 +209,8 @@ async function loadAllData() {
     DB.emailLog       = (emailLog || []).map(fromDB_emailLog);
     DB.emailSettings  = (emailSettingsArr || []).map(fromDB_emailSettings)[0] || null;
     DB.outlookSettings = (outlookSettingsArr || []).map(fromDB_outlookSettings)[0] || null;
+    DB.rssFeeds       = (rssFeeds || []).map(fromDB_rssFeed);
+    DB.rssItemsRead   = (rssItemsRead || []).map(fromDB_rssItemRead);
     rebuildIndexes();
   } catch (e) {
     showToast('Gegevens laden mislukt: ' + mapSupaError(e), 'error'); console.error(e);
