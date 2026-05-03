@@ -1,106 +1,101 @@
 // ════════════════════════════════════════════════════════════════
-// INSTELLINGEN
+// INSTELLINGEN — Tab-gebaseerde compacte layout
 // ════════════════════════════════════════════════════════════════
+
+let _instellingenTab = prefGet('instellingen.tab', 'categorieen'); // 'categorieen' | 'email' | 'agenda'
+
+function setInstellingenTab(t) {
+  _instellingenTab = t;
+  prefSet('instellingen.tab', t);
+  renderContent();
+}
 
 function renderInstellingen() {
   ensureTrainingTypes();
   ensureTrainingCategories();
+
+  const tabs = [
+    ['categorieen', `${svgIcon('list', 14)} Categorieën`],
+    ['email',       `${svgIcon('mail', 14)} E-mail`],
+    ['agenda',      `${svgIcon('calendar', 14)} Agenda`],
+  ];
+
+  let body = '';
+  if (_instellingenTab === 'categorieen')   body = renderInstellingenCategorieen();
+  else if (_instellingenTab === 'email')    body = renderInstellingenEmail();
+  else if (_instellingenTab === 'agenda')   body = renderInstellingenAgenda();
+  else { _instellingenTab = 'categorieen'; body = renderInstellingenCategorieen(); }
+
   return `
-    <div style="max-width:720px;display:flex;flex-direction:column;gap:24px">
-
-      <div class="card">
-        <div class="card-header">
-          <h3>${svgIcon('training', 16)} Trainingtypes</h3>
-          <button class="btn btn-primary btn-sm" onclick="openTrainingTypeModal()">${svgIcon('add', 14)} Type toevoegen</button>
-        </div>
-        <div class="card-body" style="padding:0">
-          <table>
-            <thead><tr><th>Naam</th><th>Kleur</th><th style="width:60px">In gebruik</th><th style="width:80px"></th></tr></thead>
-            <tbody>
-              ${getTrainingTypeList().length === 0
-                ? `<tr><td colspan="4"><div class="empty-state" style="padding:20px"><p>Geen trainingtypes</p></div></td></tr>`
-                : getTrainingTypeList().map(t => {
-                    const k = AGENDA_KLEUREN[t.kleur] || AGENDA_KLEUREN.navy;
-                    const aantal = DB.trainingen.filter(tr => (tr.type || 'training') === t.id).length;
-                    return `<tr>
-                      <td style="font-weight:600">${esc(t.naam)}</td>
-                      <td><span class="badge ${k.badge}">${esc(AGENDA_KLEUR_LABELS[t.kleur] || t.kleur)}</span></td>
-                      <td style="text-align:center;color:var(--navy3)">${aantal}</td>
-                      <td>
-                        <div class="row-actions">
-                          <button class="btn btn-ghost btn-icon btn-sm" title="Bewerken" onclick="openTrainingTypeModal('${t.id}')">${svgIcon('edit', 14)}</button>
-                          <button class="btn btn-ghost btn-icon btn-sm" title="Verwijderen" onclick="delTrainingType('${t.id}')" style="color:var(--s-rood)">${svgIcon('trash', 14)}</button>
-                        </div>
-                      </td>
-                    </tr>`;
-                  }).join('')}
-            </tbody>
-          </table>
-        </div>
+    <div style="max-width:1180px">
+      <div class="tabs" style="margin-bottom:16px">
+        ${tabs.map(([k, l]) => `<div class="tab${_instellingenTab === k ? ' active' : ''}" onclick="setInstellingenTab('${k}')">${l}</div>`).join('')}
       </div>
+      ${body}
+    </div>`;
+}
 
-      <div class="card">
-        <div class="card-header">
-          <h3>${svgIcon('training', 16)} Trainingscategorieën</h3>
-          <button class="btn btn-primary btn-sm" onclick="openTrainingCategoryModal()">${svgIcon('add', 14)} Categorie toevoegen</button>
-        </div>
-        <div class="card-body" style="padding:0">
-          <table>
-            <thead><tr><th>Naam</th><th>Kleur</th><th style="width:60px">In gebruik</th><th style="width:80px"></th></tr></thead>
-            <tbody>
-              ${getTrainingCategoryList().length === 0
-                ? `<tr><td colspan="4"><div class="empty-state" style="padding:20px"><p>Geen trainingscategorieën</p></div></td></tr>`
-                : getTrainingCategoryList().map(t => {
-                    const k = AGENDA_KLEUREN[t.kleur] || AGENDA_KLEUREN.navy;
-                    const aantal = DB.trainingen.filter(tr => (tr.categorie || 'algemeen') === t.id).length;
-                    return `<tr>
-                      <td style="font-weight:600">${esc(t.naam)}</td>
-                      <td><span class="badge ${k.badge}">${esc(AGENDA_KLEUR_LABELS[t.kleur] || t.kleur)}</span></td>
-                      <td style="text-align:center;color:var(--navy3)">${aantal}</td>
-                      <td>
-                        <div class="row-actions">
-                          <button class="btn btn-ghost btn-icon btn-sm" title="Bewerken" onclick="openTrainingCategoryModal('${t.id}')">${svgIcon('edit', 14)}</button>
-                          <button class="btn btn-ghost btn-icon btn-sm" title="Verwijderen" onclick="delTrainingCategory('${t.id}')" style="color:var(--s-rood)">${svgIcon('trash', 14)}</button>
-                        </div>
-                      </td>
-                    </tr>`;
-                  }).join('')}
-            </tbody>
-          </table>
-        </div>
+// ── Tab: Categorieën (3 type-tabellen naast elkaar) ─────────────
+function renderInstellingenCategorieen() {
+  const typeCard = (title, icon, addLabel, addFn, list, gebruikCount, openFn, delFn) => `
+    <div class="card">
+      <div class="card-header">
+        <h3>${svgIcon(icon, 16)} ${esc(title)}</h3>
+        <button class="btn btn-primary btn-sm" onclick="${addFn}()" title="${esc(addLabel)}">${svgIcon('add', 14)}</button>
       </div>
-
-      <div class="card">
-        <div class="card-header">
-          <h3>${svgIcon('calendar', 16)} Agendatypes</h3>
-          <button class="btn btn-primary btn-sm" onclick="openAgendaTypeModal()">${svgIcon('add', 14)} Type toevoegen</button>
-        </div>
-        <div class="card-body" style="padding:0">
-          <table>
-            <thead><tr><th>Naam</th><th>Kleur</th><th style="width:60px">In gebruik</th><th style="width:80px"></th></tr></thead>
-            <tbody>
-              ${DB.agendaTypes.length === 0
-                ? `<tr><td colspan="4"><div class="empty-state" style="padding:20px"><p>Geen agendatypes</p></div></td></tr>`
-                : DB.agendaTypes.map(t => {
-                    const k = AGENDA_KLEUREN[t.kleur] || AGENDA_KLEUREN.navy;
-                    const aantal = DB.agenda.filter(a => a.type === t.id).length;
-                    return `<tr>
-                      <td style="font-weight:600">${esc(t.naam)}</td>
-                      <td><span class="badge ${k.badge}">${esc(AGENDA_KLEUR_LABELS[t.kleur] || t.kleur)}</span></td>
-                      <td style="text-align:center;color:var(--navy3)">${aantal}</td>
-                      <td>
-                        <div class="row-actions">
-                          <button class="btn btn-ghost btn-icon btn-sm" title="Bewerken" onclick="openAgendaTypeModal('${t.id}')">${svgIcon('edit', 14)}</button>
-                          <button class="btn btn-ghost btn-icon btn-sm" title="Verwijderen" onclick="delAgendaType('${t.id}')" style="color:var(--s-rood)">${svgIcon('trash', 14)}</button>
-                        </div>
-                      </td>
-                    </tr>`;
-                  }).join('')}
-            </tbody>
-          </table>
-        </div>
+      <div class="card-body" style="padding:0">
+        <table>
+          <thead><tr><th>Naam</th><th style="width:90px">Kleur</th><th style="width:50px;text-align:center">#</th><th style="width:70px"></th></tr></thead>
+          <tbody>
+            ${list.length === 0
+              ? `<tr><td colspan="4"><div class="empty-state" style="padding:18px;font-size:12.5px"><p>Nog geen items</p></div></td></tr>`
+              : list.map(t => {
+                  const k = AGENDA_KLEUREN[t.kleur] || AGENDA_KLEUREN.navy;
+                  const aantal = gebruikCount(t);
+                  return `<tr>
+                    <td style="font-weight:600">${esc(t.naam)}</td>
+                    <td><span class="badge ${k.badge}">${esc(AGENDA_KLEUR_LABELS[t.kleur] || t.kleur)}</span></td>
+                    <td style="text-align:center;color:var(--navy3)">${aantal}</td>
+                    <td>
+                      <div class="row-actions">
+                        <button class="btn btn-ghost btn-icon btn-sm" title="Bewerken" onclick="${openFn}('${t.id}')">${svgIcon('edit', 14)}</button>
+                        <button class="btn btn-ghost btn-icon btn-sm" title="Verwijderen" onclick="${delFn}('${t.id}')" style="color:var(--s-rood)">${svgIcon('trash', 14)}</button>
+                      </div>
+                    </td>
+                  </tr>`;
+                }).join('')}
+          </tbody>
+        </table>
       </div>
+    </div>`;
 
+  return `
+    <div class="grid-3">
+      ${typeCard(
+        'Trainingtypes', 'training', 'Type toevoegen',
+        'openTrainingTypeModal', getTrainingTypeList(),
+        t => DB.trainingen.filter(tr => (tr.type || 'training') === t.id).length,
+        'openTrainingTypeModal', 'delTrainingType'
+      )}
+      ${typeCard(
+        'Trainingscategorieën', 'training', 'Categorie toevoegen',
+        'openTrainingCategoryModal', getTrainingCategoryList(),
+        t => DB.trainingen.filter(tr => (tr.categorie || 'algemeen') === t.id).length,
+        'openTrainingCategoryModal', 'delTrainingCategory'
+      )}
+      ${typeCard(
+        'Agendatypes', 'calendar', 'Type toevoegen',
+        'openAgendaTypeModal', DB.agendaTypes,
+        t => DB.agenda.filter(a => a.type === t.id).length,
+        'openAgendaTypeModal', 'delAgendaType'
+      )}
+    </div>`;
+}
+
+// ── Tab: E-mail (templates + server) ────────────────────────────
+function renderInstellingenEmail() {
+  return `
+    <div style="max-width:780px;display:flex;flex-direction:column;gap:16px">
       <div class="card">
         <div class="card-header">
           <h3>${svgIcon('mail', 16)} E-mailtemplates</h3>
@@ -158,7 +153,13 @@ function renderInstellingen() {
           </div>
         </div>
       </div>
+    </div>`;
+}
 
+// ── Tab: Agenda (ICS-feed) ──────────────────────────────────────
+function renderInstellingenAgenda() {
+  return `
+    <div style="max-width:780px">
       <div class="card">
         <div class="card-header"><h3>${svgIcon('calendar', 16)} Agenda (gepubliceerde feed)</h3></div>
         <div class="card-body">
@@ -194,7 +195,6 @@ function renderInstellingen() {
           </div>
         </div>
       </div>
-
     </div>`;
 }
 
