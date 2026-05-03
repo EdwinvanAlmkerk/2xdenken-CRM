@@ -21,7 +21,7 @@ const NAV_ITEMS = [
   { id: 'dashboard',    label: 'Dashboard',              icon: 'board' },
   { id: 'agenda',       label: 'Agenda',                 icon: 'calendar' },
   { id: 'email',        label: 'E-mail',                 icon: 'mail' },
-  { id: 'rss',          label: 'Nieuws & RSS',           icon: 'note' },
+  { id: 'rss',          label: 'Nieuws',                 icon: 'note' },
   { id: 'besturen',     label: 'Besturen',               icon: 'board',    also: ['bestuur-detail'] },
   { id: 'scholen',      label: 'Scholen',                icon: 'school',   also: ['school-detail'] },
   { id: 'contacten',    label: 'Contacten',              icon: 'contact',  also: ['contact-detail'] },
