@@ -212,7 +212,8 @@ function renderSchoolDetail(id) {
               <div class="divider"></div>
               <div class="c-info">
                 ${c.email ? `<div class="c-row">${svgIcon('mail', 13)} <a href="mailto:${esc(c.email)}">${esc(c.email)}</a></div>` : ''}
-                ${c.telefoon ? `<div class="c-row">${svgIcon('phone', 13)} <a href="tel:${esc(c.telefoon)}">${esc(c.telefoon)}</a></div>` : ''}
+                ${c.telefoonMobiel ? `<div class="c-row">${svgIcon('phone', 13)} <a href="tel:${esc(c.telefoonMobiel)}">${esc(c.telefoonMobiel)}</a> <span style="color:var(--navy4);font-size:11px">mobiel</span></div>` : ''}
+                ${c.telefoonWerk ? `<div class="c-row">${svgIcon('phone', 13)} <a href="tel:${esc(c.telefoonWerk)}">${esc(c.telefoonWerk)}</a> <span style="color:var(--navy4);font-size:11px">werk</span></div>` : ''}
               </div>
               ${(() => {
                 const cDossiers = dossiersVanContact(c.id).filter(d => !isFactuurDossier(d) && !isInboxLogged(d)).sort((a, b) => new Date(b.datum) - new Date(a.datum));
@@ -399,8 +400,10 @@ function openContactModal(schoolId, cid = '') {
        </div>
      </div>
      <div class="form-group"><label>E-mailadres</label><input type="email" id="f-email" value="${esc(c?.email || '')}" placeholder="jan@school.nl"/></div>
-     <div class="form-group"><label>Telefoonnummer</label><input type="tel" id="f-tel" value="${esc(c?.telefoon || '')}" placeholder="+31 6 12345678"/></div>
-     ${HAS_CONTACTEN_GEBOORTEDATUM_COLUMN ? `<div class="form-group"><label>Geboortedatum (optioneel)</label><input type="date" id="f-geb" value="${esc(c?.geboortedatum || '')}"/></div>` : ''}`,
+     <div class="form-row">
+       <div class="form-group"><label>Telefoon mobiel</label><input type="tel" id="f-tel-mobiel" value="${esc(c?.telefoonMobiel || '')}" placeholder="+31 6 12345678"/></div>
+       <div class="form-group"><label>Telefoon werk</label><input type="tel" id="f-tel-werk" value="${esc(c?.telefoonWerk || '')}" placeholder="+31 30 1234567"/></div>
+     </div>`,
     `<button class="btn btn-secondary" onclick="closeModal()">Annuleren</button>
      ${c ? `<button class="btn" style="background:#FDE8E8;color:#C0392B;font-weight:700" onclick="delContact('${cid}','${schoolId}')">Verwijderen</button>` : ''}
      <button class="btn btn-primary" onclick="saveContact('${schoolId}','${cid}')">Opslaan</button>`);

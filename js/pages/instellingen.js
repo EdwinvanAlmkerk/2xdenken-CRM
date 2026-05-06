@@ -429,7 +429,7 @@ function _backupDownloadXlsx(data, filename) {
   addSheet('Contacten', data.contacten.map(c => ({
     'ID': c.id, 'School': schoolMap[c.schoolId]?.naam || '', 'Naam': c.naam,
     'Functie': c.functie || '', 'Type': c.type || '', 'E-mail': c.email || '',
-    'Telefoon': c.telefoon || '', 'Geboortedatum': c.geboortedatum || '',
+    'Telefoon mobiel': c.telefoonMobiel || '', 'Telefoon werk': c.telefoonWerk || '',
   })));
 
   addSheet('Trainingen', data.trainingen.map(t => ({

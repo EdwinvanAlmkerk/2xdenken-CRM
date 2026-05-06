@@ -25,7 +25,6 @@ const DASHBOARD_WIDGETS = [
   { id: 'topopenstaand',   label: 'Top 10 openstaand',    fullWidth: false, defaultVisible: false, render: renderTopOpenstaandWidget },
   { id: 'trainingenmaand', label: 'Trainingen deze maand',fullWidth: false, defaultVisible: false, render: renderTrainingenMaandWidget },
   { id: 'vervallen',       label: 'Vervallen facturen',   fullWidth: false, defaultVisible: false, render: renderVervallenWidget },
-  { id: 'verjaardagen',    label: 'Verjaardagen',         fullWidth: false, defaultVisible: false, render: renderVerjaardagenWidget },
 ];
 
 let _dashboardConfig = null;        // [{id, visible}] — wordt lazy-init in _dashboardActiveConfig()
@@ -448,60 +447,3 @@ function renderVervallenWidget() {
     </div>`;
 }
 
-function renderVerjaardagenWidget() {
-  // Behoeft de optionele kolom contacten.geboortedatum. Toont een
-  // call-to-action wanneer de migratie nog niet is uitgevoerd, anders
-  // de eerstvolgende verjaardagen binnen 90 dagen.
-  if (!HAS_CONTACTEN_GEBOORTEDATUM_COLUMN) {
-    return `
-      <div class="card">
-        <div class="card-header"><h3>${svgIcon('star', 16)} Verjaardagen</h3></div>
-        <div class="card-body">
-          <div class="empty-state-compact">Voeg een geboortedatum-kolom toe aan <code>contacten</code> om deze widget te activeren.<br><span style="font-size:11px;color:var(--navy4)">Migratie: <code>20260503141000_contacten_add_geboortedatum.sql</code></span></div>
-        </div>
-      </div>`;
-  }
-
-  const today = new Date();
-  const tY = today.getFullYear();
-  const horizonDays = 90;
-  const items = [];
-  for (const c of (DB.contacten || [])) {
-    if (!c.geboortedatum) continue;
-    const [, mm, dd] = c.geboortedatum.split('-');
-    if (!mm || !dd) continue;
-    let next = new Date(tY, parseInt(mm, 10) - 1, parseInt(dd, 10));
-    if (next < new Date(today.getFullYear(), today.getMonth(), today.getDate())) {
-      next = new Date(tY + 1, parseInt(mm, 10) - 1, parseInt(dd, 10));
-    }
-    const dagen = Math.round((next - today) / 86400000);
-    if (dagen > horizonDays) continue;
-    const leeftijd = next.getFullYear() - parseInt(c.geboortedatum.slice(0, 4), 10);
-    items.push({ contact: c, datum: next, dagen, leeftijd });
-  }
-  items.sort((a, b) => a.datum - b.datum);
-
-  return `
-    <div class="card">
-      <div class="card-header">
-        <h3>${svgIcon('star', 16)} Verjaardagen <span style="font-size:11px;font-weight:500;color:var(--navy4);margin-left:6px">komende 90 dagen</span></h3>
-        <button class="btn btn-secondary btn-sm" onclick="navigate('contacten')">Alle contacten</button>
-      </div>
-      <div class="card-body">
-        ${items.length === 0
-          ? `<div class="empty-state-compact">Geen verjaardagen in de komende 90 dagen</div>`
-          : `<div style="display:flex;flex-direction:column;gap:6px">${items.slice(0, 8).map(it => {
-              const school = getSchool(it.contact.schoolId);
-              const datumLabel = it.datum.toLocaleDateString('nl-NL', { day: 'numeric', month: 'long' });
-              const dagenLabel = it.dagen === 0 ? 'vandaag' : it.dagen === 1 ? 'morgen' : `over ${it.dagen} dagen`;
-              return `<div onclick="navigateToContact('${it.contact.schoolId}','${it.contact.id}')" style="display:flex;gap:10px;align-items:center;padding:8px 10px;border-radius:6px;background:var(--mint1);cursor:pointer">
-                <div style="font-size:18px">🎂</div>
-                <div style="flex:1;min-width:0">
-                  <div style="font-weight:600;font-size:13.5px;color:var(--navy);overflow:hidden;text-overflow:ellipsis;white-space:nowrap">${esc(it.contact.naam)}${it.leeftijd > 0 ? ` (${it.leeftijd})` : ''}</div>
-                  <div style="font-size:11.5px;color:var(--navy3);overflow:hidden;text-overflow:ellipsis;white-space:nowrap">${esc(datumLabel)} · ${esc(dagenLabel)}${school ? ' · ' + esc(school.naam) : ''}</div>
-                </div>
-              </div>`;
-            }).join('')}</div>`}
-      </div>
-    </div>`;
-}

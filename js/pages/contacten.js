@@ -60,10 +60,10 @@ function renderContacten(search = '') {
     <div class="card">
       <div class="table-wrap">
         <table>
-          <thead><tr>${th('naam', 'Naam')}${th('functie', 'Functie')}${th('type', 'Type')}${th('school', 'School')}<th>E-mail</th><th>Telefoon</th><th style="width:80px"></th></tr></thead>
+          <thead><tr>${th('naam', 'Naam')}${th('functie', 'Functie')}${th('type', 'Type')}${th('school', 'School')}<th>E-mail</th><th>Telefoon mobiel</th><th>Telefoon werk</th><th style="width:80px"></th></tr></thead>
           <tbody>
             ${filtered.length === 0
-              ? `<tr><td colspan="7"><div class="empty-state"><p>Geen contacten gevonden</p></div></td></tr>`
+              ? `<tr><td colspan="8"><div class="empty-state"><p>Geen contacten gevonden</p></div></td></tr>`
               : pageSlice.map(c => {
                   const s = getSchool(c.schoolId);
                   return `<tr class="clickable-row" onclick="navigateToContact('${s?.id || ''}','${c.id}')">
@@ -72,7 +72,8 @@ function renderContacten(search = '') {
                     <td>${badge(c.type)}</td>
                     <td style="font-size:13px;color:var(--ink3)">${esc(s?.naam || '—')}</td>
                     <td>${c.email ? `<a href="mailto:${esc(c.email)}" onclick="event.stopPropagation()" style="color:var(--blue);font-size:13px">${esc(c.email)}</a>` : '—'}</td>
-                    <td style="font-size:13px;color:var(--ink3)">${esc(c.telefoon || '—')}</td>
+                    <td style="font-size:13px;color:var(--ink3)">${esc(c.telefoonMobiel || '—')}</td>
+                    <td style="font-size:13px;color:var(--ink3)">${esc(c.telefoonWerk || '—')}</td>
                     <td onclick="event.stopPropagation()" style="width:50px">
                       <div class="row-actions">
                         <button class="btn btn-ghost btn-icon btn-sm" title="Verwijderen" onclick="delContact('${c.id}','${s?.id || ''}')" style="color:var(--s-rood)">${svgIcon('trash', 14)}</button>
@@ -101,9 +102,9 @@ function exportContactenExcel() {
   const typeNL = { beslisser: 'Beslisser', beinvloeder: 'Beïnvloeder' };
 
   const rows = [
-    [Q(titel), '', '', '', '', '', '', ''],
-    ['', '', '', '', '', '', '', ''],
-    [Q('Naam'), Q('Functie'), Q('Type'), Q('E-mail'), Q('Telefoon'), Q('School'), Q('Plaats'), Q('Bestuur')],
+    [Q(titel), '', '', '', '', '', '', '', ''],
+    ['', '', '', '', '', '', '', '', ''],
+    [Q('Naam'), Q('Functie'), Q('Type'), Q('E-mail'), Q('Telefoon mobiel'), Q('Telefoon werk'), Q('School'), Q('Plaats'), Q('Bestuur')],
     ...filtered.map(c => {
       const s = getSchool(c.schoolId);
       const b = s ? getBestuur(s.bestuurId) : null;
@@ -112,14 +113,15 @@ function exportContactenExcel() {
         Q(c.functie),
         Q(typeNL[c.type] || c.type || ''),
         Q(c.email),
-        Q(c.telefoon),
+        Q(c.telefoonMobiel),
+        Q(c.telefoonWerk),
         Q(s?.naam || ''),
         Q(s?.plaats || ''),
         Q(b?.naam || ''),
       ];
     }),
-    ['', '', '', '', '', '', '', ''],
-    [Q(`Geëxporteerd op: ${new Date().toLocaleDateString('nl-NL')} | Aantal contacten: ${filtered.length}`), '', '', '', '', '', '', ''],
+    ['', '', '', '', '', '', '', '', ''],
+    [Q(`Geëxporteerd op: ${new Date().toLocaleDateString('nl-NL')} | Aantal contacten: ${filtered.length}`), '', '', '', '', '', '', '', ''],
   ];
 
   const csv  = '\uFEFF' + rows.map(r => r.join(';')).join('\r\n');
@@ -167,7 +169,14 @@ function renderContactDetail(schoolId, contactId) {
           <div class="card-body">
             <table style="width:100%">
               <tbody>
-                ${[['Naam', c.naam], ['Functie', c.functie], ['Type', badge(c.type)], ['E-mail', c.email ? `<a href="mailto:${esc(c.email)}">${esc(c.email)}</a>` : null], ['Telefoon', c.telefoon]].filter(([, v]) => v).map(([k, v]) => `<tr><td style="color:var(--ink3);font-size:12px;padding-right:16px;padding-bottom:8px;vertical-align:top;white-space:nowrap">${k}</td><td style="font-size:14px;padding-bottom:8px">${v}</td></tr>`).join('')}
+                ${[
+                  ['Naam', c.naam],
+                  ['Functie', c.functie],
+                  ['Type', badge(c.type)],
+                  ['E-mail', c.email ? `<a href="mailto:${esc(c.email)}">${esc(c.email)}</a>` : null],
+                  ['Telefoon mobiel', c.telefoonMobiel ? `<a href="tel:${esc(c.telefoonMobiel)}">${esc(c.telefoonMobiel)}</a>` : null],
+                  ['Telefoon werk',   c.telefoonWerk   ? `<a href="tel:${esc(c.telefoonWerk)}">${esc(c.telefoonWerk)}</a>`   : null],
+                ].filter(([, v]) => v).map(([k, v]) => `<tr><td style="color:var(--ink3);font-size:12px;padding-right:16px;padding-bottom:8px;vertical-align:top;white-space:nowrap">${k}</td><td style="font-size:14px;padding-bottom:8px">${v}</td></tr>`).join('')}
               </tbody>
             </table>
           </div>

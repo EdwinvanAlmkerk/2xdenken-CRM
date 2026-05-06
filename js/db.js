@@ -8,7 +8,6 @@ let HAS_TRAINING_TYPES_TABLE = false;
 let HAS_TRAINING_CATEGORIES_TABLE = false;
 let HAS_TRAINING_BESTANDEN_COLUMN = false;
 let HAS_TRAINING_LINKS_COLUMN = false;
-let HAS_CONTACTEN_GEBOORTEDATUM_COLUMN = false;
 let HAS_DASHBOARD_SETTINGS_TABLE = false;
 
 let DB = {
@@ -99,7 +98,13 @@ async function supaAuth(path, body) {
 // ── Supabase → camelCase mapping ──────────────────────────────────
 function fromDB_bestuur(r)  { return { id: r.id, naam: r.naam, website: r.website || '', adres: r.adres || '', debiteurnr: r.debiteurnr || '' }; }
 function fromDB_school(r)   { return { id: r.id, bestuurId: r.bestuur_id, naam: r.naam, debiteurnr: r.debiteurnr || '', adres: r.adres || '', postcode: r.postcode || '', plaats: r.plaats || '', website: r.website || '' }; }
-function fromDB_contact(r)  { return { id: r.id, schoolId: r.school_id, naam: r.naam, functie: r.functie || '', type: r.type || 'beslisser', email: r.email || '', telefoon: r.telefoon || '', geboortedatum: r.geboortedatum || '' }; }
+function fromDB_contact(r)  {
+  const mobiel = r.telefoon_mobiel || '';
+  const werk   = r.telefoon_werk || '';
+  // Fallback: oude rijen die nog niet via de migratie liepen, lezen `telefoon` als mobiel.
+  const mobielMetFallback = mobiel || (r.telefoon || '');
+  return { id: r.id, schoolId: r.school_id, naam: r.naam, functie: r.functie || '', type: r.type || 'beslisser', email: r.email || '', telefoonMobiel: mobielMetFallback, telefoonWerk: werk };
+}
 function fromDB_dossier(r)  { return { id: r.id, schoolId: r.school_id, contactId: r.contact_id || '', datum: r.datum, type: r.type || 'notitie', onderwerp: r.onderwerp || '', tekst: r.tekst || '', bronNaam: r.bron_naam || '', bestanden: r.bestanden || [], bijlagen: r.bijlagen || [] }; }
 function fromDB_factuur(r)  { return { id: r.id, schoolId: r.school_id || '', bestuurId: r.bestuur_id || '', contactId: r.contact_id, tav: r.tav || '', nummer: r.nummer || '', debiteurnr: r.debiteurnr || '', datum: r.datum, vervaldatum: r.vervaldatum, status: r.status || 'concept', betreft: r.betreft || '', regels: r.regels || [], totaal: r.totaal || 0 }; }
 function getLocalTrainingDocsMap() {
@@ -145,9 +150,7 @@ function fromDB_rssItemRead(r) { return { id: r.id, feedId: r.feed_id, itemGuid:
 function toDB_bestuur(d)  { return { naam: d.naam, website: d.website || null, adres: d.adres || null, debiteurnr: d.debiteurnr || null }; }
 function toDB_school(d)   { return { bestuur_id: d.bestuurId || null, naam: d.naam, debiteurnr: d.debiteurnr || null, adres: d.adres || null, postcode: d.postcode || null, plaats: d.plaats || null, website: d.website || null }; }
 function toDB_contact(d)  {
-  const payload = { school_id: d.schoolId, naam: d.naam, functie: d.functie || null, type: d.type || 'beslisser', email: d.email || null, telefoon: d.telefoon || null };
-  if (HAS_CONTACTEN_GEBOORTEDATUM_COLUMN) payload.geboortedatum = d.geboortedatum || null;
-  return payload;
+  return { school_id: d.schoolId, naam: d.naam, functie: d.functie || null, type: d.type || 'beslisser', email: d.email || null, telefoon_mobiel: d.telefoonMobiel || '', telefoon_werk: d.telefoonWerk || '' };
 }
 function toDB_dossier(d)  { return { school_id: d.schoolId, contact_id: d.contactId || null, datum: d.datum, type: d.type || 'notitie', onderwerp: d.onderwerp || null, tekst: d.tekst || null, bron_naam: d.bronNaam || null, bestanden: d.bestanden || [] }; }
 function toDB_factuur(d)  { return { school_id: d.schoolId || null, bestuur_id: d.bestuurId || null, contact_id: d.contactId || null, tav: d.tav || null, nummer: d.nummer || null, debiteurnr: d.debiteurnr || null, datum: d.datum || null, vervaldatum: d.vervaldatum || null, status: d.status || 'concept', betreft: d.betreft || null, regels: d.regels || [], totaal: d.totaal || 0 }; }
@@ -174,7 +177,7 @@ function toDB_dashboardSettings(d) { return { widgets: Array.isArray(d.widgets) 
 async function loadAllData() {
   showLoading();
   try {
-    const [besturen, scholen, contacten, dossiers, facturen, trainingen, uitvoeringen, agenda, agendaTypes, trainingTypes, trainingCategories, _trainingBestandenProbe, _trainingLinksProbe, _contactGeboortedatumProbe, emailTemplates, emailLog, emailSettingsArr, outlookSettingsArr, rssFeeds, rssItemsRead, dashboardSettingsArr] = await Promise.all([
+    const [besturen, scholen, contacten, dossiers, facturen, trainingen, uitvoeringen, agenda, agendaTypes, trainingTypes, trainingCategories, _trainingBestandenProbe, _trainingLinksProbe, emailTemplates, emailLog, emailSettingsArr, outlookSettingsArr, rssFeeds, rssItemsRead, dashboardSettingsArr] = await Promise.all([
       supa('/rest/v1/besturen?select=*&order=naam'),
       supa('/rest/v1/scholen?select=*&order=naam'),
       supa('/rest/v1/contacten?select=*&order=naam'),
@@ -196,9 +199,6 @@ async function loadAllData() {
       supa('/rest/v1/trainingen?select=tips_links&limit=1')
         .then(r => { HAS_TRAINING_LINKS_COLUMN = true; return r; })
         .catch(() => { HAS_TRAINING_LINKS_COLUMN = false; return []; }),
-      supa('/rest/v1/contacten?select=geboortedatum&limit=1')
-        .then(r => { HAS_CONTACTEN_GEBOORTEDATUM_COLUMN = true; return r; })
-        .catch(() => { HAS_CONTACTEN_GEBOORTEDATUM_COLUMN = false; return []; }),
       supa('/rest/v1/email_templates?select=*&order=naam'),
       supa('/rest/v1/email_log?select=*&order=datum.desc'),
       supa('/rest/v1/email_settings?select=*&id=eq.main'),
