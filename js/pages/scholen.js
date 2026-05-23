@@ -33,12 +33,14 @@ function renderScholen(search = '') {
   let filtered = DB.scholen.filter(s =>
     !q ||
     s.naam.toLowerCase().includes(q) ||
-    (s.plaats || '').toLowerCase().includes(q));
+    (s.plaats || '').toLowerCase().includes(q) ||
+    (s.debiteurnr || '').toLowerCase().includes(q));
   const dir = _scholenSortDir === 'asc' ? 1 : -1;
   filtered = [...filtered].sort((a, b) => {
     const ba = getBestuur(a.bestuurId);
     const bb = getBestuur(b.bestuurId);
     if (_scholenSortCol === 'naam')      return dir * a.naam.localeCompare(b.naam, 'nl');
+    if (_scholenSortCol === 'debiteurnr')return dir * (a.debiteurnr || '').localeCompare(b.debiteurnr || '', 'nl', { numeric: true });
     if (_scholenSortCol === 'bestuur')   return dir * (ba?.naam || '').localeCompare(bb?.naam || '', 'nl');
     if (_scholenSortCol === 'plaats')    return dir * (a.plaats || '').localeCompare(b.plaats || '', 'nl');
     if (_scholenSortCol === 'contacten') return dir * (contactenVanSchool(a.id).length - contactenVanSchool(b.id).length);
@@ -52,7 +54,7 @@ function renderScholen(search = '') {
     <div style="display:flex;gap:12px;margin-bottom:20px">
       <div class="search-wrap" style="flex:1">
         <span class="search-icon">${svgIcon('search', 15)}</span>
-        <input id="search-scholen" type="text" placeholder="Zoek school of plaats…" value="${esc(search)}" oninput="searchScholen(this.value)" style="padding-left:34px"/>
+        <input id="search-scholen" type="text" placeholder="Zoek school, plaats of debiteurnr…" value="${esc(search)}" oninput="searchScholen(this.value)" style="padding-left:34px"/>
       </div>
       <button class="btn btn-secondary" onclick="exportScholenExcel()" style="border-color:var(--groen);color:var(--groen);font-weight:700">${svgIcon('download', 15)} Excel export</button>
       <button class="btn btn-primary" onclick="openSchoolModal()">${svgIcon('add')} Nieuwe school</button>
@@ -60,15 +62,16 @@ function renderScholen(search = '') {
     <div class="card">
       <div class="table-wrap">
         <table>
-          <thead><tr>${th('naam', 'School')}${th('bestuur', 'Bestuur')}${th('plaats', 'Plaats')}${th('contacten', 'Contacten')}<th></th></tr></thead>
+          <thead><tr>${th('naam', 'School')}${th('debiteurnr', 'Debiteurnr')}${th('bestuur', 'Bestuur')}${th('plaats', 'Plaats')}${th('contacten', 'Contacten')}<th></th></tr></thead>
           <tbody>
             ${filtered.length === 0
-              ? `<tr><td colspan="5"><div class="empty-state"><p>Geen scholen gevonden</p></div></td></tr>`
+              ? `<tr><td colspan="6"><div class="empty-state"><p>Geen scholen gevonden</p></div></td></tr>`
               : pageSlice.map(s => {
                   const best = getBestuur(s.bestuurId);
                   const nc = contactenVanSchool(s.id).length;
                   return `<tr class="clickable-row" onclick="navigate('school-detail','${s.id}')">
                     <td style="font-weight:500">${esc(s.naam)}</td>
+                    <td style="font-size:13px;color:var(--ink3);white-space:nowrap">${esc(s.debiteurnr || '–')}</td>
                     <td style="font-size:13px;color:var(--ink3)">${esc(best?.naam || '–')}</td>
                     <td>${esc(s.plaats || '–')}</td>
                     <td style="color:var(--ink3);font-size:13px">${nc}</td>
