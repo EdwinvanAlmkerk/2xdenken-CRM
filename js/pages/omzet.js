@@ -4,6 +4,7 @@
 
 let _omzetJaar     = prefGet('omzet.jaar', String(new Date().getFullYear()));
 let _omzetStatus   = prefGet('omzet.status', 'gefactureerd'); // 'gefactureerd' = verzonden+betaald, 'betaald', 'alle'
+let _omzetVergelijk = prefGet('omzet.vergelijk', 'vorig-jaar');
 let _omzetSortCol  = prefGet('omzet.sortCol', 'bedrag');
 let _omzetSortDir  = prefGet('omzet.sortDir', 'desc');
 let _omzetTopOnly  = true;
@@ -12,6 +13,7 @@ const OMZET_TOP_N = 10;
 
 function setOmzetJaar(v)   { _omzetJaar = v; prefSet('omzet.jaar', v); smartRender(renderOmzetPage); }
 function setOmzetStatus(v) { _omzetStatus = v; prefSet('omzet.status', v); smartRender(renderOmzetPage); }
+function setOmzetVergelijk(v) { _omzetVergelijk = v; prefSet('omzet.vergelijk', v); smartRender(renderOmzetPage); }
 function toggleOmzetAlle() { _omzetTopOnly = !_omzetTopOnly; smartRender(renderOmzetPage); }
 function sortOmzet(col) {
   if (_omzetSortCol === col) { _omzetSortDir = _omzetSortDir === 'asc' ? 'desc' : 'asc'; }
@@ -33,6 +35,66 @@ function _omzetGetFacturen() {
     if (_omzetJaar === 'alle') return true;
     return getFactuurJaar(f) === _omzetJaar;
   });
+}
+
+function _omzetParseFactuurDatum(factuur) {
+  const raw = String(factuur?.datum || '').trim();
+  if (!raw) return null;
+
+  if (/^\d{4}-\d{2}-\d{2}$/.test(raw)) {
+    const d = new Date(raw + 'T00:00:00');
+    return Number.isNaN(d.getTime()) ? null : d;
+  }
+
+  const parts = raw.split(/[\/.\-]/).map(p => p.trim()).filter(Boolean);
+  if (parts.length === 3 && /^\d{4}$/.test(parts[2])) {
+    const day = Number(parts[0]);
+    const month = Number(parts[1]);
+    const year = Number(parts[2]);
+    const d = new Date(year, month - 1, day);
+    if (!Number.isNaN(d.getTime()) && d.getFullYear() === year && d.getMonth() === month - 1 && d.getDate() === day) {
+      return d;
+    }
+  }
+
+  return null;
+}
+
+function _omzetPeildatumVoorJaar(jaarNum) {
+  const now = new Date();
+  const month = now.getMonth() + 1;
+  const day = now.getDate();
+  const maxDay = new Date(jaarNum, month, 0).getDate();
+  const safeDay = String(Math.min(day, maxDay)).padStart(2, '0');
+  return `${jaarNum}-${String(month).padStart(2, '0')}-${safeDay}`;
+}
+
+function _omzetSomTotDatum(jaarNum, peildatumIso) {
+  const peildatum = new Date(peildatumIso + 'T23:59:59');
+  const facturen = (DB.facturen || []).filter(f => {
+    if (!_omzetMatchesStatus(f)) return false;
+    if (getFactuurJaar(f) !== String(jaarNum)) return false;
+    const datum = _omzetParseFactuurDatum(f);
+    return datum && datum <= peildatum;
+  });
+  return facturen.reduce((sum, f) => sum + (Number(f.totaal) || 0), 0);
+}
+
+function _omzetVergelijking() {
+  if (_omzetVergelijk !== 'vorig-jaar') return null;
+  if (_omzetJaar === 'alle') return null;
+
+  const jaar = Number(_omzetJaar);
+  if (!Number.isInteger(jaar) || jaar < 1) return null;
+
+  const peilNu = _omzetPeildatumVoorJaar(jaar);
+  const peilVorig = _omzetPeildatumVoorJaar(jaar - 1);
+  const nu = _omzetSomTotDatum(jaar, peilNu);
+  const vorig = _omzetSomTotDatum(jaar - 1, peilVorig);
+  const verschil = nu - vorig;
+  const pct = vorig > 0 ? (verschil / vorig) * 100 : null;
+
+  return { jaar, nu, vorig, verschil, pct, peilNu, peilVorig };
 }
 
 function _omzetAggregeer(facturen) {
@@ -170,9 +232,42 @@ function renderOmzetPage() {
     ['betaald', 'Alleen betaald'],
     ['alle', 'Alles behalve concept'],
   ];
+  const vergelijkOpts = [
+    ['geen', 'Geen vergelijking'],
+    ['vorig-jaar', 'Vorig jaar (zelfde periode)'],
+  ];
 
   const periodeLabel = _omzetJaar === 'alle' ? 'alle jaren' : _omzetJaar;
   const statusLabel = (statusOpts.find(([k]) => k === _omzetStatus) || statusOpts[0])[1].toLowerCase();
+  const vergelijking = _omzetVergelijking();
+  const vergelijkingLabel = vergelijking
+    ? new Date(vergelijking.peilNu + 'T00:00:00').toLocaleDateString('nl-NL', { day: 'numeric', month: 'long' })
+    : '';
+  const verschilKleur = vergelijking && vergelijking.verschil >= 0 ? '#2E7D52' : '#B0433F';
+  const verschilTekst = vergelijking
+    ? `${vergelijking.verschil >= 0 ? '+' : '-'}${fmtEuro(Math.abs(vergelijking.verschil))}`
+    : '';
+  const pctTekst = vergelijking
+    ? (vergelijking.pct == null ? 'n.v.t.' : `${vergelijking.pct >= 0 ? '+' : ''}${vergelijking.pct.toFixed(1)}%`)
+    : '';
+  const vergelijkSub = vergelijking
+    ? `${_omzetJaar} t/m ${vergelijkingLabel} vs ${vergelijking.jaar - 1}`
+    : '';
+  const kpis = [
+    ['Totale omzet', fmtEuro(totaal), '#1ab8b8', 'Periode ' + periodeLabel],
+    ['Waarvan betaald', fmtEuro(totaalBetaald), '#2E7D52', `${totaal > 0 ? Math.round(totaalBetaald / totaal * 100) : 0}% van totaal`],
+    ['Openstaand', fmtEuro(totaalOpen), '#D1662E', `${totaal > 0 ? Math.round(totaalOpen / totaal * 100) : 0}% van totaal`],
+    ['Scholen met omzet', String(aantalScholen), '#2D3054', `${aantalFacturen} factu${aantalFacturen === 1 ? 'ur' : 'ren'} totaal`],
+    ['Gemiddeld per school', fmtEuro(gemiddelde), '#6D4AA2', ''],
+  ];
+  if (vergelijking) {
+    kpis.push([
+      'Verschil t.o.v. vorig jaar',
+      `${verschilTekst} (${pctTekst})`,
+      verschilKleur,
+      vergelijkSub,
+    ]);
+  }
 
   return `
     <div style="display:flex;gap:10px;margin-bottom:16px;flex-wrap:wrap;align-items:center">
@@ -189,19 +284,19 @@ function renderOmzetPage() {
           ${statusOpts.map(([k, l]) => `<option value="${k}"${_omzetStatus === k ? ' selected' : ''}>${esc(l)}</option>`).join('')}
         </select>
       </div>
+      <div style="display:flex;flex-direction:column;gap:2px">
+        <span style="font-size:11px;color:var(--navy4);font-weight:700;text-transform:uppercase;letter-spacing:.5px">Vergelijking</span>
+        <select onchange="setOmzetVergelijk(this.value)" ${_omzetJaar === 'alle' ? 'disabled' : ''} style="padding:9px 13px;border:2px solid var(--bg3);border-radius:var(--r);font-family:'Nunito',sans-serif;font-size:13.5px;font-weight:600;color:var(--navy);background:${_omzetJaar === 'alle' ? 'var(--bg)' : 'white'};cursor:${_omzetJaar === 'alle' ? 'not-allowed' : 'pointer'};min-width:230px;opacity:${_omzetJaar === 'alle' ? '.65' : '1'}">
+          ${vergelijkOpts.map(([k, l]) => `<option value="${k}"${_omzetVergelijk === k ? ' selected' : ''}>${esc(l)}</option>`).join('')}
+        </select>
+      </div>
       <div style="flex:1"></div>
       <button class="btn btn-secondary" onclick="exportOmzetExcel()" style="border-color:var(--groen);color:var(--groen);font-weight:700">${svgIcon('download', 15)} Excel export</button>
       <button class="btn btn-secondary" onclick="exportOmzetPDF()" style="border-color:#9B6B00;color:#9B6B00;font-weight:700">${svgIcon('print', 15)} PDF / Afdrukken</button>
     </div>
 
     <div class="kpi-grid" style="display:grid;grid-template-columns:repeat(auto-fit,minmax(180px,1fr));gap:14px;margin-bottom:18px">
-      ${[
-        ['Totale omzet', fmtEuro(totaal), '#1ab8b8', 'Periode ' + periodeLabel],
-        ['Waarvan betaald', fmtEuro(totaalBetaald), '#2E7D52', `${totaal > 0 ? Math.round(totaalBetaald / totaal * 100) : 0}% van totaal`],
-        ['Openstaand', fmtEuro(totaalOpen), '#D1662E', `${totaal > 0 ? Math.round(totaalOpen / totaal * 100) : 0}% van totaal`],
-        ['Scholen met omzet', String(aantalScholen), '#2D3054', `${aantalFacturen} factu${aantalFacturen === 1 ? 'ur' : 'ren'} totaal`],
-        ['Gemiddeld per school', fmtEuro(gemiddelde), '#6D4AA2', ''],
-      ].map(([label, value, color, sub]) => `
+      ${kpis.map(([label, value, color, sub]) => `
         <div class="card" style="padding:14px 18px">
           <div style="font-size:11px;color:var(--navy4);font-weight:700;text-transform:uppercase;letter-spacing:.6px">${esc(label)}</div>
           <div style="font-size:22px;font-weight:800;color:${color};margin-top:4px;line-height:1.2">${value}</div>
