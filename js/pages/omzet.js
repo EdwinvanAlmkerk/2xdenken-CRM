@@ -4,7 +4,10 @@
 
 let _omzetJaar     = prefGet('omzet.jaar', String(new Date().getFullYear()));
 let _omzetStatus   = prefGet('omzet.status', 'gefactureerd'); // 'gefactureerd' = verzonden+betaald, 'betaald', 'alle'
-let _omzetVergelijk = prefGet('omzet.vergelijk', 'vorig-jaar');
+let _omzetVergelijk = prefGet('omzet.vergelijk', 'jaar');
+if (_omzetVergelijk === 'vorig-jaar') _omzetVergelijk = 'jaar';
+let _omzetVergelijkJaar = prefGet('omzet.vergelijkJaar', String(new Date().getFullYear() - 1));
+let _omzetPeildatumMd = prefGet('omzet.peildatumMd', `${String(new Date().getMonth() + 1).padStart(2, '0')}-${String(new Date().getDate()).padStart(2, '0')}`);
 let _omzetSortCol  = prefGet('omzet.sortCol', 'bedrag');
 let _omzetSortDir  = prefGet('omzet.sortDir', 'desc');
 let _omzetTopOnly  = true;
@@ -14,6 +17,14 @@ const OMZET_TOP_N = 10;
 function setOmzetJaar(v)   { _omzetJaar = v; prefSet('omzet.jaar', v); smartRender(renderOmzetPage); }
 function setOmzetStatus(v) { _omzetStatus = v; prefSet('omzet.status', v); smartRender(renderOmzetPage); }
 function setOmzetVergelijk(v) { _omzetVergelijk = v; prefSet('omzet.vergelijk', v); smartRender(renderOmzetPage); }
+function setOmzetVergelijkJaar(v) { _omzetVergelijkJaar = v; prefSet('omzet.vergelijkJaar', v); smartRender(renderOmzetPage); }
+function setOmzetPeildatum(v) {
+  const raw = String(v || '').trim();
+  if (!/^\d{4}-\d{2}-\d{2}$/.test(raw)) return;
+  _omzetPeildatumMd = raw.slice(5);
+  prefSet('omzet.peildatumMd', _omzetPeildatumMd);
+  smartRender(renderOmzetPage);
+}
 function toggleOmzetAlle() { _omzetTopOnly = !_omzetTopOnly; smartRender(renderOmzetPage); }
 function sortOmzet(col) {
   if (_omzetSortCol === col) { _omzetSortDir = _omzetSortDir === 'asc' ? 'desc' : 'asc'; }
@@ -61,12 +72,13 @@ function _omzetParseFactuurDatum(factuur) {
 }
 
 function _omzetPeildatumVoorJaar(jaarNum) {
-  const now = new Date();
-  const month = now.getMonth() + 1;
-  const day = now.getDate();
-  const maxDay = new Date(jaarNum, month, 0).getDate();
+  const md = String(_omzetPeildatumMd || '').match(/^(\d{2})-(\d{2})$/);
+  const month = md ? Number(md[1]) : (new Date().getMonth() + 1);
+  const day = md ? Number(md[2]) : new Date().getDate();
+  const safeMonth = Math.max(1, Math.min(12, month));
+  const maxDay = new Date(jaarNum, safeMonth, 0).getDate();
   const safeDay = String(Math.min(day, maxDay)).padStart(2, '0');
-  return `${jaarNum}-${String(month).padStart(2, '0')}-${safeDay}`;
+  return `${jaarNum}-${String(safeMonth).padStart(2, '0')}-${safeDay}`;
 }
 
 function _omzetSomTotDatum(jaarNum, peildatumIso) {
@@ -81,20 +93,22 @@ function _omzetSomTotDatum(jaarNum, peildatumIso) {
 }
 
 function _omzetVergelijking() {
-  if (_omzetVergelijk !== 'vorig-jaar') return null;
+  if (_omzetVergelijk !== 'jaar') return null;
   if (_omzetJaar === 'alle') return null;
 
   const jaar = Number(_omzetJaar);
+  const vergelijkJaar = Number(_omzetVergelijkJaar);
   if (!Number.isInteger(jaar) || jaar < 1) return null;
+  if (!Number.isInteger(vergelijkJaar) || vergelijkJaar < 1 || vergelijkJaar === jaar) return null;
 
   const peilNu = _omzetPeildatumVoorJaar(jaar);
-  const peilVorig = _omzetPeildatumVoorJaar(jaar - 1);
+  const peilVorig = _omzetPeildatumVoorJaar(vergelijkJaar);
   const nu = _omzetSomTotDatum(jaar, peilNu);
-  const vorig = _omzetSomTotDatum(jaar - 1, peilVorig);
+  const vorig = _omzetSomTotDatum(vergelijkJaar, peilVorig);
   const verschil = nu - vorig;
   const pct = vorig > 0 ? (verschil / vorig) * 100 : null;
 
-  return { jaar, nu, vorig, verschil, pct, peilNu, peilVorig };
+  return { jaar, vergelijkJaar, nu, vorig, verschil, pct, peilNu, peilVorig };
 }
 
 function _omzetAggregeer(facturen) {
@@ -203,10 +217,21 @@ function _omzetBarChart(rows) {
 function renderOmzetPage() {
   if (!DB.facturen) DB.facturen = [];
   const jaren = [...new Set(DB.facturen.map(f => getFactuurJaar(f)).filter(Boolean))].sort().reverse();
+  const vergelijkbareJaren = jaren.filter(j => j !== _omzetJaar);
   const huidigJaar = String(new Date().getFullYear());
   if (!jaren.includes(_omzetJaar) && _omzetJaar !== 'alle') {
     _omzetJaar = jaren.includes(huidigJaar) ? huidigJaar : (jaren[0] || 'alle');
   }
+  if (_omzetJaar === 'alle' || !jaren.includes(_omzetVergelijkJaar) || _omzetVergelijkJaar === _omzetJaar) {
+    _omzetVergelijkJaar = vergelijkbareJaren[0] || '';
+  }
+  if (!/^\d{2}-\d{2}$/.test(String(_omzetPeildatumMd || ''))) {
+    const now = new Date();
+    _omzetPeildatumMd = `${String(now.getMonth() + 1).padStart(2, '0')}-${String(now.getDate()).padStart(2, '0')}`;
+  }
+
+  prefSet('omzet.vergelijkJaar', _omzetVergelijkJaar);
+  prefSet('omzet.peildatumMd', _omzetPeildatumMd);
 
   const facturen = _omzetGetFacturen();
   const rows = _omzetAggregeer(facturen);
@@ -234,7 +259,7 @@ function renderOmzetPage() {
   ];
   const vergelijkOpts = [
     ['geen', 'Geen vergelijking'],
-    ['vorig-jaar', 'Vorig jaar (zelfde periode)'],
+    ['jaar', 'Zelf gekozen jaar (zelfde periode)'],
   ];
 
   const periodeLabel = _omzetJaar === 'alle' ? 'alle jaren' : _omzetJaar;
@@ -251,7 +276,7 @@ function renderOmzetPage() {
     ? (vergelijking.pct == null ? 'n.v.t.' : `${vergelijking.pct >= 0 ? '+' : ''}${vergelijking.pct.toFixed(1)}%`)
     : '';
   const vergelijkSub = vergelijking
-    ? `${_omzetJaar} t/m ${vergelijkingLabel} vs ${vergelijking.jaar - 1}`
+    ? `${_omzetJaar} t/m ${vergelijkingLabel} vs ${vergelijking.vergelijkJaar}`
     : '';
   const kpis = [
     ['Totale omzet', fmtEuro(totaal), '#1ab8b8', 'Periode ' + periodeLabel],
@@ -262,7 +287,7 @@ function renderOmzetPage() {
   ];
   if (vergelijking) {
     kpis.push([
-      'Verschil t.o.v. vorig jaar',
+      `Verschil t.o.v. ${vergelijking.vergelijkJaar}`,
       `${verschilTekst} (${pctTekst})`,
       verschilKleur,
       vergelijkSub,
@@ -288,6 +313,16 @@ function renderOmzetPage() {
         <span style="font-size:11px;color:var(--navy4);font-weight:700;text-transform:uppercase;letter-spacing:.5px">Vergelijking</span>
         <select onchange="setOmzetVergelijk(this.value)" ${_omzetJaar === 'alle' ? 'disabled' : ''} style="padding:9px 13px;border:2px solid var(--bg3);border-radius:var(--r);font-family:'Nunito',sans-serif;font-size:13.5px;font-weight:600;color:var(--navy);background:${_omzetJaar === 'alle' ? 'var(--bg)' : 'white'};cursor:${_omzetJaar === 'alle' ? 'not-allowed' : 'pointer'};min-width:230px;opacity:${_omzetJaar === 'alle' ? '.65' : '1'}">
           ${vergelijkOpts.map(([k, l]) => `<option value="${k}"${_omzetVergelijk === k ? ' selected' : ''}>${esc(l)}</option>`).join('')}
+        </select>
+      </div>
+      <div style="display:flex;flex-direction:column;gap:2px">
+        <span style="font-size:11px;color:var(--navy4);font-weight:700;text-transform:uppercase;letter-spacing:.5px">Peildatum</span>
+        <input type="date" value="${_omzetJaar !== 'alle' ? _omzetPeildatumVoorJaar(Number(_omzetJaar)) : ''}" onchange="setOmzetPeildatum(this.value)" ${_omzetJaar === 'alle' || _omzetVergelijk !== 'jaar' ? 'disabled' : ''} style="padding:9px 13px;border:2px solid var(--bg3);border-radius:var(--r);font-family:'Nunito',sans-serif;font-size:13.5px;font-weight:600;color:var(--navy);background:${_omzetJaar === 'alle' || _omzetVergelijk !== 'jaar' ? 'var(--bg)' : 'white'};cursor:${_omzetJaar === 'alle' || _omzetVergelijk !== 'jaar' ? 'not-allowed' : 'pointer'};min-width:180px;opacity:${_omzetJaar === 'alle' || _omzetVergelijk !== 'jaar' ? '.65' : '1'}">
+      </div>
+      <div style="display:flex;flex-direction:column;gap:2px">
+        <span style="font-size:11px;color:var(--navy4);font-weight:700;text-transform:uppercase;letter-spacing:.5px">Vergelijkingsjaar</span>
+        <select onchange="setOmzetVergelijkJaar(this.value)" ${_omzetJaar === 'alle' || _omzetVergelijk !== 'jaar' ? 'disabled' : ''} style="padding:9px 13px;border:2px solid var(--bg3);border-radius:var(--r);font-family:'Nunito',sans-serif;font-size:13.5px;font-weight:600;color:var(--navy);background:${_omzetJaar === 'alle' || _omzetVergelijk !== 'jaar' ? 'var(--bg)' : 'white'};cursor:${_omzetJaar === 'alle' || _omzetVergelijk !== 'jaar' ? 'not-allowed' : 'pointer'};min-width:170px;opacity:${_omzetJaar === 'alle' || _omzetVergelijk !== 'jaar' ? '.65' : '1'}">
+          ${vergelijkbareJaren.map(j => `<option value="${j}"${_omzetVergelijkJaar === j ? ' selected' : ''}>${j}</option>`).join('')}
         </select>
       </div>
       <div style="flex:1"></div>
