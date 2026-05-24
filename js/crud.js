@@ -772,6 +772,262 @@ async function delEmailTemplate(id) {
   } catch (e) { toastError(e); } finally { hideLoading(); }
 }
 
+// ── KOSTENTYPES ──────────────────────────────────────────────────
+// Beheer van het lijstje kostentypes (Reiskosten, Materiaal, …). Werkt
+// hetzelfde als training_types: writes naar Supabase alleen als de tabel
+// bestaat, anders alleen in-memory zodat de app niet breekt op een
+// systeem zonder migratie.
+function ensureKostenTypes() {
+  if (!Array.isArray(DB.kostenTypes)) DB.kostenTypes = [];
+}
+
+function getKostenTypeList() {
+  ensureKostenTypes();
+  return DB.kostenTypes;
+}
+
+function getKostenTypeInfo(typeId = '') {
+  const list = getKostenTypeList();
+  const found = list.find(t => t.id === typeId)
+    || list[0]
+    || { id: typeId || 'overig', naam: typeId || 'Overig', kleur: 'grijs' };
+  const style = (typeof TRAINING_TYPE_STYLES === 'object' ? TRAINING_TYPE_STYLES : null)?.[found.kleur]
+    || { color: '#6B6B8A', bg: '#F0F0F5' };
+  return { ...found, label: found.naam || 'Overig', color: style.color, bg: style.bg };
+}
+
+function kostenTypeLabel(typeId = '') {
+  return getKostenTypeInfo(typeId).label;
+}
+
+function kostenTypeBadge(typeId = '') {
+  const info = getKostenTypeInfo(typeId);
+  return `<span style="display:inline-flex;align-items:center;padding:2px 10px;border-radius:20px;font-size:11.5px;font-weight:700;background:${info.bg};color:${info.color}">${esc(info.label)}</span>`;
+}
+
+async function saveKostenType(id) {
+  ensureKostenTypes();
+  const naam = document.getElementById('f-kostentypename').value.trim();
+  if (!naam) return alert('Naam is verplicht');
+  const kleur = document.getElementById('f-kostentypekleur').value || 'navy';
+  showLoading();
+  try {
+    if (id) {
+      if (HAS_KOSTEN_TYPES_TABLE) {
+        await supa(`/rest/v1/kosten_types?id=eq.${id}`, { method: 'PATCH', body: JSON.stringify({ naam, kleur }) });
+      }
+      DB.kostenTypes = DB.kostenTypes.map(t => t.id === id ? { ...t, naam, kleur } : t);
+    } else {
+      const newId = (typeof normalizeTypeId === 'function' ? normalizeTypeId(naam) : naam.toLowerCase().replace(/[^a-z0-9]+/g, '_').replace(/^_|_$/g, '') || uid());
+      if (DB.kostenTypes.find(t => t.id === newId)) return alert('Er bestaat al een kostentype met deze naam');
+      if (HAS_KOSTEN_TYPES_TABLE) {
+        await supa('/rest/v1/kosten_types', { method: 'POST', body: JSON.stringify({ id: newId, naam, kleur }) });
+      }
+      DB.kostenTypes.push({ id: newId, naam, kleur });
+    }
+    closeModal(); renderContent();
+  } catch (e) { toastError(e); } finally { hideLoading(); }
+}
+
+async function delKostenType(id) {
+  ensureKostenTypes();
+  if ((DB.kostenTypes || []).length <= 1) return alert('Er moet minimaal één kostentype overblijven.');
+  const inGebruik = (DB.inkoopfacturen || []).filter(f => f.kostenTypeId === id).length;
+  const msg = inGebruik > 0
+    ? `Dit type wordt gebruikt door ${inGebruik} inkoopfactuur/facturen. Verwijderen? Bestaande inkoopfacturen verliezen hun type (worden zonder type weergegeven).`
+    : 'Kostentype verwijderen?';
+  if (!confirm(msg)) return;
+  showLoading();
+  try {
+    if (HAS_KOSTEN_TYPES_TABLE) {
+      // FK met ON DELETE SET NULL maakt dit veilig — children worden vanzelf NULL.
+      await supa(`/rest/v1/kosten_types?id=eq.${id}`, { method: 'DELETE' });
+    }
+    DB.kostenTypes = DB.kostenTypes.filter(t => t.id !== id);
+    DB.inkoopfacturen = (DB.inkoopfacturen || []).map(f => f.kostenTypeId === id ? { ...f, kostenTypeId: '' } : f);
+    closeModal(); renderContent();
+  } catch (e) { toastError(e); } finally { hideLoading(); }
+}
+
+// ── INKOOPFACTUREN ───────────────────────────────────────────────
+function parseInkoopBedrag(val) {
+  return parseFloat(String(val || '').replace(/\./g, '').replace(',', '.').replace(/[^0-9.-]/g, '')) || 0;
+}
+
+async function saveInkoopfactuur(id) {
+  const leverancier = document.getElementById('f-ink-leverancier').value.trim();
+  if (!leverancier) return alert('Leverancier is verplicht');
+  const factuurdatum = document.getElementById('f-ink-datum').value;
+  if (!factuurdatum) return alert('Factuurdatum is verplicht');
+  const bedrag = parseInkoopBedrag(document.getElementById('f-ink-bedrag').value);
+  if (!bedrag || bedrag <= 0) return alert('Vul een geldig bedrag in');
+
+  const bestaand = id ? (DB.inkoopfacturen || []).find(f => f.id === id) : null;
+  const fileInput = document.getElementById('f-ink-bestand');
+  const files = fileInput ? [...fileInput.files] : [];
+
+  const isRecurring = document.getElementById('f-ink-recurring')?.checked || false;
+  const recurringInterval = isRecurring ? (document.getElementById('f-ink-interval')?.value || 'maand') : '';
+  const recurringEndDate = isRecurring ? (document.getElementById('f-ink-einddatum')?.value || '') : '';
+
+  const data = {
+    factuurnummer: document.getElementById('f-ink-nr').value.trim(),
+    leverancier,
+    kostenTypeId: document.getElementById('f-ink-type').value || '',
+    factuurdatum,
+    omschrijving: document.getElementById('f-ink-omschr').value.trim(),
+    bedrag,
+    isRecurring,
+    recurringInterval,
+    recurringEndDate,
+    parentId: bestaand?.parentId || '',
+    bestanden: [...(bestaand?.bestanden || [])],
+    notitie: document.getElementById('f-ink-notitie').value.trim(),
+  };
+
+  showLoading();
+  try {
+    const recordId = id || uid();
+    for (const f of files) data.bestanden.push(await uploadBestandToStorage(recordId, f));
+
+    if (id) {
+      await supa(`/rest/v1/inkoopfacturen?id=eq.${id}`, { method: 'PATCH', body: JSON.stringify(toDB_inkoopfactuur(data)) });
+      DB.inkoopfacturen = DB.inkoopfacturen.map(f => f.id === id ? { ...f, ...data } : f);
+    } else {
+      await supa('/rest/v1/inkoopfacturen', { method: 'POST', body: JSON.stringify({ id: recordId, ...toDB_inkoopfactuur(data) }) });
+      DB.inkoopfacturen.push({ id: recordId, ...data, createdAt: new Date().toISOString() });
+    }
+
+    // Bij nieuwe template direct kinderen genereren tot vandaag.
+    if (data.isRecurring) {
+      try { await generateRecurringInkoop(); } catch (e) { console.warn('Recurring inkoop generatie mislukt:', e); }
+    }
+
+    closeModal(); renderContent();
+  } catch (e) { toastError(e); } finally { hideLoading(); }
+}
+
+async function delInkoopfactuur(id) {
+  const f = (DB.inkoopfacturen || []).find(x => x.id === id);
+  if (!f) return;
+  const heeftKinderen = f.isRecurring && (DB.inkoopfacturen || []).some(c => c.parentId === id);
+  const msg = heeftKinderen
+    ? 'Deze inkoopfactuur is een terugkerende serie. Verwijderen stopt de serie; bestaande automatisch gegenereerde facturen blijven bewaard.\n\nDoorgaan?'
+    : 'Inkoopfactuur verwijderen?';
+  if (!confirm(msg)) return;
+  showLoading();
+  try {
+    if (f.bestanden?.length) {
+      for (const b of f.bestanden) { try { await deleteBestandFromStorage(b.pad); } catch (e) {} }
+    }
+    await supa(`/rest/v1/inkoopfacturen?id=eq.${id}`, { method: 'DELETE' });
+    DB.inkoopfacturen = DB.inkoopfacturen.filter(x => x.id !== id);
+    // Kinderen behouden, maar hun parentId is via DB ON DELETE SET NULL al genull'd.
+    DB.inkoopfacturen = DB.inkoopfacturen.map(x => x.parentId === id ? { ...x, parentId: '' } : x);
+    closeModal(); renderContent();
+  } catch (e) { toastError(e); } finally { hideLoading(); }
+}
+
+async function delInkoopBestand(inkoopId, idx) {
+  const f = (DB.inkoopfacturen || []).find(x => x.id === inkoopId);
+  if (!f || !f.bestanden || !f.bestanden[idx]) return;
+  if (!confirm('Document verwijderen?')) return;
+  showLoading();
+  try {
+    const verwijderd = f.bestanden[idx];
+    if (verwijderd?.pad) try { await deleteBestandFromStorage(verwijderd.pad); } catch (e) {}
+    const next = { ...f, bestanden: f.bestanden.filter((_, i) => i !== idx) };
+    await supa(`/rest/v1/inkoopfacturen?id=eq.${inkoopId}`, { method: 'PATCH', body: JSON.stringify({ bestanden: next.bestanden }) });
+    DB.inkoopfacturen = DB.inkoopfacturen.map(item => item.id === inkoopId ? next : item);
+    closeModal(); renderContent();
+    if (typeof openInkoopfactuurModal === 'function') openInkoopfactuurModal(inkoopId);
+  } catch (e) { toastError(e); } finally { hideLoading(); }
+}
+
+async function downloadInkoopBestand(inkoopId, idx) {
+  const f = (DB.inkoopfacturen || []).find(x => x.id === inkoopId);
+  if (!f || !f.bestanden || !f.bestanden[idx]) return;
+  await downloadStorageBestand(f.bestanden[idx]);
+}
+
+// ── Recurring generator ──────────────────────────────────────────
+// Genereert ontbrekende child-records voor elke recurring "template"-
+// inkoopfactuur (is_recurring=true, geen parent). Idempotent: de
+// database UNIQUE(parent_id, factuurdatum) vangt eventuele race
+// conditions op tussen meerdere tabs.
+function _addInterval(isoDate, interval, n = 1) {
+  const d = new Date(isoDate);
+  if (interval === 'maand')     d.setMonth(d.getMonth() + n);
+  else if (interval === 'kwartaal') d.setMonth(d.getMonth() + 3 * n);
+  else if (interval === 'jaar') d.setFullYear(d.getFullYear() + n);
+  else return null;
+  return d.toISOString().slice(0, 10);
+}
+
+function _enumerateRecurringDates(template, todayIso) {
+  const result = [];
+  const interval = template.recurringInterval || 'maand';
+  const end = template.recurringEndDate && template.recurringEndDate < todayIso
+    ? template.recurringEndDate
+    : todayIso;
+  let cur = _addInterval(template.factuurdatum, interval, 1);
+  let safety = 0;
+  while (cur && cur <= end && safety < 600) {
+    result.push(cur);
+    cur = _addInterval(cur, interval, 1);
+    safety++;
+  }
+  return result;
+}
+
+async function generateRecurringInkoop() {
+  if (!HAS_INKOOPFACTUREN_TABLE) return;
+  if (!Array.isArray(DB.inkoopfacturen)) return;
+  const today = new Date().toISOString().slice(0, 10);
+  const templates = DB.inkoopfacturen.filter(f => f.isRecurring && !f.parentId);
+  if (!templates.length) return;
+
+  let toegevoegd = 0;
+  for (const t of templates) {
+    const wantDates = _enumerateRecurringDates(t, today);
+    if (!wantDates.length) continue;
+    const existing = new Set(DB.inkoopfacturen.filter(c => c.parentId === t.id).map(c => c.factuurdatum));
+    for (const d of wantDates) {
+      if (existing.has(d)) continue;
+      const newId = uid();
+      const childPayload = {
+        factuurnummer: '',
+        leverancier: t.leverancier,
+        kostenTypeId: t.kostenTypeId,
+        factuurdatum: d,
+        omschrijving: t.omschrijving,
+        bedrag: t.bedrag,
+        isRecurring: false,
+        recurringInterval: '',
+        recurringEndDate: '',
+        parentId: t.id,
+        bestanden: [],
+        notitie: t.notitie,
+      };
+      try {
+        await supa('/rest/v1/inkoopfacturen', { method: 'POST', body: JSON.stringify({ id: newId, ...toDB_inkoopfactuur(childPayload) }) });
+        DB.inkoopfacturen.push({ id: newId, ...childPayload, createdAt: new Date().toISOString() });
+        toegevoegd++;
+      } catch (e) {
+        // Unique-constraint conflict (parent_id + factuurdatum): andere tab
+        // genereerde 'm al — skip stil verder.
+        const msg = String(e?.message || e);
+        if (!/23505|duplicate|unique/i.test(msg)) {
+          console.warn('Recurring inkoop POST failed:', msg);
+        }
+      }
+    }
+  }
+  if (toegevoegd > 0 && typeof renderContent === 'function' && page === 'inkoopfacturen') {
+    try { renderContent(); } catch (e) {}
+  }
+}
+
 // ── DASHBOARD-INSTELLINGEN ───────────────────────────────────────
 // Bewaart de widget-volgorde en zichtbaarheid in Supabase (single-row
 // onder id='main'). Valt stilletjes terug op alleen localStorage als

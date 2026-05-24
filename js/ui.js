@@ -189,10 +189,12 @@ function quickAdd(action) {
   closeQuickAdd();
   switch (action) {
     case 'agenda':   if (typeof openAgendaModal === 'function')  openAgendaModal();        break;
-    case 'factuur':  if (typeof openFactuurModal === 'function') openFactuurModal('');     break;
+    case 'factuur':  if (typeof openNieuweFactuurModal === 'function') openNieuweFactuurModal();
+                     else if (typeof openFactuurModal === 'function') openFactuurModal(''); break;
     case 'school':   if (typeof openSchoolModal === 'function')  openSchoolModal();        break;
     case 'bestuur':  if (typeof openBestuurModal === 'function') openBestuurModal();       break;
     case 'training': if (typeof openTrainingModal === 'function') openTrainingModal();     break;
+    case 'inkoop':   if (typeof openInkoopfactuurModal === 'function') openInkoopfactuurModal(); break;
   }
 }
 

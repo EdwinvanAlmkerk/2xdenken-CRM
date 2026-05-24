@@ -9,6 +9,8 @@ let HAS_TRAINING_CATEGORIES_TABLE = false;
 let HAS_TRAINING_BESTANDEN_COLUMN = false;
 let HAS_TRAINING_LINKS_COLUMN = false;
 let HAS_DASHBOARD_SETTINGS_TABLE = false;
+let HAS_KOSTEN_TYPES_TABLE = false;
+let HAS_INKOOPFACTUREN_TABLE = false;
 
 let DB = {
   besturen: [], scholen: [], contacten: [],
@@ -22,7 +24,9 @@ let DB = {
   emailSettings: null,
   rssFeeds: [],
   rssItemsRead: [],
-  dashboardSettings: null
+  dashboardSettings: null,
+  inkoopfacturen: [],
+  kostenTypes: []
 };
 
 function uid() {
@@ -145,6 +149,25 @@ function fromDB_outlookSettings(r) { return { id: r.id, icsUrl: r.ics_url || '',
 function fromDB_dashboardSettings(r) { return { id: r.id, widgets: Array.isArray(r.widgets) ? r.widgets : [], updatedAt: r.updated_at }; }
 function fromDB_rssFeed(r)   { return { id: r.id, naam: r.naam, url: r.url, categorie: r.categorie || '', sortering: r.sortering || 0, createdAt: r.created_at }; }
 function fromDB_rssItemRead(r) { return { id: r.id, feedId: r.feed_id, itemGuid: r.item_guid, readAt: r.read_at }; }
+function fromDB_kostenType(r) { return { id: r.id, naam: r.naam, kleur: r.kleur || 'navy' }; }
+function fromDB_inkoopfactuur(r) {
+  return {
+    id: r.id,
+    factuurnummer: r.factuurnummer || '',
+    leverancier: r.leverancier || '',
+    kostenTypeId: r.kosten_type_id || '',
+    factuurdatum: r.factuurdatum || '',
+    omschrijving: r.omschrijving || '',
+    bedrag: Number(r.bedrag) || 0,
+    isRecurring: !!r.is_recurring,
+    recurringInterval: r.recurring_interval || '',
+    recurringEndDate: r.recurring_end_date || '',
+    parentId: r.parent_id || '',
+    bestanden: Array.isArray(r.bestanden) ? r.bestanden : [],
+    notitie: r.notitie || '',
+    createdAt: r.created_at
+  };
+}
 
 // ── camelCase → snake_case for writes ────────────────────────────
 function toDB_bestuur(d)  { return { naam: d.naam, website: d.website || null, adres: d.adres || null, debiteurnr: d.debiteurnr || null }; }
@@ -172,12 +195,29 @@ function toDB_uitv(d)     { return { training_id: d.trainingId, school_id: d.sch
 function toDB_agenda(d)   { return { titel: d.titel, datum: d.datum, begin_tijd: d.beginTijd || null, eind_tijd: d.eindTijd || null, type: d.type || 'afspraak', school_id: d.schoolId || null, contact_id: d.contactId || null, bestuur_id: d.bestuurId || null, locatie: d.locatie || null, notitie: d.notitie || null }; }
 function toDB_rssFeed(d)  { return { naam: d.naam, url: d.url, categorie: d.categorie || null, sortering: d.sortering ?? 0 }; }
 function toDB_dashboardSettings(d) { return { widgets: Array.isArray(d.widgets) ? d.widgets : [], updated_at: new Date().toISOString() }; }
+function toDB_kostenType(d) { return { naam: d.naam, kleur: d.kleur || 'navy' }; }
+function toDB_inkoopfactuur(d) {
+  return {
+    factuurnummer: d.factuurnummer || null,
+    leverancier: d.leverancier || '',
+    kosten_type_id: d.kostenTypeId || null,
+    factuurdatum: d.factuurdatum || null,
+    omschrijving: d.omschrijving || null,
+    bedrag: Number(d.bedrag) || 0,
+    is_recurring: !!d.isRecurring,
+    recurring_interval: d.isRecurring ? (d.recurringInterval || 'maand') : null,
+    recurring_end_date: d.isRecurring ? (d.recurringEndDate || null) : null,
+    parent_id: d.parentId || null,
+    bestanden: Array.isArray(d.bestanden) ? d.bestanden : [],
+    notitie: d.notitie || null
+  };
+}
 
 // ── Load all data from Supabase ───────────────────────────────────
 async function loadAllData() {
   showLoading();
   try {
-    const [besturen, scholen, contacten, dossiers, facturen, trainingen, uitvoeringen, agenda, agendaTypes, trainingTypes, trainingCategories, _trainingBestandenProbe, _trainingLinksProbe, emailTemplates, emailLog, emailSettingsArr, outlookSettingsArr, rssFeeds, rssItemsRead, dashboardSettingsArr] = await Promise.all([
+    const [besturen, scholen, contacten, dossiers, facturen, trainingen, uitvoeringen, agenda, agendaTypes, trainingTypes, trainingCategories, _trainingBestandenProbe, _trainingLinksProbe, emailTemplates, emailLog, emailSettingsArr, outlookSettingsArr, rssFeeds, rssItemsRead, dashboardSettingsArr, kostenTypes, inkoopfacturen] = await Promise.all([
       supa('/rest/v1/besturen?select=*&order=naam'),
       supa('/rest/v1/scholen?select=*&order=naam'),
       supa('/rest/v1/contacten?select=*&order=naam'),
@@ -208,6 +248,12 @@ async function loadAllData() {
       supa('/rest/v1/dashboard_settings?select=*&id=eq.main')
         .then(r => { HAS_DASHBOARD_SETTINGS_TABLE = true; return r; })
         .catch(() => { HAS_DASHBOARD_SETTINGS_TABLE = false; return []; }),
+      supa('/rest/v1/kosten_types?select=*&order=naam')
+        .then(r => { HAS_KOSTEN_TYPES_TABLE = true; return r; })
+        .catch(() => { HAS_KOSTEN_TYPES_TABLE = false; return []; }),
+      supa('/rest/v1/inkoopfacturen?select=*&order=factuurdatum.desc')
+        .then(r => { HAS_INKOOPFACTUREN_TABLE = true; return r; })
+        .catch(() => { HAS_INKOOPFACTUREN_TABLE = false; return []; }),
     ]);
     DB.besturen     = (besturen || []).map(fromDB_bestuur);
     DB.scholen      = (scholen || []).map(fromDB_school);
@@ -227,7 +273,13 @@ async function loadAllData() {
     DB.rssFeeds       = (rssFeeds || []).map(fromDB_rssFeed);
     DB.rssItemsRead   = (rssItemsRead || []).map(fromDB_rssItemRead);
     DB.dashboardSettings = (dashboardSettingsArr || []).map(fromDB_dashboardSettings)[0] || null;
+    DB.kostenTypes        = (kostenTypes || []).map(fromDB_kostenType);
+    DB.inkoopfacturen     = (inkoopfacturen || []).map(fromDB_inkoopfactuur);
     rebuildIndexes();
+    // Genereer ontbrekende terugkerende inkoopfacturen (idempotent, niet-blokkerend).
+    if (HAS_INKOOPFACTUREN_TABLE && typeof generateRecurringInkoop === 'function') {
+      generateRecurringInkoop().catch(e => console.warn('Recurring inkoop generatie mislukt:', e));
+    }
   } catch (e) {
     showToast('Gegevens laden mislukt: ' + mapSupaError(e), 'error'); console.error(e);
   } finally {

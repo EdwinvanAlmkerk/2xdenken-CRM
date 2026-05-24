@@ -13,6 +13,7 @@ function setInstellingenTab(t) {
 function renderInstellingen() {
   ensureTrainingTypes();
   ensureTrainingCategories();
+  if (typeof ensureKostenTypes === 'function') ensureKostenTypes();
 
   const tabs = [
     ['categorieen', `${svgIcon('list', 14)} Categorieën`],
@@ -71,8 +72,9 @@ function renderInstellingenCategorieen() {
       </div>
     </div>`;
 
+  const kostenTypesList = typeof getKostenTypeList === 'function' ? getKostenTypeList() : (DB.kostenTypes || []);
   return `
-    <div class="grid-3">
+    <div class="grid-2" style="margin-bottom:14px">
       ${typeCard(
         'Trainingtypes', 'training', 'Type toevoegen',
         'openTrainingTypeModal', getTrainingTypeList(),
@@ -85,13 +87,46 @@ function renderInstellingenCategorieen() {
         t => DB.trainingen.filter(tr => (tr.categorie || 'algemeen') === t.id).length,
         'openTrainingCategoryModal', 'delTrainingCategory'
       )}
+    </div>
+    <div class="grid-2">
       ${typeCard(
         'Agendatypes', 'calendar', 'Type toevoegen',
         'openAgendaTypeModal', DB.agendaTypes,
         t => DB.agenda.filter(a => a.type === t.id).length,
         'openAgendaTypeModal', 'delAgendaType'
       )}
+      ${typeCard(
+        'Kostentypes', 'invoice', 'Kostentype toevoegen',
+        'openKostenTypeModal', kostenTypesList,
+        t => (DB.inkoopfacturen || []).filter(f => f.kostenTypeId === t.id).length,
+        'openKostenTypeModal', 'delKostenType'
+      )}
     </div>`;
+}
+
+// ── Kostentype-modal (identiek patroon aan training-type modal) ───
+function openKostenTypeModal(id = '') {
+  if (typeof ensureKostenTypes === 'function') ensureKostenTypes();
+  const list = typeof getKostenTypeList === 'function' ? getKostenTypeList() : (DB.kostenTypes || []);
+  const t = id ? list.find(x => x.id === id) : null;
+  const kleurOpties = Object.entries(AGENDA_KLEUR_LABELS).map(([val, label]) => {
+    const k = AGENDA_KLEUREN[val];
+    return `<label style="display:flex;align-items:center;gap:8px;padding:6px 10px;border-radius:6px;cursor:pointer;border:2px solid ${(t?.kleur || 'navy') === val ? 'var(--navy)' : 'var(--bg3)'};background:${(t?.kleur || 'navy') === val ? 'var(--bg)' : 'white'}">
+      <input type="radio" name="kostentypekleur" value="${val}" ${(t?.kleur || 'navy') === val ? 'checked' : ''} style="display:none" onclick="document.querySelectorAll('#kostentype-kleur-grid label').forEach(l=>{l.style.borderColor='var(--bg3)';l.style.background='white'});this.closest('label').style.borderColor='var(--navy)';this.closest('label').style.background='var(--bg)'">
+      <span class="badge ${k.badge}">${esc(label)}</span>
+    </label>`;
+  }).join('');
+
+  showModal(t ? 'Kostentype bewerken' : 'Nieuw kostentype',
+    `<div class="form-group"><label>Naam *</label><input type="text" id="f-kostentypename" value="${esc(t?.naam || '')}" placeholder="Bijv. Reiskosten, Materiaal, Hosting…"/></div>
+     <div class="form-group">
+       <label>Kleur</label>
+       <div id="kostentype-kleur-grid" style="display:flex;gap:8px;flex-wrap:wrap">${kleurOpties}</div>
+       <select id="f-kostentypekleur" style="display:none"><option value="${esc(t?.kleur || 'navy')}">${esc(t?.kleur || 'navy')}</option></select>
+     </div>`,
+    `<button class="btn btn-secondary" onclick="closeModal()">Annuleren</button>
+     ${t ? `<button class="btn" style="background:#FDE8E8;color:#C0392B;font-weight:700" onclick="delKostenType('${id}')">Verwijderen</button>` : ''}
+     <button class="btn btn-primary" onclick="document.getElementById('f-kostentypekleur').value=document.querySelector('input[name=kostentypekleur]:checked')?.value||'navy';saveKostenType('${id}')">${t ? 'Opslaan' : 'Toevoegen'}</button>`);
 }
 
 // ── Tab: E-mail (templates + server) ────────────────────────────
@@ -311,6 +346,7 @@ function renderInstellingenBackup() {
               <div>Contacten: <strong>${counts.contacten}</strong></div>
               <div>Trainingen: <strong>${counts.trainingen}</strong></div>
               <div>Facturen: <strong>${counts.facturen}</strong></div>
+              <div>Inkoopfacturen: <strong>${counts.inkoopfacturen}</strong></div>
               <div>Dossiers: <strong>${counts.dossiers}</strong></div>
               <div>Uitvoeringen: <strong>${counts.uitvoeringen}</strong></div>
               <div>Agenda: <strong>${counts.agenda}</strong></div>
@@ -331,16 +367,17 @@ function renderInstellingenBackup() {
 function _backupCounts(from, to) {
   const filt = items => _filterByDateRange(items, from, to, 'datum');
   return {
-    besturen:       (DB.besturen || []).length,
-    scholen:        (DB.scholen || []).length,
-    contacten:      (DB.contacten || []).length,
-    trainingen:     (DB.trainingen || []).length,
-    emailTemplates: (DB.emailTemplates || []).length,
-    facturen:       filt(DB.facturen || []).length,
-    dossiers:       filt(DB.dossiers || []).length,
-    uitvoeringen:   filt(DB.uitvoeringen || []).length,
-    agenda:         filt(DB.agenda || []).length,
-    emailLog:       filt(DB.emailLog || []).length,
+    besturen:        (DB.besturen || []).length,
+    scholen:         (DB.scholen || []).length,
+    contacten:       (DB.contacten || []).length,
+    trainingen:      (DB.trainingen || []).length,
+    emailTemplates:  (DB.emailTemplates || []).length,
+    facturen:        filt(DB.facturen || []).length,
+    dossiers:        filt(DB.dossiers || []).length,
+    uitvoeringen:    filt(DB.uitvoeringen || []).length,
+    agenda:          filt(DB.agenda || []).length,
+    emailLog:        filt(DB.emailLog || []).length,
+    inkoopfacturen:  _filterByDateRange(DB.inkoopfacturen || [], from, to, 'factuurdatum').length,
   };
 }
 
@@ -401,6 +438,8 @@ function _backupBuildDataset(from, to) {
     uitvoeringen:       filt(DB.uitvoeringen || []),
     agenda:             filt(DB.agenda || []),
     emailLog:           filt(DB.emailLog || []),
+    inkoopfacturen:     _filterByDateRange(DB.inkoopfacturen || [], from, to, 'factuurdatum'),
+    kostenTypes:        (DB.kostenTypes || []).slice(),
     _maps: { bestuurMap, schoolMap, contactMap, trainMap, factuurMap },
   };
 }
@@ -511,6 +550,22 @@ function _backupDownloadXlsx(data, filename) {
   addSheet('Trainingtypes', data.trainingTypes.map(t => ({ 'ID': t.id, 'Naam': t.naam, 'Kleur': t.kleur || '' })));
   addSheet('Trainingscategorieën', data.trainingCategories.map(t => ({ 'ID': t.id, 'Naam': t.naam, 'Kleur': t.kleur || '' })));
   addSheet('Agendatypes', data.agendaTypes.map(t => ({ 'ID': t.id, 'Naam': t.naam, 'Kleur': t.kleur || '' })));
+  addSheet('Kostentypes', (data.kostenTypes || []).map(t => ({ 'ID': t.id, 'Naam': t.naam, 'Kleur': t.kleur || '' })));
+
+  // Inkoopfacturen — kostenmodule
+  const kostenTypeMap = Object.fromEntries((data.kostenTypes || []).map(t => [t.id, t]));
+  addSheet('Inkoopfacturen', (data.inkoopfacturen || []).map(f => ({
+    'ID': f.id,
+    'Datum': f.factuurdatum || '',
+    'Leverancier': f.leverancier || '',
+    'Factuurnummer': f.factuurnummer || '',
+    'Type': kostenTypeMap[f.kostenTypeId]?.naam || '',
+    'Omschrijving': f.omschrijving || '',
+    'Bedrag (EUR)': Number(f.bedrag) || 0,
+    'Terugkerend': f.isRecurring ? `Ja (${f.recurringInterval || 'maand'})` : (f.parentId ? 'Auto-gegenereerd' : 'Nee'),
+    'Notitie': (f.notitie || '').replace(/\s+/g, ' ').trim(),
+    'Aantal bestanden': (f.bestanden || []).length,
+  })));
 
   XLSX.writeFile(wb, filename);
 }
@@ -538,6 +593,8 @@ function _backupDownloadJson(data, from, to, filename) {
     uitvoeringen:       data.uitvoeringen,
     agenda:             data.agenda,
     emailLog:           data.emailLog,
+    inkoopfacturen:     data.inkoopfacturen || [],
+    kostenTypes:        data.kostenTypes || [],
   };
   const blob = new Blob([JSON.stringify(payload, null, 2)], { type: 'application/json;charset=utf-8' });
   const url = URL.createObjectURL(blob);

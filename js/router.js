@@ -12,7 +12,9 @@ const PAGE_LABELS = {
   dashboard: 'Dashboard', agenda: 'Agenda', email: 'E-mail', rss: 'Nieuws & RSS',
   besturen: 'Besturen', 'bestuur-detail': 'Bestuur',
   scholen: 'Scholen', 'school-detail': 'School', contacten: 'Alle contacten', 'contact-detail': 'Contactpersoon',
-  facturen: 'Facturen', omzet: 'Omzet overzicht', trainingen: 'Trainingen & Werkvormen', 'training-detail': 'Training',
+  facturen: 'Facturen', omzet: 'Omzet overzicht',
+  inkoopfacturen: 'Inkoopfacturen', 'kosten-overzicht': 'Kosten overzicht',
+  trainingen: 'Trainingen & Werkvormen', 'training-detail': 'Training',
   instellingen: 'Instellingen'
 };
 
@@ -28,8 +30,10 @@ const NAV_ITEMS = [
   { section: 'Programma' },
   { id: 'trainingen',   label: 'Trainingen & Werkvormen',  icon: 'training', also: ['training-detail'] },
   { section: 'Financieel' },
-  { id: 'facturen',     label: 'Facturen',               icon: 'invoice' },
-  { id: 'omzet',        label: 'Omzet overzicht',       icon: 'euro' },
+  { id: 'facturen',         label: 'Facturen',           icon: 'invoice' },
+  { id: 'inkoopfacturen',   label: 'Inkoopfacturen',     icon: 'invoice' },
+  { id: 'omzet',            label: 'Omzet overzicht',    icon: 'euro' },
+  { id: 'kosten-overzicht', label: 'Kosten overzicht',   icon: 'euro' },
   { section: 'Beheer' },
   { id: 'instellingen', label: 'Instellingen',           icon: 'settings' },
 ];
@@ -94,6 +98,8 @@ function renderContent() {
   else if (page === 'contact-detail')  c.innerHTML = renderContactDetail(pageParam, contactParam);
   else if (page === 'facturen')        c.innerHTML = renderFacturenPage(_factuurSearch || '');
   else if (page === 'omzet')           c.innerHTML = renderOmzetPage();
+  else if (page === 'inkoopfacturen')  c.innerHTML = renderInkoopfacturenPage(_inkoopSearch || '');
+  else if (page === 'kosten-overzicht') c.innerHTML = renderKostenOverzichtPage();
   else if (page === 'trainingen')      c.innerHTML = renderTrainingenPage();
   else if (page === 'training-detail') c.innerHTML = renderTrainingDetail(pageParam);
   else if (page === 'instellingen')    c.innerHTML = renderInstellingen();
