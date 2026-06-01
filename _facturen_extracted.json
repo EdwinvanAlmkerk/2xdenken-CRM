@@ -1,0 +1,1917 @@
+﻿[
+    {
+        "nummer":  "202601",
+        "sheet_name":  "202601",
+        "factuurnr_sheet":  "202601",
+        "datum_sheet":  "2026-02-13",
+        "debnr_sheet":  "DB15",
+        "tav":  "M. Breuningen",
+        "betreft":  "Het Anker, 3e factuur coachtraject K.S.",
+        "regels":  [
+                       {
+                           "omschrijving":  "Coachessie 3",
+                           "toelichting":  "Nader te bepalen a.d.v. de hulpvragen en ontwikkelpunten",
+                           "datum":  "22-01-\u002726",
+                           "uren":  "2,5 uur              2 uur",
+                           "bedrag":  240
+                       }
+                   ],
+        "totaal_sheet":  240,
+        "ovz":  {
+                    "nummer":  "202601",
+                    "datum_ovz":  "2026-02-13",
+                    "debiteurnr_ovz":  "DB15",
+                    "naam_ovz":  "Het Anker, 3e factuur coachtraject K.B.",
+                    "bedrag_ovz":  240,
+                    "betaald_ovz":  true
+                }
+    },
+    {
+        "nummer":  "202602",
+        "sheet_name":  "202602",
+        "factuurnr_sheet":  "202602",
+        "datum_sheet":  "2026-02-12",
+        "debnr_sheet":  "DB15",
+        "tav":  "M. Breuningen",
+        "betreft":  "Het Anker, 1e factuur begeleiding gr. 5",
+        "regels":  [
+                       {
+                           "omschrijving":  "Nulmeting",
+                           "toelichting":  "Welk gedrag is zichtbaar in de groep (leerlinggedrag, leerkrachtgedrag, groepscohesie, organisatie en klassenmanagement)? Bij alle drie de betrokken leerkrachten is een nulmeting, met een gesprek geweest. Concreet betekent het per leerkracht:                                             voorbereiding: 15 min                                                                      uitvoering: 45 min                                                                    nabespreking: 45 min                                                 verslaglegging 15 min",
+                           "datum":  "27-01-\u002726          28-01-\u002726          10/11-02-\u002726",
+                           "uren":  "2 uur                  2 uur                  2,5 uur",
+                           "bedrag":  780
+                       }
+                   ],
+        "totaal_sheet":  780,
+        "ovz":  {
+                    "nummer":  "202602",
+                    "datum_ovz":  "2026-02-13",
+                    "debiteurnr_ovz":  "DB15",
+                    "naam_ovz":  "Het Anker, 1e factuur coachtraject gr. 5",
+                    "bedrag_ovz":  780,
+                    "betaald_ovz":  true
+                }
+    },
+    {
+        "nummer":  "202603",
+        "sheet_name":  "202603",
+        "factuurnr_sheet":  "202603",
+        "datum_sheet":  "2026-02-12",
+        "debnr_sheet":  "DB10",
+        "tav":  "M. van der Geijs",
+        "betreft":  "De Bolster, 5e factuur coachtraject L.R",
+        "regels":  [
+                       {
+                           "omschrijving":  "Coachessie 5 en 6",
+                           "toelichting":  "Nader te bepalen a.d.v. de hulpvragen en ontwikkelpunten                                                    30 min voorbereiding\n1,5 uur uitvoering                                                                  30 min verslaglegging",
+                           "datum":  "03-02-\u002726",
+                           "uren":  "2,5 uur",
+                           "bedrag":  287.5
+                       }
+                   ],
+        "totaal_sheet":  287.5,
+        "ovz":  {
+                    "nummer":  "202603",
+                    "datum_ovz":  "2026-02-13",
+                    "debiteurnr_ovz":  "DB10",
+                    "naam_ovz":  "PCB De Bolster, 4e factuur coachtraject L.R",
+                    "bedrag_ovz":  287.5,
+                    "betaald_ovz":  true
+                }
+    },
+    {
+        "nummer":  "202604",
+        "sheet_name":  "202604",
+        "factuurnr_sheet":  "202604",
+        "datum_sheet":  "2026-02-13",
+        "debnr_sheet":  "DB43",
+        "tav":  "K. Muller",
+        "betreft":  "PCBO Amersfoort, 2e factuur coachtraject leerkracht M.S., De Zonnewijzer",
+        "regels":  [
+                       {
+                           "omschrijving":  "Startobservatie",
+                           "toelichting":  "De nulmeting bestaat uit: \nObservatie:                         45   min\nVerwerking observatie:        45  min\nTerugkoppeling:                  1   uur\nTotaal:                                2,5  uur",
+                           "datum":  "14-01-’26",
+                           "uren":  "2,5 uur",
+                           "bedrag":  300
+                       },
+                       {
+                           "omschrijving":  "Coachessie 1 t/m 3",
+                           "toelichting":  "Nader te bepalen a.d.v. de hulpvragen en ontwikkelpunten",
+                           "datum":  "20-01-\u002726          03-02-\u002726       10-02-\u002726",
+                           "uren":  "2,5 uur              2,5 uur            2,5 uur",
+                           "bedrag":  900
+                       },
+                       {
+                           "omschrijving":  "Begeleiding in de rol van LKC\u0027er (zij-instroomtraject)",
+                           "toelichting":  "In mijn rol van leerkrachtcoach worden  er 3 maandendelijkse gesprekken met de leerkrach en de SLB\u0027er van de PABO gevoerd.                                                    Vb. 1 uur                                                                      Uitv. 1 uur",
+                           "datum":  "20-01-\u002726",
+                           "uren":  "2 uur",
+                           "bedrag":  240
+                       }
+                   ],
+        "totaal_sheet":  1440,
+        "ovz":  {
+                    "nummer":  "202604",
+                    "datum_ovz":  "2026-02-13",
+                    "debiteurnr_ovz":  "DB43",
+                    "naam_ovz":  "PCBO Amersfoort, 2e factuur coachtraject M.S.",
+                    "bedrag_ovz":  1440,
+                    "betaald_ovz":  true
+                }
+    },
+    {
+        "nummer":  "202605",
+        "sheet_name":  "202605 ",
+        "factuurnr_sheet":  "202605",
+        "datum_sheet":  "2026-02-12",
+        "debnr_sheet":  "DB25",
+        "tav":  "E. Oosterhof",
+        "betreft":  "De KWS, 5e factuur coachtraject L.S.",
+        "regels":  [
+                       {
+                           "omschrijving":  "Sessie 7",
+                           "toelichting":  "Nader te bepalen a.d.v. de hulpvragen en ontwikkelpunten. Denk aan: persoonlijk leiderschap, feedback geven en ontvangen, profilering en positie innemen, moeilijke situaties bespreekbaar maken                                                      30 min voorbereiding\n1,5 uur uitvoering",
+                           "datum":  "20-01-\u002726",
+                           "uren":  "2 uur",
+                           "bedrag":  230
+                       }
+                   ],
+        "totaal_sheet":  230,
+        "ovz":  {
+                    "nummer":  "202605",
+                    "datum_ovz":  "2026-02-13",
+                    "debiteurnr_ovz":  "DB25",
+                    "naam_ovz":  "KWS, 5e factuur coachtraject L.S.",
+                    "bedrag_ovz":  230,
+                    "betaald_ovz":  true
+                }
+    },
+    {
+        "nummer":  "202606",
+        "sheet_name":  "202606",
+        "factuurnr_sheet":  "202606",
+        "datum_sheet":  "2026-02-12",
+        "debnr_sheet":  "DB25",
+        "tav":  "E. Oosterhof",
+        "betreft":  "KWS, 3e factuur coachtraject T.L.",
+        "regels":  [
+                       {
+                           "omschrijving":  "Coachessies 7 t/m 8",
+                           "toelichting":  "Nader te bepalen a.d.v. de hulpvragen en ontwikkelpunten",
+                           "datum":  "07-01-\u002726        22-01-\u002726",
+                           "uren":  "2,5 uur                1 uur",
+                           "bedrag":  420
+                       },
+                       {
+                           "omschrijving":  "Begeleiding in de rol van LKC\u0027er (zij-instroomtraject)",
+                           "toelichting":  "In mijn rol van leerkrachtcoach worden  er 3 maandendelijkse gesprekken met de leerkrach en de SLB\u0027er van de PABO gevoerd.                                                    Vb. 1 uur                                                                      Uitv. 1 uur",
+                           "datum":  "16-01-\u002726",
+                           "uren":  "2 uur",
+                           "bedrag":  240
+                       }
+                   ],
+        "totaal_sheet":  680,
+        "ovz":  {
+                    "nummer":  "202606",
+                    "datum_ovz":  "2026-02-13",
+                    "debiteurnr_ovz":  "DB25",
+                    "naam_ovz":  "KWS, 3e factuur coachtraject T.L.",
+                    "bedrag_ovz":  680,
+                    "betaald_ovz":  true
+                }
+    },
+    {
+        "nummer":  "202607",
+        "sheet_name":  "202607",
+        "factuurnr_sheet":  "202607",
+        "datum_sheet":  "2026-02-12",
+        "debnr_sheet":  "DB25",
+        "tav":  "E. Oosterhof",
+        "betreft":  "KWS, 1e factuur coachtraject G.t.R.",
+        "regels":  [
+                       {
+                           "omschrijving":  "Sessie 1 en 2",
+                           "toelichting":  "Nader te bepalen a.d.v. de hulpvragen en ontwikkelpunten. Denk aan: persoonlijk leiderschap, fomgaan met veranderingen, professionele profilering en positie innemen, moeilijke situaties bespreekbaar maken                                                      30 min voorbereiding\n1,5 uur uitvoering",
+                           "datum":  "28-01-\u002726        04-02-\u002726",
+                           "uren":  "2 uur                 2 uur",
+                           "bedrag":  480
+                       }
+                   ],
+        "totaal_sheet":  480,
+        "ovz":  {
+                    "nummer":  "202607",
+                    "datum_ovz":  "2026-02-13",
+                    "debiteurnr_ovz":  "DB25",
+                    "naam_ovz":  "KWS, 1e factuur coachtraject G.t.R.",
+                    "bedrag_ovz":  480,
+                    "betaald_ovz":  true
+                }
+    },
+    {
+        "nummer":  "202608",
+        "sheet_name":  "202608 ",
+        "factuurnr_sheet":  "202608",
+        "datum_sheet":  "2026-02-12",
+        "debnr_sheet":  "DB18",
+        "tav":  "M. Dogterom",
+        "betreft":  "PWA, 2e factuur coachtraject T.v.P.",
+        "regels":  [
+                       {
+                           "omschrijving":  "Coachessies 1",
+                           "toelichting":  "Nader te bepalen a.d.v. de hulpvragen en ontwikkelpunten",
+                           "datum":  "28-01-\u002726",
+                           "uren":  "2 uur",
+                           "bedrag":  240
+                       }
+                   ],
+        "totaal_sheet":  240,
+        "ovz":  {
+                    "nummer":  "202608",
+                    "datum_ovz":  "2026-02-13",
+                    "debiteurnr_ovz":  "DB18",
+                    "naam_ovz":  "Prins Willem-Alexanderschool, 2e factuur coachtraject T.v.P.",
+                    "bedrag_ovz":  240,
+                    "betaald_ovz":  true
+                }
+    },
+    {
+        "nummer":  "202609",
+        "sheet_name":  "202609",
+        "factuurnr_sheet":  "202609",
+        "datum_sheet":  "2026-02-13",
+        "debnr_sheet":  "DB06",
+        "tav":  "mevrouw R. Koelewijn",
+        "betreft":  "De Berkenschool, 5e factuur coachtraject H.H.",
+        "regels":  [
+                       {
+                           "omschrijving":  "Coachsessie 2 en 3",
+                           "toelichting":  "Nader te bepalen a.d.v. de hulpvragen en ontwikkelpunten",
+                           "datum":  "13-01-\u002726        29-01-\u002726",
+                           "uren":  "2,5 uur               2,5 uur",
+                           "bedrag":  600
+                       }
+                   ],
+        "totaal_sheet":  600,
+        "ovz":  {
+                    "nummer":  "202609",
+                    "datum_ovz":  "2026-02-13",
+                    "debiteurnr_ovz":  "DB06",
+                    "naam_ovz":  "Berkenschool, 5e factuur coachtraject H.H.",
+                    "bedrag_ovz":  600,
+                    "betaald_ovz":  true
+                }
+    },
+    {
+        "nummer":  "202610",
+        "sheet_name":  "202610",
+        "factuurnr_sheet":  "202610",
+        "datum_sheet":  "2026-02-13",
+        "debnr_sheet":  "DB24",
+        "tav":  "DB. De Kruijf",
+        "betreft":  "Parkschool, 5e factuur coachtraject D.K.",
+        "regels":  [
+                       {
+                           "omschrijving":  "Coachessie 7 en 8",
+                           "toelichting":  "Nader te bepalen a.d.v. de hulpvragen en ontwikkelpunten                                                    30 min voorbereiding\n1,5 uur uitvoering",
+                           "datum":  "06-01-\u002726       05-02-\u002726",
+                           "uren":  "2 uur                  2 uur",
+                           "bedrag":  460
+                       }
+                   ],
+        "totaal_sheet":  460,
+        "ovz":  {
+                    "nummer":  "202610",
+                    "datum_ovz":  "2026-02-13",
+                    "debiteurnr_ovz":  "DB24",
+                    "naam_ovz":  "Parkschool, 5e factuur coachtraject D.K.",
+                    "bedrag_ovz":  460,
+                    "betaald_ovz":  true
+                }
+    },
+    {
+        "nummer":  "202611",
+        "sheet_name":  "202611",
+        "factuurnr_sheet":  "202611",
+        "datum_sheet":  "2026-02-13",
+        "debnr_sheet":  "DB13",
+        "tav":  "A. Hardeman",
+        "betreft":  "De Vuurvogel, 3e factuur coachtraject S.M.",
+        "regels":  [
+                       {
+                           "omschrijving":  "Coachessie 4 en 5",
+                           "toelichting":  "Nader te bepalen a.d.v. de hulpvragen en ontwikkelpunten",
+                           "datum":  "22-01-\u002726          11-02-\u002726",
+                           "uren":  "2 uur                 2 uur",
+                           "bedrag":  480
+                       }
+                   ],
+        "totaal_sheet":  480,
+        "ovz":  {
+                    "nummer":  "202611",
+                    "datum_ovz":  "2026-02-13",
+                    "debiteurnr_ovz":  "DB13",
+                    "naam_ovz":  "PCB De Vuurvogel, 2e factuur coachtraject S.M.",
+                    "bedrag_ovz":  480,
+                    "betaald_ovz":  true
+                }
+    },
+    {
+        "nummer":  "202612",
+        "sheet_name":  "202612",
+        "factuurnr_sheet":  "202612",
+        "datum_sheet":  "2026-02-13",
+        "debnr_sheet":  "DB13",
+        "tav":  "A. Hardeman",
+        "betreft":  "De Vuurvogel, 3e factuur coachtraject R.Z.",
+        "regels":  [
+                       {
+                           "omschrijving":  "Coachessie 4 t/m 7 + sparringsgesprek en videointeractie",
+                           "toelichting":  "Nader te bepalen a.d.v. de hulpvragen en ontwikkelpunten",
+                           "datum":  "06-01-\u002726          20-01-\u002726       02-02-\u002726       04-02-\u002726        10-02-\u002726",
+                           "uren":  "2,5 uur              2,5 uur              2 uur                 2,5 uur              2,5 uur",
+                           "bedrag":  1440
+                       }
+                   ],
+        "totaal_sheet":  1440,
+        "ovz":  {
+                    "nummer":  "202612",
+                    "datum_ovz":  "2026-02-13",
+                    "debiteurnr_ovz":  "DB13",
+                    "naam_ovz":  "PCB De Vuurvogel, 2e factuur coachtraject R.Z.",
+                    "bedrag_ovz":  1440,
+                    "betaald_ovz":  true
+                }
+    },
+    {
+        "nummer":  "202613",
+        "sheet_name":  "202613",
+        "factuurnr_sheet":  "202613",
+        "datum_sheet":  "2026-02-13",
+        "debnr_sheet":  "DB14",
+        "tav":  "T. Verlaan-Oskam",
+        "betreft":  "De Windroos, 1e factuur coachtraject E.S.",
+        "regels":  [
+                       {
+                           "omschrijving":  "Intake coachtraject  leerkracht",
+                           "toelichting":  "Verheldering van de hulpvraag. Afstemmen wat het coachtraject inhoudt, wat is nodig en belangrijk?               \nIntake: 1 uur                                                                Verslaglegging: 1 uur",
+                           "datum":  "15-01-\u002725",
+                           "uren":  "2 uur",
+                           "bedrag":  240
+                       },
+                       {
+                           "omschrijving":  "Coachessie 1 en 2",
+                           "toelichting":  "Nader te bepalen a.d.v. de hulpvragen en ontwikkelpunten",
+                           "datum":  "29-01-\u002726          09-02-\u002726",
+                           "uren":  "2 uur                 2 uur",
+                           "bedrag":  480
+                       }
+                   ],
+        "totaal_sheet":  720,
+        "ovz":  {
+                    "nummer":  "202613",
+                    "datum_ovz":  "2026-02-13",
+                    "debiteurnr_ovz":  "DB14",
+                    "naam_ovz":  "PCB De Windroos, 1e factuur coachtraject E.S.",
+                    "bedrag_ovz":  720,
+                    "betaald_ovz":  true
+                }
+    },
+    {
+        "nummer":  "202614",
+        "sheet_name":  "202614",
+        "factuurnr_sheet":  "202614",
+        "datum_sheet":  "2026-02-13",
+        "debnr_sheet":  "DB14",
+        "tav":  "T. Verlaan-Oskam",
+        "betreft":  "De Windroos, 1e factuur coachtraject N.v.S.",
+        "regels":  [
+                       {
+                           "omschrijving":  "Intake coachtraject  leerkracht",
+                           "toelichting":  "Verheldering van de hulpvraag. Afstemmen wat het coachtraject inhoudt, wat is nodig en belangrijk?               \nIntake: 1 uur                                                                Verslaglegging: 1 uur",
+                           "datum":  "10-02-\u002725",
+                           "uren":  "2 uur",
+                           "bedrag":  240
+                       }
+                   ],
+        "totaal_sheet":  240,
+        "ovz":  {
+                    "nummer":  "202614",
+                    "datum_ovz":  "2026-02-13",
+                    "debiteurnr_ovz":  "DB14",
+                    "naam_ovz":  "PCB De Windroos, 1e factuur coachtraject N.v.S.",
+                    "bedrag_ovz":  240,
+                    "betaald_ovz":  true
+                }
+    },
+    {
+        "nummer":  "202615",
+        "sheet_name":  "202615",
+        "factuurnr_sheet":  "202615",
+        "datum_sheet":  "2026-02-13",
+        "debnr_sheet":  "DB43",
+        "tav":  "M. Bakker",
+        "betreft":  "PCBO Amersfoort, teamondersteuning PCB De Zonnwijzer, begeleiding kernteam",
+        "regels":  [
+                       {
+                           "omschrijving":  "Overleg",
+                           "toelichting":  "Overleg: wat is de huidige situatie, waar liggen behoeften en wat kan 2xdenken hierin betekenen. \nvoorbereiding: 1 uur                                                            Uitvoering: 1 uur",
+                           "datum":  "06-01-\u002726",
+                           "uren":  "2 uur",
+                           "bedrag":  240
+                       },
+                       {
+                           "omschrijving":  "Plan van aanpak",
+                           "toelichting":  "Wat is nodig voor het team, per bouw en hoe ziet de ondersteuning van het kernteam eruit, met als doel een gedragsveranering binnen het team te stimuleren. Op teamniveau is een grote behoefte aan bewustwording van talenten, inzichten in persoonlijke triggers en het vergroten van eigenaarschap in het omgaan met ‘gedoe’. Daarnaast is het kernteam is zoekende in welk leiderschap en koers nodig is, zodat teamleden vanuit meer rust, werkgeluk, stevigheid en vertrouwen handelen.",
+                           "datum":  "",
+                           "uren":  "2 uur",
+                           "bedrag":  240
+                       },
+                       {
+                           "omschrijving":  "Bijeenkomst 1 kernteam",
+                           "toelichting":  "Onderzoeken welke aansturing de school nodig heeft en hoe het kernteam daar in kan bijdragen. Welk leiderschap is nu nodig en wat past bij jou?",
+                           "datum":  "",
+                           "uren":  "vb. 2 uur          uitv. 2 uur",
+                           "bedrag":  480
+                       }
+                   ],
+        "totaal_sheet":  960,
+        "ovz":  {
+                    "nummer":  "202615",
+                    "datum_ovz":  "2026-02-13",
+                    "debiteurnr_ovz":  "DB43",
+                    "naam_ovz":  "PCBO Amersfoort, De Zonnewijzer, begeleiding kernteam",
+                    "bedrag_ovz":  960,
+                    "betaald_ovz":  true
+                }
+    },
+    {
+        "nummer":  "202616",
+        "sheet_name":  "202616",
+        "factuurnr_sheet":  "202616",
+        "datum_sheet":  "2026-02-13",
+        "debnr_sheet":  "DB04",
+        "tav":  "mevr. Wijdeven",
+        "betreft":  "De Wijde Wereld, 3e factuur coachtraject D.v.D.",
+        "regels":  [
+                       {
+                           "omschrijving":  "Coachessie 3 en 4",
+                           "toelichting":  "Nader te bepalen a.d.v. de hulpvragen en ontwikkelpunten",
+                           "datum":  "28-01-\u002726      12-02-\u002726",
+                           "uren":  "3,5 uur              2 uur",
+                           "bedrag":  660
+                       }
+                   ],
+        "totaal_sheet":  640,
+        "ovz":  {
+                    "nummer":  "202616",
+                    "datum_ovz":  "2026-02-13",
+                    "debiteurnr_ovz":  "DB13",
+                    "naam_ovz":  "De Wijde Wereld, 3e factuur coachtraject D.v.D.",
+                    "bedrag_ovz":  640,
+                    "betaald_ovz":  true
+                }
+    },
+    {
+        "nummer":  "202617",
+        "sheet_name":  "202617",
+        "factuurnr_sheet":  "202617",
+        "datum_sheet":  "2026-02-13",
+        "debnr_sheet":  "DB42",
+        "tav":  "P.v. Veeken",
+        "betreft":  "De Gonderlier, 2e factuur coachtraject leerkrachten gr. 5b",
+        "regels":  [
+                       {
+                           "omschrijving":  "Startobservatie",
+                           "toelichting":  "De nulmeting bij beide leerkrachten, bestaande uit: \nObservatie:                         45   min\nVerwerking observatie:        45  min\nTerugkoppeling:                  1   uur\nTotaal:                                2,5  uur",
+                           "datum":  "06-01-’26      21-01-\u002726",
+                           "uren":  "2,5 uur              2,5 uur",
+                           "bedrag":  600
+                       },
+                       {
+                           "omschrijving":  "Coachessies 1 en deels 2",
+                           "toelichting":  "Nader te bepalen a.d.v. de hulpvragen en ontwikkelpunten. Leerkracht D.v.E. heeft nu 2 sessies gehad                        Leerkracht M.L. heeft nu 1 sessie gehad",
+                           "datum":  "20-01-\u002726          03-02-\u002726       04-02-\u002726",
+                           "uren":  "2,5 uur              2,5 uur            2,5 uur",
+                           "bedrag":  900
+                       }
+                   ],
+        "totaal_sheet":  1500,
+        "ovz":  {
+                    "nummer":  "202617",
+                    "datum_ovz":  "2026-02-13",
+                    "debiteurnr_ovz":  "DB42",
+                    "naam_ovz":  "De Gondelier, 2e factuur coachtraject leerkrachten gr. 5",
+                    "bedrag_ovz":  1500,
+                    "betaald_ovz":  true
+                }
+    },
+    {
+        "nummer":  "202618",
+        "sheet_name":  "202618",
+        "factuurnr_sheet":  "202618",
+        "datum_sheet":  "2026-02-13",
+        "debnr_sheet":  "DB31",
+        "tav":  "C. de Jong",
+        "betreft":  "De Uilenburcht,2e factuur coachtraject leerkracht L.S.",
+        "regels":  [
+                       {
+                           "omschrijving":  "Startobservatie",
+                           "toelichting":  "De nulmeting bij beide leerkrachten, bestaande uit: \nObservatie:                         45   min\nVerwerking observatie:        45  min\nTerugkoppeling:                  1   uur\nTotaal:                                2,5  uur",
+                           "datum":  "05-01-’26",
+                           "uren":  "2,5 uur",
+                           "bedrag":  300
+                       },
+                       {
+                           "omschrijving":  "Coachessies 1 t/m 4",
+                           "toelichting":  "Nader te bepalen a.d.v. de hulpvragen en ontwikkelpunten.",
+                           "datum":  "19-01-\u002726          02-02-\u002726       05-02-\u002726",
+                           "uren":  "2,5 uur              2,5 uur              2,5 uur",
+                           "bedrag":  900
+                       },
+                       {
+                           "omschrijving":  "Reiskosten",
+                           "toelichting":  "Amersfoort-Driebergen-Driebergen-Amersfoort",
+                           "datum":  "4x56 km á €0,35",
+                           "uren":  "",
+                           "bedrag":  79.52
+                       }
+                   ],
+        "totaal_sheet":  1279.52,
+        "ovz":  {
+                    "nummer":  "202618",
+                    "datum_ovz":  "2026-02-13",
+                    "debiteurnr_ovz":  "DB31",
+                    "naam_ovz":  "De Uilenburcht,2e factuur coachtraject leerkracht L.S.",
+                    "bedrag_ovz":  1279.52,
+                    "betaald_ovz":  true
+                }
+    },
+    {
+        "nummer":  "202619",
+        "sheet_name":  "202619",
+        "factuurnr_sheet":  "202619",
+        "datum_sheet":  "2026-02-13",
+        "debnr_sheet":  "DB45",
+        "tav":  "Bas Roelvink",
+        "betreft":  "Vrije school Zeist, factuur coachtraject leerkracht E.v.d.S.",
+        "regels":  [
+                       {
+                           "omschrijving":  "Intake coachtraject  leerkracht",
+                           "toelichting":  "Verheldering van de hulpvraag. Afstemmen wat het coachtraject inhoudt, wat is nodig en belangrijk?               \nIntake: 1 uur                                                                Verslaglegging: 1 uur",
+                           "datum":  "05-01-\u002726",
+                           "uren":  "2 uur",
+                           "bedrag":  240
+                       },
+                       {
+                           "omschrijving":  "Startobservatie",
+                           "toelichting":  "De nulmeting bij beide leerkrachten, bestaande uit: \nObservatie:                         45 min\nVerwerking observatie:        45  min\nTerugkoppeling:                  1,5  uur\nTotaal:                                3  uur",
+                           "datum":  "13-01-’26",
+                           "uren":  "3 uur",
+                           "bedrag":  360
+                       },
+                       {
+                           "omschrijving":  "Reiskosten",
+                           "toelichting":  "Amersfoort-Driebergen-Driebergen-Amersfoort",
+                           "datum":  "1x26 km á €0,35",
+                           "uren":  "",
+                           "bedrag":  25.2
+                       }
+                   ],
+        "totaal_sheet":  625.2,
+        "ovz":  {
+                    "nummer":  "202619",
+                    "datum_ovz":  "2026-02-13",
+                    "debiteurnr_ovz":  "DB45",
+                    "naam_ovz":  "Vrije school Zeist,1e factuur coachtraject leerkracht E.v.d.S.",
+                    "bedrag_ovz":  625.2,
+                    "betaald_ovz":  true
+                }
+    },
+    {
+        "nummer":  "202620",
+        "sheet_name":  "202620",
+        "factuurnr_sheet":  "202620",
+        "datum_sheet":  "2026-02-13",
+        "debnr_sheet":  "DB38",
+        "tav":  "mervr. Maeyke de Ree",
+        "betreft":  "Ontmoetingsschool Atlas, 3e factuur ondersteuningstraject basisvaardigheden",
+        "regels":  [
+                       {
+                           "omschrijving":  "Klasobservaties",
+                           "toelichting":  "Startobservatie in de groep+terugkoppeling (2leerkr.).\nDe nulmeting bestaat uit:  \nVoorbereiding\t                   15 min.\nObservatie:                        45 min.\nVerwerking observatie:       45 min.\nTerugkoppeling:                 45 min.\nTotaal:                              2,5 uur",
+                           "datum":  "14-01-\u002726",
+                           "uren":  "2 uur per leerkr.",
+                           "bedrag":  600
+                       },
+                       {
+                           "omschrijving":  "Onderzoek, conclusie + terugkoppeling directie",
+                           "toelichting":  "Analyse + advies                                                                  Opbrengst startgesprekken en nulmeting:\nWat is op school- en individueel niveau zichtbaar, \nwelke vervolgstappen zijn wenselijk, hoe gaan we \nverder en wie heeft welke ondersteuning/begeleiding \nnodig?",
+                           "datum":  "27-01-\u002726",
+                           "uren":  "vb. 2 uur          uitv. 2 uur",
+                           "bedrag":  480
+                       }
+                   ],
+        "totaal_sheet":  1080,
+        "ovz":  {
+                    "nummer":  "202620",
+                    "datum_ovz":  "2026-02-13",
+                    "debiteurnr_ovz":  "DB38",
+                    "naam_ovz":  "Atlas,3e factuur ondersteuningstraject basisvaardigheden",
+                    "bedrag_ovz":  1080,
+                    "betaald_ovz":  true
+                }
+    },
+    {
+        "nummer":  "202621",
+        "sheet_name":  "202621",
+        "factuurnr_sheet":  "202621",
+        "datum_sheet":  "2026-02-13",
+        "debnr_sheet":  "DB37",
+        "tav":  "mervr. W. Veldkamp",
+        "betreft":  "De Loysderhoek, 3e factuur coachtraject V.v.W.",
+        "regels":  [
+                       {
+                           "omschrijving":  "Coachessies 2 t/m 4",
+                           "toelichting":  "Nader te bepalen a.d.v. de hulpvragen en ontwikkelpunten",
+                           "datum":  "08-01-\u002726       19-01-\u002726      02-02-\u002726",
+                           "uren":  "2,5 uur                      2,5 uur              2,5 uur",
+                           "bedrag":  900
+                       },
+                       {
+                           "omschrijving":  "Evaluatie coachtraject",
+                           "toelichting":  "Evaluatie van het coachtraject met de leerkracht. at heeft de leerkracht aan ontwikkeling doorgemaakt? Welke inzichten neemt zij mee en hoe kijkt zij terug op de afgelopen periode, evenals het coachtraject?                                                                  Voorbereding: 30 min.                                                             Evaluatiegesprek: 1 uur                                                Evaluatieverslag: 1 uur",
+                           "datum":  "02-02-\u002726",
+                           "uren":  "2,5 uur",
+                           "bedrag":  300
+                       }
+                   ],
+        "totaal_sheet":  1200,
+        "ovz":  {
+                    "nummer":  "202621",
+                    "datum_ovz":  "2026-02-13",
+                    "debiteurnr_ovz":  "DB37",
+                    "naam_ovz":  "De Loysderhoek, 3e factuur coachtraject V.v.W.",
+                    "bedrag_ovz":  1200,
+                    "betaald_ovz":  true
+                }
+    },
+    {
+        "nummer":  "202622",
+        "sheet_name":  "202622",
+        "factuurnr_sheet":  "202622",
+        "datum_sheet":  "2026-02-13",
+        "debnr_sheet":  "DB27",
+        "tav":  null,
+        "betreft":  "El Amien 1 en 2, 23e factuur begeleiding startende leerkrachten",
+        "regels":  [
+                       {
+                           "omschrijving":  "Begeleidingsdagen zij-instroom",
+                           "toelichting":  "In mijn rol van leerkrachtcoach hebben we de generale prove van bekwammheid ter voorbereiding op het afstudeermoment, samen met de SLB\u0027er vanuit de PABO.  Het betreft 3 leerkrachten",
+                           "datum":  "07-01-\u002726        08-01-\u002726        08-01-\u002726",
+                           "uren":  "2 uur                 2 uur                  2 uur",
+                           "bedrag":  720
+                       }
+                   ],
+        "totaal_sheet":  720,
+        "ovz":  {
+                    "nummer":  "202622",
+                    "datum_ovz":  "2026-02-13",
+                    "debiteurnr_ovz":  "DB27",
+                    "naam_ovz":  "El Amien 1 en 2, 23e factuur begeleiding startende leerkrachten",
+                    "bedrag_ovz":  720,
+                    "betaald_ovz":  true
+                }
+    },
+    {
+        "nummer":  "202623",
+        "sheet_name":  "202623",
+        "factuurnr_sheet":  "202623",
+        "datum_sheet":  "2026-02-13",
+        "debnr_sheet":  "DB40",
+        "tav":  "Dillian Hos",
+        "betreft":  "De Lijster, 4e factuur coachtraject I.M.",
+        "regels":  [
+                       {
+                           "omschrijving":  "Coachessie 11 t/m 13",
+                           "toelichting":  "Nader te bepalen a.d.v. de hulpvragen en ontwikkelpunten                                                    30 min voorbereiding\n1,5 uur uitvoering                                                                  30 min verslaglegging",
+                           "datum":  "22-01-\u002726\n29-01-\u002726\n05-02-\u002726\n12-02-\u002726",
+                           "uren":  "1 uur                2,5 uur              2,5 uur           2,5 uur",
+                           "bedrag":  1020
+                       },
+                       {
+                           "omschrijving":  "Tussenevaluatiemoment 2 coachtraject",
+                           "toelichting":  "Tussenevaluatie van het coachtraject met de leerkracht en de directeur. In hoeverre haalt de leerkracht de ontwikkeldoelen, waar staat zij nu en wat is de volgende stap? Welke ontwikkelpunten/acteis zijn belangrijk voor de verder ontwikkeling en hoe gaat zij hiermee verder? Voorbereding: 30 min.                                                 Evaluatiegesprek: 1 uur                                              Evaluatieverslag: 1 uur",
+                           "datum":  "12-02-\u002726",
+                           "uren":  "2,5 uur",
+                           "bedrag":  300
+                       },
+                       {
+                           "omschrijving":  "reiskosten",
+                           "toelichting":  "Amersfoort-Barneveld-Barneld-Amersfoort",
+                           "datum":  "63km á €0,35",
+                           "uren":  "",
+                           "bedrag":  55.65
+                       }
+                   ],
+        "totaal_sheet":  1375.65,
+        "ovz":  {
+                    "nummer":  "202623",
+                    "datum_ovz":  "2026-02-13",
+                    "debiteurnr_ovz":  "DB40",
+                    "naam_ovz":  "De Lijster, 4e factuur coachtraject I.M.",
+                    "bedrag_ovz":  1375.65,
+                    "betaald_ovz":  true
+                }
+    },
+    {
+        "nummer":  "202624",
+        "sheet_name":  "202624",
+        "factuurnr_sheet":  "202624",
+        "datum_sheet":  "2026-02-13",
+        "debnr_sheet":  "DB01",
+        "tav":  null,
+        "betreft":  "Gabrie Mehenschool, teamondersteuning samenwerking, communicatie en verbinding.",
+        "regels":  [
+                       {
+                           "omschrijving":  "Studiemiddag",
+                           "toelichting":  "Sessie 4: Actualiteit inbrengen en onderzoeken wat \nieders eigen rol kan zijn om bij te dragen aan \noptimale samenwerking.",
+                           "datum":  "15-01-\u002726",
+                           "uren":  "vb. 2 uur            uitv. 2 uur",
+                           "bedrag":  460
+                       },
+                       {
+                           "omschrijving":  "Overleg kernteam",
+                           "toelichting":  "Sparringsmoment: overleg over stand van zaken in het team en actuele behoeftes, voorbespreken studiemiddag.",
+                           "datum":  "08-01-\u002726",
+                           "uren":  "Uitv. 1,5 uur",
+                           "bedrag":  172.5
+                       }
+                   ],
+        "totaal_sheet":  632.5,
+        "ovz":  {
+                    "nummer":  "202624",
+                    "datum_ovz":  "2026-02-13",
+                    "debiteurnr_ovz":  "DB01",
+                    "naam_ovz":  "Gabrie Mehenschool, teamondersteuning samenwerking, communicatie en verbinding.",
+                    "bedrag_ovz":  632.5,
+                    "betaald_ovz":  true
+                }
+    },
+    {
+        "nummer":  "202625",
+        "sheet_name":  "202625",
+        "factuurnr_sheet":  "202625",
+        "datum_sheet":  "2026-02-13",
+        "debnr_sheet":  "DB01",
+        "tav":  null,
+        "betreft":  "CRKBO",
+        "regels":  [
+                       {
+                           "omschrijving":  "CRKBO",
+                           "toelichting":  "Auditkosten continuering Instelling",
+                           "datum":  "15-01-\u002726",
+                           "uren":  "",
+                           "bedrag":  335.78
+                       }
+                   ],
+        "totaal_sheet":  335.78,
+        "ovz":  {
+                    "nummer":  "202625",
+                    "datum_ovz":  "2026-02-13",
+                    "debiteurnr_ovz":  "DB01",
+                    "naam_ovz":  "CRKBO, Auditkosten continuering Instelling",
+                    "bedrag_ovz":  335.78,
+                    "betaald_ovz":  true
+                }
+    },
+    {
+        "nummer":  "202626",
+        "sheet_name":  "202626",
+        "factuurnr_sheet":  "202626",
+        "datum_sheet":  "2026-04-21",
+        "debnr_sheet":  "DB01",
+        "tav":  null,
+        "betreft":  "IKC De Doornick, teamondersteuning samenwerking, communicatie en verbinding.",
+        "regels":  [
+                       {
+                           "omschrijving":  "Studiemiddag",
+                           "toelichting":  "Sessie 4: Welke rollen en verantwoordelijkheden\nzijn er op de school, organogram, hoelopen de\nlijnen en zijn we daar blij mee?",
+                           "datum":  "09-02-\u002726",
+                           "uren":  "vb.1 dagdeel           uitv. 1 dagdeel",
+                           "bedrag":  920
+                       },
+                       {
+                           "omschrijving":  "Reiskosten",
+                           "toelichting":  "Een keer Amersfoort Doornenburg-Doornenburg Amersfoort",
+                           "datum":  "09-02-\u002726",
+                           "uren":  "",
+                           "bedrag":  21
+                       }
+                   ],
+        "totaal_sheet":  941,
+        "ovz":  {
+                    "nummer":  "202626",
+                    "datum_ovz":  "2026-04-21",
+                    "debiteurnr_ovz":  "DB01",
+                    "naam_ovz":  "IKC, De Doornick",
+                    "bedrag_ovz":  941,
+                    "betaald_ovz":  true
+                }
+    },
+    {
+        "nummer":  "202627",
+        "sheet_name":  "202627",
+        "factuurnr_sheet":  "202627",
+        "datum_sheet":  "2026-04-21",
+        "debnr_sheet":  "DB15",
+        "tav":  "M. Breuningen",
+        "betreft":  "Het Anker, factuur coachtraject M.P.",
+        "regels":  [
+                       {
+                           "omschrijving":  "Tussenevaluatiemoment coachtraject",
+                           "toelichting":  "Tussenevaluatie van het coachtraject met de leerkracht en de directeur. In hoeverre haalt de leerkracht de ontwikkeldoelen, waar staat zij nu en wat is de volgende stap? Welke ontwikkelpunten/acteis zijn belangrijk voor de verder ontwikkeling en hoe gaat zij hiermee verder?                                                                  Voorbereding: 30 min.                                                             Evaluatiegesprek: 1 uur                                                Evaluatieverslag: 1 uur",
+                           "datum":  "02-03-\u002726",
+                           "uren":  "2,5 uur",
+                           "bedrag":  287.5
+                       },
+                       {
+                           "omschrijving":  "Coachessie 14 t/m 16",
+                           "toelichting":  "Nader te bepalen a.d.v. de hulpvragen en ontwikkelpunten                                                    30 min voorbereiding\n1,5 uur uitvoering                                                                  30 min verslaglegging",
+                           "datum":  "02-03-\u002726        24-03-\u002726       13-04-\u002726",
+                           "uren":  "2,5 uur              2,5 uur              2,5 uur",
+                           "bedrag":  862.5
+                       }
+                   ],
+        "totaal_sheet":  1150,
+        "ovz":  {
+                    "nummer":  "202627",
+                    "datum_ovz":  "2026-04-21",
+                    "debiteurnr_ovz":  "DB15",
+                    "naam_ovz":  "Het Anker, 7e factuur coachtraject M.P.",
+                    "bedrag_ovz":  1150,
+                    "betaald_ovz":  false
+                }
+    },
+    {
+        "nummer":  "202628",
+        "sheet_name":  "202628",
+        "factuurnr_sheet":  "202628",
+        "datum_sheet":  "2026-04-21",
+        "debnr_sheet":  "DB15",
+        "tav":  "M. Breuningen",
+        "betreft":  "Het Anker, 2e factuur begeleiding gr. 5",
+        "regels":  [
+                       {
+                           "omschrijving":  "Overleg KC\u0027er",
+                           "toelichting":  "Overleg en afstemming n.a.v. de nulmeting. Wat is zichtbaar in de groepen, aan leerkrachtgedrag, wat zijn school-/ unitafspraken, wat is de voortgang in vergelijking met andere units? Hoe ziet het plan van aanpak eruit en wie doet wat?                                                                                         vb. 30 min.                                                                             Uitv. 1,5 uur",
+                           "datum":  "25-02-\u002726",
+                           "uren":  "2 uur",
+                           "bedrag":  240
+                       },
+                       {
+                           "omschrijving":  "Coachsessie",
+                           "toelichting":  "Exra gesprek met één van de leerkrachten voorafgaand aan het ondersteuningstraject van de unit (zaken verhelderen, barrierres wegnemem, wat heeft de leerkracht nodig om vertrouwen in het traject en de afloop te hebben?)                 vb. 30 min.                                                                         Uitv. 1,5 uur",
+                           "datum":  "10-03-\u002726",
+                           "uren":  "2 uur",
+                           "bedrag":  240
+                       },
+                       {
+                           "omschrijving":  "coachsessies in de groep",
+                           "toelichting":  "Naar aanleiding van unitoverleg meekijken naar de groeps-/ gedragsafspraken in de groep (eenduidig, transparant en voorspelbaar leerkrachtgedrag, leerlinggedrag, naleven gemaakte afspraken)                                                  voorbereiding: 15 min                                                                      uitvoering: 1uur                                                                    nabespreking: 30 min                                                 verslaglegging 15 min",
+                           "datum":  "12-02-\u002726          15-04-\u002726",
+                           "uren":  "2 uur                  2 uur",
+                           "bedrag":  480
+                       },
+                       {
+                           "omschrijving":  "Unitbijeenkomsten 1\u00262",
+                           "toelichting":  "Samen onderzoeken wat de huidige stand van zaken is, wat de afspraken zijn, welk eenduidige leerkrachtgedrag is belangrijk en wanneer wordt het makkelijk/moeilijk dat vol te houden? Hoe werk je zelf aan een stevig fundament en welk persoonlijk leiderschap is helpend/ondermijnend?                                                                          vb. 2 uur                                                                               Uitv. 2 uur",
+                           "datum":  "30-03-\u002726      13-04-\u002726",
+                           "uren":  "4 uur                  4 uur",
+                           "bedrag":  960
+                       }
+                   ],
+        "totaal_sheet":  1920,
+        "ovz":  {
+                    "nummer":  "202628",
+                    "datum_ovz":  "2026-04-21",
+                    "debiteurnr_ovz":  "DB15",
+                    "naam_ovz":  "Het Anker, 2e factuur coachtraject gr. 5",
+                    "bedrag_ovz":  1920,
+                    "betaald_ovz":  false
+                }
+    },
+    {
+        "nummer":  "202629",
+        "sheet_name":  "202629",
+        "factuurnr_sheet":  "202629",
+        "datum_sheet":  "2026-04-21",
+        "debnr_sheet":  "DB10",
+        "tav":  "J.v.d. Burgh",
+        "betreft":  "De Bolster, 6e factuur coachtraject L.R",
+        "regels":  [
+                       {
+                           "omschrijving":  "Coachessie 10",
+                           "toelichting":  "Nader te bepalen a.d.v. de hulpvragen en ontwikkelpunten                                                    30 min voorbereiding\n1,5 uur uitvoering                                                                  30 min verslaglegging",
+                           "datum":  "03-03-\u002726",
+                           "uren":  "2,5 uur",
+                           "bedrag":  287.5
+                       },
+                       {
+                           "omschrijving":  "Evaluatie coachtraject",
+                           "toelichting":  "Evaluatie van het coachtraject met de leerkracht en de waarnemend directeur. In hoeverre haalt de leerkracht de ontwikkeldoelen, waar staat zij nu? Welke ontwikkelpunten/acteis zijn belangrijk voor de verder ontwikkeling en hoe gaat zij hiermee verder?                                                                  Voorbereding: 30 min.                                                             Evaluatiegesprek: 1 uur                                                Evaluatieverslag: 1 uur",
+                           "datum":  "31-03-\u002726",
+                           "uren":  "2,5 uur",
+                           "bedrag":  287.5
+                       }
+                   ],
+        "totaal_sheet":  575,
+        "ovz":  {
+                    "nummer":  "202629",
+                    "datum_ovz":  "2026-04-21",
+                    "debiteurnr_ovz":  "DB10",
+                    "naam_ovz":  "PCB De Bolster, 4e factuur coachtraject L.R",
+                    "bedrag_ovz":  575,
+                    "betaald_ovz":  false
+                }
+    },
+    {
+        "nummer":  "202630",
+        "sheet_name":  "202630",
+        "factuurnr_sheet":  "202630",
+        "datum_sheet":  "2026-04-21",
+        "debnr_sheet":  "DB43",
+        "tav":  "K. Muller",
+        "betreft":  "PCBO Amersfoort, 3e factuur coachtraject leerkracht M.S., De Zonnewijzer",
+        "regels":  [
+                       {
+                           "omschrijving":  "Coachessie 4 t/m 6",
+                           "toelichting":  "Nader te bepalen a.d.v. de hulpvragen en ontwikkelpunten",
+                           "datum":  "04-03-\u002726          25-03-\u002726       14-04-\u002726",
+                           "uren":  "2,5 uur              2,5 uur            2,5 uur",
+                           "bedrag":  900
+                       },
+                       {
+                           "omschrijving":  "Begeleiding in de rol van LKC\u0027er (zij-instroomtraject)",
+                           "toelichting":  "In mijn rol van leerkrachtcoach worden  er 3 maandendelijkse gesprekken met de leerkrach en de SLB\u0027er van de PABO gevoerd.                                                    vb. 1 uur                                                                        uitv. 1 uur",
+                           "datum":  "23-03-\u002726",
+                           "uren":  "2 uur",
+                           "bedrag":  240
+                       },
+                       {
+                           "omschrijving":  "Sparringgesprek",
+                           "toelichting":  "Gesprek over de voortgang van de opleiding: opdrachten, ontwikkeldoelen, proeve van bekwaamheid.",
+                           "datum":  "14-04-\u002726",
+                           "uren":  "1 uur",
+                           "bedrag":  120
+                       }
+                   ],
+        "totaal_sheet":  1260,
+        "ovz":  {
+                    "nummer":  "202630",
+                    "datum_ovz":  "2026-04-21",
+                    "debiteurnr_ovz":  "DB43",
+                    "naam_ovz":  "PCBO Amersfoort, 3e factuur coachtraject M.S.",
+                    "bedrag_ovz":  1260,
+                    "betaald_ovz":  false
+                }
+    },
+    {
+        "nummer":  "202631",
+        "sheet_name":  "202631",
+        "factuurnr_sheet":  "202631",
+        "datum_sheet":  "2026-04-21",
+        "debnr_sheet":  "DB43",
+        "tav":  "M. Bakker",
+        "betreft":  "PCBO Amersfoort, teamondersteuning PCB De Zonnwijzer, begeleiding kernteam",
+        "regels":  [
+                       {
+                           "omschrijving":  "Overleg directie en bestuur",
+                           "toelichting":  "Overleg met Marjolein Veldhuizen, Annemieke Vernooij en Marie-Elle, met als doel de schoolontwikkeling te bespreken.",
+                           "datum":  "07-04-\u002726",
+                           "uren":  "vb. 1 uur                uitv. 1,5 uur",
+                           "bedrag":  300
+                       },
+                       {
+                           "omschrijving":  "Bijeenkomst bouwen",
+                           "toelichting":  "Per bouw onderzoeken welke persoonlijke triggers en talenten aanwezig zijn, waar kan jij invloed op uit oefenen en meer eigenaarschap tonen? Hoe kan jij je krachtig voelen in je werk, hoe pak en houd je regie? Hoe kan ik mijn eigen fundament stevig houden, ook als het moeilijk wordt? Per bijeenkomst:                                                                               Vb. 2 uur                                                                                   Uitv. 2 uur",
+                           "datum":  "05-03-\u002726      11-03-\u002726       17-03-\u002726",
+                           "uren":  "4 uur                   4 uur                    4 uur",
+                           "bedrag":  1440
+                       },
+                       {
+                           "omschrijving":  "Studieochtend",
+                           "toelichting":  "Opbrengst bijeenkomst per bouw/terugblik Belbin, persoonlijk leiderschap, wat is zichtbaar aan handelen in het team, hoe crëer je samen een professionele cultuur en welke rol heeft eenieder hierin?",
+                           "datum":  "19-03-\u002726",
+                           "uren":  "vb. 3 uur          uitv. 3 uur",
+                           "bedrag":  720
+                       },
+                       {
+                           "omschrijving":  "Bijeenkomst 2 kernteam",
+                           "toelichting":  "Onderzoeken welke aansturing de school nodig heeft en hoe het kernteam daar in kan bijdragen. Welk leiderschap is nu nodig en wat past bij jou?",
+                           "datum":  "24-02-\u002726",
+                           "uren":  "vb. 2 uur          uitv. 2 uur",
+                           "bedrag":  480
+                       }
+                   ],
+        "totaal_sheet":  2940,
+        "ovz":  {
+                    "nummer":  "202631",
+                    "datum_ovz":  "2026-04-21",
+                    "debiteurnr_ovz":  "DB43",
+                    "naam_ovz":  "PCBO Amersfoort, De Zonnewijzer, begeleiding (kern)team",
+                    "bedrag_ovz":  2940,
+                    "betaald_ovz":  false
+                }
+    },
+    {
+        "nummer":  "202632",
+        "sheet_name":  "202632",
+        "factuurnr_sheet":  "202632",
+        "datum_sheet":  "2026-04-21",
+        "debnr_sheet":  "DB25",
+        "tav":  "E. Oosterhof",
+        "betreft":  "KWS, 4e factuur coachtraject T.L.",
+        "regels":  [
+                       {
+                           "omschrijving":  "Coachessies 5 t/m 7",
+                           "toelichting":  "Nader te bepalen a.d.v. de hulpvragen en ontwikkelpunten",
+                           "datum":  "26-02-\u002726        25-03-\u002726         22-04-\u002726",
+                           "uren":  "2,5 uur                2,5 uur              2,5 uur",
+                           "bedrag":  900
+                       },
+                       {
+                           "omschrijving":  "Begeleiding in de rol van LKC\u0027er (zij-instroomtraject)",
+                           "toelichting":  "Gesprekken over de voortgang van de opleiding: opdrachten, ontwikkeldoelen, proeve van bekwaamheid.",
+                           "datum":  "25-03-\u002726      22-04-\u002726",
+                           "uren":  "1 uur                 1 uur",
+                           "bedrag":  240
+                       }
+                   ],
+        "totaal_sheet":  1140,
+        "ovz":  {
+                    "nummer":  "202632",
+                    "datum_ovz":  "2026-04-21",
+                    "debiteurnr_ovz":  "DB25",
+                    "naam_ovz":  "KWS, 4e factuur coachtraject T.L.",
+                    "bedrag_ovz":  1140,
+                    "betaald_ovz":  true
+                }
+    },
+    {
+        "nummer":  "202633",
+        "sheet_name":  "202633",
+        "factuurnr_sheet":  "202633",
+        "datum_sheet":  "2026-04-21",
+        "debnr_sheet":  "DB25",
+        "tav":  "E. Oosterhof",
+        "betreft":  "KWS, 2e factuur coachtraject G.t.R.",
+        "regels":  [
+                       {
+                           "omschrijving":  "Sessie 3 en 4",
+                           "toelichting":  "Nader te bepalen a.d.v. de hulpvragen en ontwikkelpunten. Denk aan: persoonlijk leiderschap, fomgaan met veranderingen, professionele profilering en positie innemen, moeilijke situaties bespreekbaar maken                                                      30 min voorbereiding\n1,5 uur uitvoering",
+                           "datum":  "25-02-\u002726        01-04-\u002726",
+                           "uren":  "2 uur                 2 uur",
+                           "bedrag":  480
+                       }
+                   ],
+        "totaal_sheet":  480,
+        "ovz":  {
+                    "nummer":  "202633",
+                    "datum_ovz":  "2026-04-21",
+                    "debiteurnr_ovz":  "DB25",
+                    "naam_ovz":  "KWS, 2e factuur coachtraject G.t.R.",
+                    "bedrag_ovz":  480,
+                    "betaald_ovz":  true
+                }
+    },
+    {
+        "nummer":  "202634",
+        "sheet_name":  "202634",
+        "factuurnr_sheet":  "202634",
+        "datum_sheet":  "2026-04-21",
+        "debnr_sheet":  "DB18",
+        "tav":  "M. Dogterom",
+        "betreft":  "PWA, 1e factuur coachtraject M.v.d.B.",
+        "regels":  [
+                       {
+                           "omschrijving":  "Intake coachtraject  leerkracht",
+                           "toelichting":  "Verheldering van de hulpvraag. Afstemmen wat het coachtraject inhoudt, wat is nodig en belangrijk?               \nIntake: 1 uur                                                                Verslaglegging: 1 uur",
+                           "datum":  "09-03-\u002726",
+                           "uren":  "2 uur",
+                           "bedrag":  240
+                       },
+                       {
+                           "omschrijving":  "Coachessies 1 en 2",
+                           "toelichting":  "Nader te bepalen a.d.v. de hulpvragen en ontwikkelpunten  30 min voorbereiding\n1,5 uur uitvoering",
+                           "datum":  "30-03-\u002726       01-04-\u002726",
+                           "uren":  "2 uur                 2 uur",
+                           "bedrag":  480
+                       }
+                   ],
+        "totaal_sheet":  720,
+        "ovz":  {
+                    "nummer":  "202634",
+                    "datum_ovz":  "2026-04-21",
+                    "debiteurnr_ovz":  "DB18",
+                    "naam_ovz":  "Prins Willem-Alexanderschool, 1e factuur coachtraject M.v.d.B.",
+                    "bedrag_ovz":  720,
+                    "betaald_ovz":  false
+                }
+    },
+    {
+        "nummer":  "202635",
+        "sheet_name":  "202635",
+        "factuurnr_sheet":  "202635",
+        "datum_sheet":  "2026-04-21",
+        "debnr_sheet":  "DB06",
+        "tav":  "mevrouw R. Koelewijn",
+        "betreft":  "De Berkenschool, 6e factuur coachtraject H.H.",
+        "regels":  [
+                       {
+                           "omschrijving":  "Coachsessie 4 en 5",
+                           "toelichting":  "Nader te bepalen a.d.v. de hulpvragen en ontwikkelpunten",
+                           "datum":  "25-02-\u002726        20-04-\u002726",
+                           "uren":  "2,5 uur               2,5 uur",
+                           "bedrag":  600
+                       }
+                   ],
+        "totaal_sheet":  600,
+        "ovz":  {
+                    "nummer":  "202635",
+                    "datum_ovz":  "2026-04-21",
+                    "debiteurnr_ovz":  "DB06",
+                    "naam_ovz":  "Berkenschool, 5e factuur coachtraject H.H.",
+                    "bedrag_ovz":  600,
+                    "betaald_ovz":  false
+                }
+    },
+    {
+        "nummer":  "202636",
+        "sheet_name":  "202636",
+        "factuurnr_sheet":  "202636",
+        "datum_sheet":  "2026-04-21",
+        "debnr_sheet":  "DB06",
+        "tav":  "mevrouw R. Koelewijn",
+        "betreft":  "De Berkenschool, 3e factuur coachtraject J.v.L.",
+        "regels":  [
+                       {
+                           "omschrijving":  "Coachgesprek",
+                           "toelichting":  "Nader te bepalen a.d.v. de hulpvragen en ontwikkelpunten    vb. 30 min                                                                         uitv. 1,5 uur",
+                           "datum":  "05-03-\u002736",
+                           "uren":  "2 uur",
+                           "bedrag":  240
+                       }
+                   ],
+        "totaal_sheet":  240,
+        "ovz":  {
+                    "nummer":  "202636",
+                    "datum_ovz":  "2026-04-21",
+                    "debiteurnr_ovz":  "DB06",
+                    "naam_ovz":  "Berkenschool, 3e factuur coachtraject J.v.L.",
+                    "bedrag_ovz":  240,
+                    "betaald_ovz":  false
+                }
+    },
+    {
+        "nummer":  "202637",
+        "sheet_name":  "202637",
+        "factuurnr_sheet":  "202637",
+        "datum_sheet":  "2026-04-21",
+        "debnr_sheet":  "DB24",
+        "tav":  "DB. De Kruijf",
+        "betreft":  "Parkschool, 6e factuur coachtraject D.K.",
+        "regels":  [
+                       {
+                           "omschrijving":  "Coachessie 9 en 10",
+                           "toelichting":  "Nader te bepalen a.d.v. de hulpvragen en ontwikkelpunten                                                    30 min voorbereiding\n1,5 uur uitvoering",
+                           "datum":  "26-02-\u002726        08-04-\u002726",
+                           "uren":  "2 uur                  2 uur",
+                           "bedrag":  460
+                       }
+                   ],
+        "totaal_sheet":  460,
+        "ovz":  {
+                    "nummer":  "202637",
+                    "datum_ovz":  "2026-04-21",
+                    "debiteurnr_ovz":  "DB24",
+                    "naam_ovz":  "Parkschool, 6e factuur coachtraject D.K.",
+                    "bedrag_ovz":  460,
+                    "betaald_ovz":  true
+                }
+    },
+    {
+        "nummer":  "202638",
+        "sheet_name":  "202638",
+        "factuurnr_sheet":  "202638",
+        "datum_sheet":  "2026-04-21",
+        "debnr_sheet":  "DB13",
+        "tav":  "A. Hardeman",
+        "betreft":  "De Vuurvogel, 4e factuur coachtraject S.M.",
+        "regels":  [
+                       {
+                           "omschrijving":  "Coachessie 6 en 7",
+                           "toelichting":  "Nader te bepalen a.d.v. de hulpvragen en ontwikkelpunten",
+                           "datum":  "26-03-\u002726          22-04-\u002726",
+                           "uren":  "2,5 uur                 2,5 uur",
+                           "bedrag":  600
+                       }
+                   ],
+        "totaal_sheet":  600,
+        "ovz":  {
+                    "nummer":  "202638",
+                    "datum_ovz":  "2026-04-21",
+                    "debiteurnr_ovz":  "DB13",
+                    "naam_ovz":  "PCB De Vuurvogel, 4e factuur coachtraject S.M.",
+                    "bedrag_ovz":  600,
+                    "betaald_ovz":  false
+                }
+    },
+    {
+        "nummer":  "202639",
+        "sheet_name":  "202639",
+        "factuurnr_sheet":  "202639",
+        "datum_sheet":  "2026-04-21",
+        "debnr_sheet":  "DB13",
+        "tav":  "A. Hardeman",
+        "betreft":  "De Vuurvogel, 4e factuur coachtraject R.Z.",
+        "regels":  [
+                       {
+                           "omschrijving":  "Coachessie 8 t/m 11",
+                           "toelichting":  "Nader te bepalen a.d.v. de hulpvragen en ontwikkelpunten",
+                           "datum":  "23-02-\u002726          03-03-\u002726       23-03-\u002726       14-04-\u002726",
+                           "uren":  "2,5 uur              2,5 uur                            2,5 uur              2,5 uur",
+                           "bedrag":  1200
+                       }
+                   ],
+        "totaal_sheet":  1200,
+        "ovz":  {
+                    "nummer":  "202639",
+                    "datum_ovz":  "2026-04-21",
+                    "debiteurnr_ovz":  "DB13",
+                    "naam_ovz":  "PCB De Vuurvogel, 4e factuur coachtraject R.Z.",
+                    "bedrag_ovz":  1200,
+                    "betaald_ovz":  false
+                }
+    },
+    {
+        "nummer":  "202640",
+        "sheet_name":  "202640",
+        "factuurnr_sheet":  "202640",
+        "datum_sheet":  "2026-04-21",
+        "debnr_sheet":  "DB14",
+        "tav":  "T. Verlaan-Oskam",
+        "betreft":  "De Windroos, 2e factuur coachtraject E.S.",
+        "regels":  [
+                       {
+                           "omschrijving":  "Coachessie 3 t/m 5",
+                           "toelichting":  "Nader te bepalen a.d.v. de hulpvragen en ontwikkelpunten",
+                           "datum":  "04-03-\u002726          16-03-\u002726       07-04-\u002726",
+                           "uren":  "2 uur                 2 uur                   2 uur",
+                           "bedrag":  720
+                       }
+                   ],
+        "totaal_sheet":  720,
+        "ovz":  {
+                    "nummer":  "202640",
+                    "datum_ovz":  "2026-04-21",
+                    "debiteurnr_ovz":  "DB14",
+                    "naam_ovz":  "PCB De Windroos, 2e factuur coachtraject E.S.",
+                    "bedrag_ovz":  720,
+                    "betaald_ovz":  false
+                }
+    },
+    {
+        "nummer":  "202641",
+        "sheet_name":  "202641",
+        "factuurnr_sheet":  "202641",
+        "datum_sheet":  "2026-04-21",
+        "debnr_sheet":  "DB14",
+        "tav":  "T. Verlaan-Oskam",
+        "betreft":  "De Windroos, 2e factuur coachtraject N.v.S.",
+        "regels":  [
+                       {
+                           "omschrijving":  "Coachessie 3 t/m 5",
+                           "toelichting":  "Nader te bepalen a.d.v. de hulpvragen en ontwikkelpunten",
+                           "datum":  "23-02-\u002726          23-03-\u002726      20-04-\u002726",
+                           "uren":  "2 uur                 2 uur                 2 uur",
+                           "bedrag":  720
+                       }
+                   ],
+        "totaal_sheet":  720,
+        "ovz":  {
+                    "nummer":  "202641",
+                    "datum_ovz":  "2026-04-21",
+                    "debiteurnr_ovz":  "DB14",
+                    "naam_ovz":  "PCB De Windroos, 2e factuur coachtraject N.v.S.",
+                    "bedrag_ovz":  720,
+                    "betaald_ovz":  false
+                }
+    },
+    {
+        "nummer":  "202642",
+        "sheet_name":  "202642",
+        "factuurnr_sheet":  "202642",
+        "datum_sheet":  "2026-04-21",
+        "debnr_sheet":  "DB14",
+        "tav":  "T. Verlaan-Oskam",
+        "betreft":  "De Windroos, 1e factuur coachtraject J.V.",
+        "regels":  [
+                       {
+                           "omschrijving":  "Intake coachtraject  leerkracht",
+                           "toelichting":  "Verheldering van de hulpvraag. Afstemmen wat het coachtraject inhoudt, wat is nodig en belangrijk?               \nIntake: 1 uur                                                                Verslaglegging: 1 uur",
+                           "datum":  "11-03-\u002726",
+                           "uren":  "2 uur",
+                           "bedrag":  240
+                       },
+                       {
+                           "omschrijving":  "Coachessie 1 en 2",
+                           "toelichting":  "Nader te bepalen a.d.v. de hulpvragen en ontwikkelpunten",
+                           "datum":  "01-04-\u002726          09-04-\u002726",
+                           "uren":  "2 uur                 2 uur",
+                           "bedrag":  480
+                       }
+                   ],
+        "totaal_sheet":  720,
+        "ovz":  {
+                    "nummer":  "202642",
+                    "datum_ovz":  "2026-04-21",
+                    "debiteurnr_ovz":  "DB14",
+                    "naam_ovz":  "PCB De Windroos, 1e factuur coachtraject J.V",
+                    "bedrag_ovz":  720,
+                    "betaald_ovz":  false
+                }
+    },
+    {
+        "nummer":  "202643",
+        "sheet_name":  "202643",
+        "factuurnr_sheet":  "202643",
+        "datum_sheet":  "2026-04-21",
+        "debnr_sheet":  "DB05",
+        "tav":  "D. Koster",
+        "betreft":  "De Gabrie Mehen, 1e factuur coachingstraject T.K.",
+        "regels":  [
+                       {
+                           "omschrijving":  "Intake coachtraject KC\u0027er",
+                           "toelichting":  "Verheldering van de hulpvraag. Afstemmen wat het coachtraject inhoudt, wat is nodig en belangrijk?               \nIntake: 1 uur                                                                Verslaglegging: 1 uur",
+                           "datum":  "26-02-\u002726",
+                           "uren":  "2 uur",
+                           "bedrag":  240
+                       },
+                       {
+                           "omschrijving":  "Coachessies 1 t/m 3",
+                           "toelichting":  "Nader te bepalen a.d.v. de hulpvragen en ontwikkelpunten",
+                           "datum":  "16-03-\u002726        30-03-\u002726        21-04-\u002726",
+                           "uren":  "2 uur                2 uur                2 uur",
+                           "bedrag":  720
+                       }
+                   ],
+        "totaal_sheet":  960,
+        "ovz":  {
+                    "nummer":  "202643",
+                    "datum_ovz":  "2026-04-21",
+                    "debiteurnr_ovz":  "DB05",
+                    "naam_ovz":  "GMS, 1e factuur coachtraject T.K.",
+                    "bedrag_ovz":  960,
+                    "betaald_ovz":  false
+                }
+    },
+    {
+        "nummer":  "202644",
+        "sheet_name":  "202644",
+        "factuurnr_sheet":  "202644",
+        "datum_sheet":  "2026-04-21",
+        "debnr_sheet":  "DB05",
+        "tav":  "D. Koster",
+        "betreft":  "De Gabrie Mehen, 1e factuur coachingstraject H.I.",
+        "regels":  [
+                       {
+                           "omschrijving":  "Intake coachtraject",
+                           "toelichting":  "Verheldering van de hulpvraag. Afstemmen wat het coachtraject inhoudt, wat is nodig en belangrijk?               \nIntake: 1 uur                                                                Verslaglegging: 1 uur",
+                           "datum":  "24-03-\u002726",
+                           "uren":  "2 uur",
+                           "bedrag":  240
+                       },
+                       {
+                           "omschrijving":  "Coachessies 1 en 2",
+                           "toelichting":  "Nader te bepalen a.d.v. de hulpvragen en ontwikkelpunten",
+                           "datum":  "09-04-\u002726               23-04-\u002726",
+                           "uren":  "2 uur                  2 uur",
+                           "bedrag":  480
+                       }
+                   ],
+        "totaal_sheet":  720,
+        "ovz":  {
+                    "nummer":  "202644",
+                    "datum_ovz":  "2026-04-21",
+                    "debiteurnr_ovz":  "DB05",
+                    "naam_ovz":  "GMS, 1e factuur coachtraject H.I.",
+                    "bedrag_ovz":  720,
+                    "betaald_ovz":  false
+                }
+    },
+    {
+        "nummer":  "202645",
+        "sheet_name":  "202645 ",
+        "factuurnr_sheet":  "202645",
+        "datum_sheet":  "2026-04-21",
+        "debnr_sheet":  "DB39",
+        "tav":  "mervr. N. van Bladel",
+        "betreft":  "DOK12, 2e factuur begeleding gr. 7",
+        "regels":  [
+                       {
+                           "omschrijving":  "Sessie 3",
+                           "toelichting":  "Groepsobservatie (cohesie, sfeer, leerlinggedrag), Leerkrachthandelen (aansturing, verbindend gezag, regels en routine. Individuele leerlingen (voortgang ringaanpak en het indiividuele gedrag, spiegelen, afspraken maken). Overdracht met teamleider (begeleiding leekracht/groep)",
+                           "datum":  "26-02-\u002726",
+                           "uren":  "2,5 uur",
+                           "bedrag":  300
+                       }
+                   ],
+        "totaal_sheet":  300,
+        "ovz":  {
+                    "nummer":  "202645",
+                    "datum_ovz":  "2026-04-21",
+                    "debiteurnr_ovz":  "DB39",
+                    "naam_ovz":  "DOk12, 2e factuur begeleiding gr. 7",
+                    "bedrag_ovz":  300,
+                    "betaald_ovz":  true
+                }
+    },
+    {
+        "nummer":  "202646",
+        "sheet_name":  "202646",
+        "factuurnr_sheet":  "202646",
+        "datum_sheet":  "2026-04-21",
+        "debnr_sheet":  "DB39",
+        "tav":  "mervr. N. van Bladel",
+        "betreft":  "DOK12, 1e factuur begeleding gr. 3",
+        "regels":  [
+                       {
+                           "omschrijving":  "Intake coachtraject met beide leerkrachten",
+                           "toelichting":  "Verheldering van de hulpvraag. Afstemmen wat het coachtraject inhoudt, wat is nodig en belangrijk voor de groep, de samenwerking, de leerkracht? Per leerkracht:              \nIntake: 1 uur                                                                Verslaglegging: 1 uur",
+                           "datum":  "18-03-\u002726        24-03-\u002766",
+                           "uren":  "2 uur                 2 uur",
+                           "bedrag":  480
+                       },
+                       {
+                           "omschrijving":  "Startobservatie bij beide leerkrachten",
+                           "toelichting":  "De nulmeting bestaat uit per leerkracht: \nObservatie:                         45   min\nVerwerking observatie:        45  min\nTerugkoppeling:                    1 uur\nTotaal:                                2,5  uur",
+                           "datum":  "13-04-\u002726       22-04-\u002726",
+                           "uren":  "2,5 uur             2,5 uur",
+                           "bedrag":  600
+                       }
+                   ],
+        "totaal_sheet":  1080,
+        "ovz":  {
+                    "nummer":  "202646",
+                    "datum_ovz":  "2026-04-21",
+                    "debiteurnr_ovz":  "DB39",
+                    "naam_ovz":  "DOk12, 1e factuur begeleiding gr. 3",
+                    "bedrag_ovz":  1080,
+                    "betaald_ovz":  true
+                }
+    },
+    {
+        "nummer":  "202647",
+        "sheet_name":  "202647",
+        "factuurnr_sheet":  "202647",
+        "datum_sheet":  "2026-04-21",
+        "debnr_sheet":  "DB31",
+        "tav":  "C. de Jong",
+        "betreft":  "De Uilenburcht,3e factuur coachtraject leerkracht L.S.",
+        "regels":  [
+                       {
+                           "omschrijving":  "Coachessies 5 t/m 8",
+                           "toelichting":  "Nader te bepalen a.d.v. de hulpvragen en ontwikkelpunten.",
+                           "datum":  "04-03-\u002726          18-03-\u002726       07-04-\u002726        21-04-´26",
+                           "uren":  "2,5 uur              2,5 uur              2,5 uur                2,5 uur",
+                           "bedrag":  1200
+                       },
+                       {
+                           "omschrijving":  "Tussenevaluatie coachtraject",
+                           "toelichting":  "Tussentijdse valuatie van het coachtraject met de leerkracht en de directeur. In hoeverre haalt de leerkracht de ontwikkeldoelen, waar staat zij nu? Welke ontwikkelpunten/acteis zijn belangrijk voor de verder ontwikkeling en hoe gaat het traject verder?                                                                  Voorbereding: 30 min.                                                             Evaluatiegesprek: 1 uur                                                Evaluatieverslag: 1 uur",
+                           "datum":  "07-04-\u002726",
+                           "uren":  "2,5 uur",
+                           "bedrag":  300
+                       },
+                       {
+                           "omschrijving":  "Reiskosten",
+                           "toelichting":  "Amersfoort-Driebergen-Driebergen-Amersfoort",
+                           "datum":  "4x56 km á €0,35",
+                           "uren":  "",
+                           "bedrag":  79.52
+                       }
+                   ],
+        "totaal_sheet":  1579.52,
+        "ovz":  {
+                    "nummer":  "202647",
+                    "datum_ovz":  "2026-04-21",
+                    "debiteurnr_ovz":  "DB31",
+                    "naam_ovz":  "De Uilenburcht, 3e factuur coachtraject leerkracht L.S.",
+                    "bedrag_ovz":  1579.52,
+                    "betaald_ovz":  true
+                }
+    },
+    {
+        "nummer":  "202648",
+        "sheet_name":  "202648",
+        "factuurnr_sheet":  "202648",
+        "datum_sheet":  "2026-04-21",
+        "debnr_sheet":  "DB38",
+        "tav":  "mervr. Maeyke de Ree",
+        "betreft":  "Ontmoetingsschool Atlas, factuur coachtraject M.d.W.",
+        "regels":  [
+                       {
+                           "omschrijving":  "Coachessie 1 en 2",
+                           "toelichting":  "De leerkracht ervaart onrust in de groep en wil werken aan een veilig een effectief leerklimaat. A.d.h.v. gerichte klasbezoeken wordt met de leerkracht gekeken naar het klassenmanagement en organisatie, aansturing en didactiek",
+                           "datum":  "24-03-\u002726       15-04-\u002726",
+                           "uren":  "2,5 uur               2,5 uur",
+                           "bedrag":  600
+                       }
+                   ],
+        "totaal_sheet":  600,
+        "ovz":  {
+                    "nummer":  "202648",
+                    "datum_ovz":  "2026-05-09",
+                    "debiteurnr_ovz":  "DB38",
+                    "naam_ovz":  "Atlas,1e factuur coachtraject M.d.W.",
+                    "bedrag_ovz":  600,
+                    "betaald_ovz":  false
+                }
+    },
+    {
+        "nummer":  "202649",
+        "sheet_name":  "202649",
+        "factuurnr_sheet":  "202649",
+        "datum_sheet":  "2026-04-21",
+        "debnr_sheet":  "DB38",
+        "tav":  "mervr. Maeyke de Ree",
+        "betreft":  "Ontmoetingsschool Atlas,1e factuur coachtraject J.K.",
+        "regels":  [
+                       {
+                           "omschrijving":  "Intake coachtraject",
+                           "toelichting":  "Verheldering van de hulpvraag. Afstemmen wat het coachtraject inhoudt, wat is nodig en belangrijk?               \nIntake: 1 uur                                                                Verslaglegging: 1 uur",
+                           "datum":  "04-03-\u002726",
+                           "uren":  "2 uur",
+                           "bedrag":  240
+                       },
+                       {
+                           "omschrijving":  "Startobservatie",
+                           "toelichting":  "De nulmeting bestaat uit per leerkracht: \nObservatie:                         45   min\nVerwerking observatie:        45  min\nTerugkoppeling:                    1 uur\nTotaal:                                2,5  uur",
+                           "datum":  "25-03-\u002726",
+                           "uren":  "2,5 uur",
+                           "bedrag":  300
+                       },
+                       {
+                           "omschrijving":  "Coachessie 1",
+                           "toelichting":  "Nader te bepalen a.d.v. de hulpvragen en ontwikkelpunten",
+                           "datum":  "08-04-\u002726",
+                           "uren":  "2,5 uur",
+                           "bedrag":  300
+                       }
+                   ],
+        "totaal_sheet":  840,
+        "ovz":  {
+                    "nummer":  "202649",
+                    "datum_ovz":  "2026-05-09",
+                    "debiteurnr_ovz":  "DB38",
+                    "naam_ovz":  "Atlas,1e factuur coachtraject J.K.",
+                    "bedrag_ovz":  840,
+                    "betaald_ovz":  false
+                }
+    },
+    {
+        "nummer":  "202650",
+        "sheet_name":  "202650",
+        "factuurnr_sheet":  "202650",
+        "datum_sheet":  "2026-04-21",
+        "debnr_sheet":  "DB44",
+        "tav":  "mervr. Lori Murphy",
+        "betreft":  "Het Startblok, factuur ondersteuning klasbezoeken",
+        "regels":  [
+                       {
+                           "omschrijving":  "Klasbezoeken",
+                           "toelichting":  "Gerichte klasbezoeken op het vakgebied spelling. \nPer leerkracht:\nVoorbereiding\t                 15 min.\nObservatie:                     25 min.\nTerugkoppeling:               20 min.\nTotaal:                             1 uur",
+                           "datum":  "09-03-‘26\n27-03-‘26",
+                           "uren":  "",
+                           "bedrag":  1200
+                       },
+                       {
+                           "omschrijving":  "Terugkoppeling met directie",
+                           "toelichting":  "Opbrengst klasbezoeken:\nWat is op school- en individueel niveau zichtbaar? Denk aan doorgaande lijn, eenheid in handelen en taal, \neffectieve instructies e.a. opvallendheden? Van de opbrengsten en de terugkoppeling met directie wort een verslag geschreven, hetgeen met het team gedeeld zal worden.",
+                           "datum":  "",
+                           "uren":  "2 uur",
+                           "bedrag":  240
+                       }
+                   ],
+        "totaal_sheet":  1420,
+        "ovz":  {
+                    "nummer":  "202650",
+                    "datum_ovz":  "2026-05-09",
+                    "debiteurnr_ovz":  "DB44",
+                    "naam_ovz":  "t Startblok, ondersteuning klasbezoeken",
+                    "bedrag_ovz":  1420,
+                    "betaald_ovz":  false
+                }
+    },
+    {
+        "nummer":  "202651",
+        "sheet_name":  "202651",
+        "factuurnr_sheet":  "202651",
+        "datum_sheet":  "2026-04-21",
+        "debnr_sheet":  "DB04",
+        "tav":  "mevr. Wijdeven",
+        "betreft":  "De Wijde Wereld, 4e factuur coachtraject D.v.D.",
+        "regels":  [
+                       {
+                           "omschrijving":  "Coachessie 5",
+                           "toelichting":  "Nader te bepalen a.d.v. de hulpvragen en ontwikkelpunten",
+                           "datum":  "16-03-\u002726",
+                           "uren":  "2,5 uur",
+                           "bedrag":  300
+                       }
+                   ],
+        "totaal_sheet":  300,
+        "ovz":  {
+                    "nummer":  "202651",
+                    "datum_ovz":  "2026-04-21",
+                    "debiteurnr_ovz":  "DB04",
+                    "naam_ovz":  "De Wijde Wereld, 3e factuur coachtraject D.v.D.",
+                    "bedrag_ovz":  300,
+                    "betaald_ovz":  false
+                }
+    },
+    {
+        "nummer":  "202652",
+        "sheet_name":  "202652",
+        "factuurnr_sheet":  "202652",
+        "datum_sheet":  "2026-04-21",
+        "debnr_sheet":  "DB42",
+        "tav":  "P.v. Veeken",
+        "betreft":  "De Gondelier, 3e factuur coachtraject leerkrachten gr. 5b",
+        "regels":  [
+                       {
+                           "omschrijving":  "Coachessies 3 en deels 4",
+                           "toelichting":  "Nader te bepalen a.d.v. de hulpvragen en ontwikkelpunten. Leerkracht D.v.E. heeft nu 2 sessies gehad                        Leerkracht M.L. heeft nu 1 sessie gehad",
+                           "datum":  "24-02-\u002726          25-02-\u002726       10-03-\u002726",
+                           "uren":  "2,5 uur              2,5 uur            2,5 uur",
+                           "bedrag":  900
+                       },
+                       {
+                           "omschrijving":  "Overleg",
+                           "toelichting":  "Overleg en afstemming met Peter Veeken (nieuwe directeur). Wat is zichtbaar in de groep, in hoeverre is dat herkenbaar op schoolniveau en wat is belangrijk?",
+                           "datum":  "10-03-\u002726",
+                           "uren":  "1 uur",
+                           "bedrag":  120
+                       }
+                   ],
+        "totaal_sheet":  1020,
+        "ovz":  {
+                    "nummer":  "202652",
+                    "datum_ovz":  "2026-04-21",
+                    "debiteurnr_ovz":  "DB42",
+                    "naam_ovz":  "De Gondelier, 3e factuur coachtraject leerkrachten gr. 5",
+                    "bedrag_ovz":  1020,
+                    "betaald_ovz":  false
+                }
+    },
+    {
+        "nummer":  "202653",
+        "sheet_name":  "202653",
+        "factuurnr_sheet":  "202653",
+        "datum_sheet":  "2026-04-21",
+        "debnr_sheet":  "DB40",
+        "tav":  "Dillian Hos",
+        "betreft":  "De Lijster, 5e factuur coachtraject I.M.",
+        "regels":  [
+                       {
+                           "omschrijving":  "Coachessie 11 t/m 13",
+                           "toelichting":  "Nader te bepalen a.d.v. de hulpvragen en ontwikkelpunten                                                    30 min voorbereiding\n1,5 uur uitvoering                                                                  30 min verslaglegging",
+                           "datum":  "05-03-\u002726       26-03-\u002726        16-04-\u002726",
+                           "uren":  "2,5 uur              2,5 uur           2,5 uur",
+                           "bedrag":  900
+                       },
+                       {
+                           "omschrijving":  "reiskosten",
+                           "toelichting":  "Amersfoort-Barneveld-Barneld-Amersfoort",
+                           "datum":  "63km á €0,35",
+                           "uren":  "",
+                           "bedrag":  88.2
+                       }
+                   ],
+        "totaal_sheet":  988.2,
+        "ovz":  {
+                    "nummer":  "202653",
+                    "datum_ovz":  "2026-04-21",
+                    "debiteurnr_ovz":  "DB40",
+                    "naam_ovz":  "De Lijster, 5e factuur coachtraject I.M.",
+                    "bedrag_ovz":  988.2,
+                    "betaald_ovz":  false
+                }
+    },
+    {
+        "nummer":  "202654",
+        "sheet_name":  "202654",
+        "factuurnr_sheet":  "202654",
+        "datum_sheet":  "2026-05-18",
+        "debnr_sheet":  "DB45",
+        "tav":  "mervr. M. Reurink",
+        "betreft":  "De Veldrakker, 1e factuur coachtraject K.M.",
+        "regels":  [
+                       {
+                           "omschrijving":  "Intake coachtraject",
+                           "toelichting":  "Kennismaking met de leerkracht en verheldering van de hulpvraag. Afstemmen wat het coachtraject inhoudt, wat is nodig en belangrijk?               \nIntake: 1 uur                                                                Verslaglegging: 1 uur",
+                           "datum":  "04-03-\u002726",
+                           "uren":  "2 uur",
+                           "bedrag":  240
+                       },
+                       {
+                           "omschrijving":  "Startobservatie",
+                           "toelichting":  "De nulmeting bestaat uit per leerkracht: \nVoorbereiding:                   15 min\nObservatie:                       45 min\nVerwerking observatie:      45 min.\nTerugkoppeling:                1,15 uur\nTotaal:                              3 uur",
+                           "datum":  "25-03-\u002726",
+                           "uren":  "3 uur",
+                           "bedrag":  360
+                       },
+                       {
+                           "omschrijving":  "reiskosten",
+                           "toelichting":  "Amersfoort-Nieuwegein-Nieuwegein-Amersfoort",
+                           "datum":  "2x53km á €0,35",
+                           "uren":  "",
+                           "bedrag":  49
+                       }
+                   ],
+        "totaal_sheet":  649,
+        "ovz":  {
+                    "nummer":  "202654",
+                    "datum_ovz":  "2026-05-18",
+                    "debiteurnr_ovz":  "DB45",
+                    "naam_ovz":  "De Veldrakker, 1e factuur coachtraject K.M.",
+                    "bedrag_ovz":  649,
+                    "betaald_ovz":  false
+                }
+    },
+    {
+        "nummer":  "202655",
+        "sheet_name":  "202655",
+        "factuurnr_sheet":  "202655",
+        "datum_sheet":  "2026-04-21",
+        "debnr_sheet":  "DB01",
+        "tav":  null,
+        "betreft":  "Gabrie Mehenschool, bouwen aan de teamcultuur",
+        "regels":  [
+                       {
+                           "omschrijving":  "Individuele gesprekken",
+                           "toelichting":  "Met elk teamlid is een individueel coachgesprek\ngevoerd: wat ervaar je en wat is jouw persoonlijke\nopdracht?",
+                           "datum":  "26-02-‘26        02-03-‘26     03-03-‘26",
+                           "uren":  "11 pers.",
+                           "bedrag":  1320
+                       },
+                       {
+                           "omschrijving":  "Studiemiddag",
+                           "toelichting":  "Sessie 5: Samen kijken naar verbeterplan. Wat is mijn eigen rol hierin?",
+                           "datum":  "12-03-\u002726",
+                           "uren":  "vb. 2 uur               uitv. 2 uur",
+                           "bedrag":  460
+                       },
+                       {
+                           "omschrijving":  "Overleg kernteam",
+                           "toelichting":  "Sparringsmoment: overleg over stand van zaken in het team en actuele behoeftes, voorbespreken studiemiddag.",
+                           "datum":  "12-03-\u002726",
+                           "uren":  "Uitv. 1,5 uur",
+                           "bedrag":  172.5
+                       }
+                   ],
+        "totaal_sheet":  1952.5,
+        "ovz":  {
+                    "nummer":  "202655",
+                    "datum_ovz":  "2026-04-21",
+                    "debiteurnr_ovz":  "DB01",
+                    "naam_ovz":  "Gabrie Mehenschool, bouwen aan een professionele cultuur",
+                    "bedrag_ovz":  1952.5,
+                    "betaald_ovz":  true
+                }
+    },
+    {
+        "nummer":  "202656",
+        "sheet_name":  "202656",
+        "factuurnr_sheet":  "202656",
+        "datum_sheet":  "2026-04-21",
+        "debnr_sheet":  "DB15",
+        "tav":  "M. Breuningen",
+        "betreft":  "Het Anker, 4e factuur coachtraject K.S.",
+        "regels":  [
+                       {
+                           "omschrijving":  "Coachessie 4",
+                           "toelichting":  "Nader te bepalen a.d.v. de hulpvragen en ontwikkelpunten",
+                           "datum":  "10-03-\u002726",
+                           "uren":  "2 uur",
+                           "bedrag":  240
+                       }
+                   ],
+        "totaal_sheet":  240,
+        "ovz":  {
+                    "nummer":  "202656",
+                    "datum_ovz":  "2026-04-21",
+                    "debiteurnr_ovz":  "DB15",
+                    "naam_ovz":  "Het Anker, 4e factuur coachtraject K.B.",
+                    "bedrag_ovz":  240,
+                    "betaald_ovz":  false
+                }
+    },
+    {
+        "nummer":  "202657",
+        "sheet_name":  "202657",
+        "factuurnr_sheet":  "202657",
+        "datum_sheet":  "2026-05-09",
+        "debnr_sheet":  "DB38",
+        "tav":  "mervr. Maeyke de Ree",
+        "betreft":  "Ontmoetingsschool Atlas, 3e factuur ondersteuningstraject basisvaardigheden",
+        "regels":  [
+                       {
+                           "omschrijving":  "Onderzoek, conclusie + overleg en afstemming",
+                           "toelichting":  "Analyse + advies",
+                           "datum":  "24-01-\u002726",
+                           "uren":  "vb. 1 uur          uitv. 2 uur",
+                           "bedrag":  360
+                       }
+                   ],
+        "totaal_sheet":  360,
+        "ovz":  {
+                    "nummer":  "202657",
+                    "datum_ovz":  "2026-05-09",
+                    "debiteurnr_ovz":  "DB38",
+                    "naam_ovz":  "Atlas, 4e factuur ondersteuningstraject basisvaardigheden",
+                    "bedrag_ovz":  360,
+                    "betaald_ovz":  false
+                }
+    },
+    {
+        "nummer":  "202658",
+        "sheet_name":  "202658",
+        "factuurnr_sheet":  "202658",
+        "datum_sheet":  "2026-05-18",
+        "debnr_sheet":  "DB01",
+        "tav":  null,
+        "betreft":  "IKC Het Park, Teamondersteuning professionele werkcultuur",
+        "regels":  [
+                       {
+                           "omschrijving":  "Studiemiddag IKC onderwijs",
+                           "toelichting":  "Hoe gaan we het echte gesprek aan en\ngeven we constructief feedback?",
+                           "datum":  "02-04-\u002726",
+                           "uren":  "vb.3,5 uur        uitv. 3,5 uur",
+                           "bedrag":  805
+                       }
+                   ],
+        "totaal_sheet":  805,
+        "ovz":  {
+                    "nummer":  "202658",
+                    "datum_ovz":  "2026-05-18",
+                    "debiteurnr_ovz":  "DB01",
+                    "naam_ovz":  "IKC Het Park, teamondersteuning",
+                    "bedrag_ovz":  805,
+                    "betaald_ovz":  false
+                }
+    },
+    {
+        "nummer":  "202659",
+        "sheet_name":  "202659",
+        "factuurnr_sheet":  "202659",
+        "datum_sheet":  "2026-05-18",
+        "debnr_sheet":  "DB01",
+        "tav":  null,
+        "betreft":  "Gabrie Mehenschool, bouwen aan de teamcultuur",
+        "regels":  [
+                       {
+                           "omschrijving":  "Overleg focusgroep",
+                           "toelichting":  "Ondersteuning opstart: creëren van duidelijkheid\nover rol, positie en opdracht van focusgroep.",
+                           "datum":  "02-04-‘26",
+                           "uren":  "vb. 1,5 uur               uitv.1,5uur",
+                           "bedrag":  345
+                       },
+                       {
+                           "omschrijving":  "Overleg focusgroep",
+                           "toelichting":  "Sparringsmoment: creëren van duidelijkheid over\nrol, positie en opdracht van focusgroep.",
+                           "datum":  "16-04-\u002726",
+                           "uren":  "vb. 1 uur               uitv. 1 uur",
+                           "bedrag":  230
+                       },
+                       {
+                           "omschrijving":  "Overleg kernteam",
+                           "toelichting":  "Sparringsmoment: waar staan we, wat is nu nodig\nhoe verder gezien veranderde omstandigheden?",
+                           "datum":  "23-04-\u002726",
+                           "uren":  "Uitv. 1,5 uur",
+                           "bedrag":  172.5
+                       }
+                   ],
+        "totaal_sheet":  747.5,
+        "ovz":  {
+                    "nummer":  "202659",
+                    "datum_ovz":  "2026-05-18",
+                    "debiteurnr_ovz":  "DB01",
+                    "naam_ovz":  "Gabrie Mehenschool, bouwen aan een professionele cultuur",
+                    "bedrag_ovz":  747.5,
+                    "betaald_ovz":  false
+                }
+    }
+]

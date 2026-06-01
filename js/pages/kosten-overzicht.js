@@ -163,17 +163,17 @@ function renderKostenOverzichtPage() {
   return `
     <div style="display:flex;gap:10px;margin-bottom:14px;flex-wrap:wrap;align-items:center">
       <select onchange="setKostJaar(this.value)"
-        style="padding:9px 13px;border:2px solid var(--bg3);border-radius:var(--r);font-family:'Nunito',sans-serif;font-size:13.5px;font-weight:600;color:var(--navy);background:white;cursor:pointer;min-width:120px">
+        style="padding:9px 13px;border:2px solid var(--bg3);border-radius:var(--r);font-family:'Nunito',sans-serif;font-size:13.5px;font-weight:600;color:var(--navy);background:white;cursor:pointer;min-width:120px;width:auto;flex:0 0 auto">
         <option value="alle"${_kostJaar === 'alle' ? ' selected' : ''}>Alle jaren</option>
         ${allJaren.map(j => `<option value="${j}"${_kostJaar === j ? ' selected' : ''}>${j}</option>`).join('')}
       </select>
       <select onchange="setKostType(this.value)"
-        style="padding:9px 13px;border:2px solid var(--bg3);border-radius:var(--r);font-family:'Nunito',sans-serif;font-size:13.5px;font-weight:600;color:var(--navy);background:white;cursor:pointer;min-width:150px">
+        style="padding:9px 13px;border:2px solid var(--bg3);border-radius:var(--r);font-family:'Nunito',sans-serif;font-size:13.5px;font-weight:600;color:var(--navy);background:white;cursor:pointer;min-width:150px;width:auto;flex:0 0 auto">
         <option value="alle"${_kostType === 'alle' ? ' selected' : ''}>Alle types</option>
         ${typeOpts}
       </select>
       <select onchange="setKostVergelijk(this.value)"
-        style="padding:9px 13px;border:2px solid var(--bg3);border-radius:var(--r);font-family:'Nunito',sans-serif;font-size:13.5px;font-weight:600;color:var(--navy);background:white;cursor:pointer;min-width:170px">
+        style="padding:9px 13px;border:2px solid var(--bg3);border-radius:var(--r);font-family:'Nunito',sans-serif;font-size:13.5px;font-weight:600;color:var(--navy);background:white;cursor:pointer;min-width:170px;width:auto;flex:0 0 auto">
         <option value="geen"${_kostVergelijk === 'geen' ? ' selected' : ''}>Geen vergelijking</option>
         <option value="jaar"${_kostVergelijk === 'jaar' ? ' selected' : ''}>vs. vorig jaar</option>
       </select>

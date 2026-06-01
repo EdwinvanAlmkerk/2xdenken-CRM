@@ -190,5 +190,5 @@ Beide worden als `<script>` geladen in `index.html`; er is geen npm/build-step.
 - Actualiseer de datum onder "Laatste update".
 
 ## Laatste update
-- Datum: 2026-05-24
-- Wijziging: Complete kostenmodule (inkoopfacturen) toegevoegd: nieuwe migratie `20260524120000_kosten_module.sql` met tabellen `kosten_types` en `inkoopfacturen` (incl. recurring-mechanisme met self-FK en unique partial index), uitbreiding van `js/db.js` en `js/crud.js` met mappers/helpers en de idempotente generator `generateRecurringInkoop()`, twee nieuwe pagina's `js/pages/inkoopfacturen.js` (werkpagina met filters, KPI's, modal en CSV-export) en `js/pages/kosten-overzicht.js` (analyse met staafgrafiek, jaarvergelijking en Excel/PDF-export), nav-uitbreiding in `js/router.js`, een 6e quick-add FAB-knop "Nieuwe inkoopfactuur" plus extra `quickAdd('inkoop')`-case in `js/ui.js`, een vierde type-kaart "Kostentypes" in de Categorieën-tab van `js/pages/instellingen.js` met `openKostenTypeModal`, en uitbreiding van de Backup-tab met inkoopfacturen en kostentypes.
+- Datum: 2026-06-01
+- Wijziging: In `js/pages/kosten-overzicht.js` zijn de drie filter-selects in de bovenste filterrij expliciet ingesteld op `width:auto` en `flex:0 0 auto`. Hierdoor blijven de filters naast elkaar staan in plaats van onder elkaar te vallen.

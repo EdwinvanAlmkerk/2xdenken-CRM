@@ -1,0 +1,3 @@
+Mail account koppelen
+Import facturen 2026 als administratie is bijgewerkt in excel
+Factuurnummers door systeem laten bepalen na import.

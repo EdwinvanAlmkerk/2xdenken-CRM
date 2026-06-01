@@ -1,0 +1,42 @@
+Wat er moet gebeuren
+1. Database — owner-kolommen + RLS (groot, fundamenteel)
+Migratie: agenda krijgt owner_id uuid references auth.users(id). Backfill bestaande rijen naar jouw user-id.
+email_settings en outlook_settings: weg met id='main'. Vervangen door één rij per gebruiker (user_id als PK of unique).
+email_log, email_templates: ook owner_id toevoegen (anders zien jullie elkaars verstuurde mails / templates — moet je nog beslissen of templates gedeeld of privé zijn).
+RLS-policies aan op alle gebruiker-specifieke tabellen: using (owner_id = auth.uid()).
+Beslissen voor de "kerndata" (besturen/scholen/contacten/dossiers/facturen/trainingen): gedeeld (geen owner) of per gebruiker? Op basis van het CRM-doel ga ik ervan uit: gedeeld. Dan blijven die tabellen zoals ze zijn — alleen RLS aan met using (auth.role() = 'authenticated').
+2. Frontend data-laag
+js/db.js:204-205 — queries voor settings aanpassen: niet meer id=eq.main maar user_id=eq.{currentUser.id}.
+currentUser uitbreiden met id (Supabase user-uuid) — staat nu alleen name/email (js/auth.js:129).
+loadAllData() haalt agenda's van beide users op (niet alleen ingelogde) zodat de combineer-toggle direct werkt zonder nieuwe roundtrip. RLS moet dat dan toelaten — óf je staat alleen "eigen" toe en haalt de "andere" expliciet op via een view/policy die collega's leesbaar maakt.
+3. Agenda-UI: eigen vs. gecombineerd
+Toggle bovenaan agenda: [Mijn agenda] [Beide agenda's]. State opslaan in localStorage (zoals _agendaView nu).
+Render: per item kleur/badge tonen wiens agenda het is (jouw kleur vs. die van de andere user). Past in alle weergaven (dag/week/maand/lijst) — js/pages/agenda.js heeft één render-pad per view, dus relatief beheersbaar.
+Item aanmaken/bewerken: nieuwe items krijgen automatisch de ingelogde user als owner. Items van de andere user zijn read-only (of bewerkbaar — keuze).
+Outlook .ics-feed: per user een eigen feed-URL. De fetch-functie moet weten wélke user; nu pakt hij blind main.
+4. E-mail per gebruiker
+Instellingen-pagina: huidige IMAP/SMTP-velden draaien om naar "mijn e-mail" (per ingelogde user opslaan). js/crud.js:691,710.
+Edge functions fetch-emails, send-email, fetch-outlook-ics moeten:
+JWT van caller valideren → user_id uithalen
+settings ophalen op user_id, niet 'main'
+Dit is een niet-triviale wijziging in alle drie de functies (auth-context doorgeven via Authorization header, niet meer service-role-only).
+E-mail wachtwoord opslag: nu in email_pass plain in DB — bij multi-user wordt dit kritischer. Overweeg: pgcrypto encryptie, of laten zoals het is (RLS beschermt al tegen andere users) maar wel benoemen.
+5. Instellingen-UI
+"Tweede gebruiker uitnodigen" knop voor de admin (jij), die een nieuwe Supabase auth-user aanmaakt met initieel wachtwoord.
+Alternatief: jij maakt de user via Supabase Studio aan, dat bespaart een uitnodigingsflow.
+Inschatting (uren, ruwe range)
+Onderdeel	Uren
+DB migratie + RLS-policies + backfill bestaande data	4–6
+currentUser.id integreren, settings-queries omzetten	2
+Edge functions auth-aware maken (3 functies)	4–6
+Agenda-toggle "mijn / beide" + visuele scheiding owner	4–6
+E-mail per user (UI labels, opslag, fetch met user-context)	3–4
+User-management UI (uitnodigen of handmatig flow documenteren)	1–3
+Testen met 2 accounts, edge cases (sessieverlopen, RLS-fouten)	3–4
+Totaal	~21–31 uur
+Open beslissingen die de scope beïnvloeden
+Wat is gedeeld, wat is privé? Mijn aanname: scholen/besturen/contacten/dossiers/trainingen/facturen = gedeeld. Agenda + e-mail = privé. Templates? E-mail log? Dossiers? — graag bevestigen.
+Mag user A items in agenda van user B aanmaken/bewerken of alleen lezen?
+Hoeveel users in totaal? Twee vast, of wordt het meer? Schaalt de UI-toggle ("beide") nog of moet het een multi-select worden?
+Wachtwoord-opslag e-mail: laten zoals nu (plain + RLS) of encrypten?
+Zeg maar welke kant je op wilt op die vier vragen, dan scherp ik de scope aan en kan ik er een implementatieplan van maken.

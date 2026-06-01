@@ -1,0 +1,59 @@
+﻿202601|13-02-'26|DB15|Het Anker, 3e factuur coachtraject K.B.| €     240,00 |ja
+202602|13-02-'26|DB15|Het Anker, 1e factuur coachtraject gr. 5| €     780,00 |ja
+202603|13-02-'26|DB10|PCB De Bolster, 4e factuur coachtraject L.R| €     287,50 |ja
+202604|13-02-'26|DB43|PCBO Amersfoort, 2e factuur coachtraject M.S.| €  1.440,00 |ja
+202605|13-02-'26|DB25|KWS, 5e factuur coachtraject L.S.| €     230,00 |ja
+202606|13-02-'26|DB25|KWS, 3e factuur coachtraject T.L.| €     680,00 |ja
+202607|13-02-'26|DB25|KWS, 1e factuur coachtraject G.t.R.| €     480,00 |ja
+202608|13-02-'26|DB18|Prins Willem-Alexanderschool, 2e factuur coachtraject T.v.P.| €     240,00 |ja
+202609|13-02-'26|DB06|Berkenschool, 5e factuur coachtraject H.H.| €     600,00 |ja
+202610|13-02-'26|DB24|Parkschool, 5e factuur coachtraject D.K.| €     460,00 |ja
+202611|13-02-'26|DB13|PCB De Vuurvogel, 2e factuur coachtraject S.M.| €     480,00 |ja
+202612|13-02-'26|DB13|PCB De Vuurvogel, 2e factuur coachtraject R.Z.| €  1.440,00 |ja
+202613|13-02-'26|DB14|PCB De Windroos, 1e factuur coachtraject E.S.| €     720,00 |ja
+202614|13-02-'26|DB14|PCB De Windroos, 1e factuur coachtraject N.v.S.| €     240,00 |ja
+202615|13-02-'26|DB43| PCBO Amersfoort, De Zonnewijzer, begeleiding kernteam| €     960,00 |ja
+202616|13-02-'26|DB13|De Wijde Wereld, 3e factuur coachtraject D.v.D.| €     640,00 |ja
+202617|13-02-'26|DB42|De Gondelier, 2e factuur coachtraject leerkrachten gr. 5| €  1.500,00 |ja
+202618|13-02-'26|DB31|De Uilenburcht,2e factuur coachtraject leerkracht L.S.| €  1.279,54 |ja
+202619|13-02-'26|DB45|Vrije school Zeist,1e factuur coachtraject leerkracht E.v.d.S.| €     625,20 |ja
+202620|13-02-'26|DB38|Atlas,3e factuur ondersteuningstraject basisvaardigheden| €  1.080,00 |ja
+202621|13-02-'26|DB37|De Loysderhoek, 3e factuur coachtraject V.v.W.| €  1.200,00 |ja
+202622|13-02-'26|DB27|El Amien 1 en 2, 23e factuur begeleiding startende leerkrachten| €     720,00 |ja
+202623|13-02-'26|DB40|De Lijster, 4e factuur coachtraject I.M.| €  1.375,65 |ja
+202624|13-02-'26|DB01|Gabrie Mehenschool, teamondersteuning samenwerking, communicatie en verbinding. | €     632,50 |ja
+202625|13-02-'26|DB01|CRKBO, Auditkosten continuering Instelling | €     335,78 |ja
+202626|21-04-'26|DB01|IKC, De Doornick| €     941,00 |ja
+202627|21-04-'26|DB15|Het Anker, 7e factuur coachtraject M.P.| €  1.150,00 |
+202628|21-04-'26|DB15|Het Anker, 2e factuur coachtraject gr. 5| €  1.920,00 |
+202629|21-04-'26|DB10|PCB De Bolster, 4e factuur coachtraject L.R| €     575,00 |
+202630|21-04-'26|DB43|PCBO Amersfoort, 3e factuur coachtraject M.S.| €  1.260,00 |
+202631|21-04-'26|DB43|PCBO Amersfoort, De Zonnewijzer, begeleiding (kern)team| €  2.940,00 |
+202632|21-04-'26|DB25|KWS, 4e factuur coachtraject T.L.| €  1.140,00 |ja
+202633|21-04-'26|DB25|KWS, 2e factuur coachtraject G.t.R.| €     480,00 |ja
+202634|21-04-'26|DB18|Prins Willem-Alexanderschool, 1e factuur coachtraject M.v.d.B.| €     720,00 |
+202635|21-04-'26|DB06|Berkenschool, 5e factuur coachtraject H.H.| €     600,00 |
+202636|21-04-'26|DB06|Berkenschool, 3e factuur coachtraject J.v.L.| €     240,00 |
+202637|21-04-'26|DB24|Parkschool, 6e factuur coachtraject D.K.| €     460,00 |ja
+202638|21-04-'26|DB13|PCB De Vuurvogel, 4e factuur coachtraject S.M.| €     600,00 |
+202639|21-04-'26|DB13|PCB De Vuurvogel, 4e factuur coachtraject R.Z.| €  1.200,00 |
+202640|21-04-'26|DB14|PCB De Windroos, 2e factuur coachtraject E.S.| €     720,00 |
+202641|21-04-'26|DB14|PCB De Windroos, 2e factuur coachtraject N.v.S.| €     720,00 |
+202642|21-04-'26|DB14|PCB De Windroos, 1e factuur coachtraject J.V| €     720,00 |
+202643|21-04-'26|DB05|GMS, 1e factuur coachtraject T.K.| €     960,00 |
+202644|21-04-'26|DB05|GMS, 1e factuur coachtraject H.I.| €     720,00 |
+202645|21-04-'26|DB39|DOk12, 2e factuur begeleiding gr. 7| €     300,00 |ja
+202646|21-04-'26|DB39|DOk12, 1e factuur begeleiding gr. 3| €  1.080,00 |ja
+202647|21-04-'26|DB31|De Uilenburcht, 3e factuur coachtraject leerkracht L.S.| €  1.579,52 |ja
+202648|09-05-'26|DB38|Atlas,1e factuur coachtraject M.d.W.| €     600,00 |
+202649|09-05-'26|DB38|Atlas,1e factuur coachtraject J.K.| €     840,00 |
+202650|09-05-'26|DB44|t Startblok, ondersteuning klasbezoeken| €  1.420,00 |
+202651|21-04-'26|DB13|De Wijde Wereld, 3e factuur coachtraject D.v.D.| €     300,00 |
+202652|21-04-'26|DB42|De Gondelier, 3e factuur coachtraject leerkrachten gr. 5| €  1.020,00 |
+202653|21-04-'26|DB40|De Lijster, 5e factuur coachtraject I.M.| €     988,20 |
+202654|18-05-'26|DB45|De Veldrakker, 1e factuur coachtraject K.M.| €     649,00 |
+202655|21-04-'26|DB01|Gabrie Mehenschool, bouwen aan een professionele cultuur| €  1.952,50 |ja
+202656|21-04-'26|DB15|Het Anker, 4e factuur coachtraject K.B.| €     240,00 |
+202657|09-05-'26|DB38|Atlas, 4e factuur ondersteuningstraject basisvaardigheden| €     360,00 |
+202658|18-05-'26|DB01|IKC Het Park, teamondersteuning| €     805,00 |
+202659|18-05-'26|DB01|Gabrie Mehenschool, bouwen aan een professionele cultuur| €     747,50 |

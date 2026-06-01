@@ -4,7 +4,7 @@
 
 let _omzetJaar     = prefGet('omzet.jaar', String(new Date().getFullYear()));
 let _omzetStatus   = prefGet('omzet.status', 'gefactureerd'); // 'gefactureerd' = verzonden+betaald, 'betaald', 'alle'
-let _omzetVergelijk = prefGet('omzet.vergelijk', 'jaar');
+let _omzetVergelijk = prefGet('omzet.vergelijk', 'geen');
 if (_omzetVergelijk === 'vorig-jaar') _omzetVergelijk = 'jaar';
 let _omzetVergelijkJaar = prefGet('omzet.vergelijkJaar', String(new Date().getFullYear() - 1));
 let _omzetPeildatumMd = prefGet('omzet.peildatumMd', `${String(new Date().getMonth() + 1).padStart(2, '0')}-${String(new Date().getDate()).padStart(2, '0')}`);
