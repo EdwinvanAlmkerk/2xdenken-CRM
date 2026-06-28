@@ -15,6 +15,7 @@ const PAGE_LABELS = {
   facturen: 'Facturen', omzet: 'Omzet overzicht',
   inkoopfacturen: 'Inkoopfacturen', 'kosten-overzicht': 'Kosten overzicht',
   trainingen: 'Trainingen & Werkvormen', 'training-detail': 'Training',
+  'training-analyse': 'Analyse trainingen & werkvormen',
   instellingen: 'Instellingen'
 };
 
@@ -29,6 +30,7 @@ const NAV_ITEMS = [
   { id: 'contacten',    label: 'Contacten',              icon: 'contact',  also: ['contact-detail'] },
   { section: 'Programma' },
   { id: 'trainingen',   label: 'Trainingen & Werkvormen',  icon: 'training', also: ['training-detail'] },
+  { id: 'training-analyse', label: 'Analyse',              icon: 'board' },
   { section: 'Financieel' },
   { id: 'facturen',         label: 'Facturen',           icon: 'invoice' },
   { id: 'inkoopfacturen',   label: 'Inkoopfacturen',     icon: 'invoice' },
@@ -102,6 +104,7 @@ function renderContent() {
   else if (page === 'kosten-overzicht') c.innerHTML = renderKostenOverzichtPage();
   else if (page === 'trainingen')      c.innerHTML = renderTrainingenPage();
   else if (page === 'training-detail') c.innerHTML = renderTrainingDetail(pageParam);
+  else if (page === 'training-analyse') c.innerHTML = renderTrainingAnalysePage();
   else if (page === 'instellingen')    c.innerHTML = renderInstellingen();
 }
 
