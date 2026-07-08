@@ -61,7 +61,7 @@ function renderBesturen(search = '') {
     </div>
     <div class="card">
       <div class="table-wrap">
-        <table>
+        <table data-resize-key="besturen">
           <thead><tr>${th('naam', 'Naam bestuur')}${th('debiteur', 'Debiteurnr')}${th('scholen', 'Scholen')}<th>Website</th><th></th></tr></thead>
           <tbody>
             ${filtered.length === 0

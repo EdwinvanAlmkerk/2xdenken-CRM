@@ -97,6 +97,85 @@ function smartRender(renderFn) {
       }
     }
   }
+  enhanceResizableTables();
+}
+
+// ── Versleepbare kolombreedtes ──────────────────────────────────
+// Markeer een tabel met data-resize-key="<naam>" om de kolommen
+// horizontaal versleepbaar te maken. De gekozen breedtes worden per
+// kolom bewaard in localStorage (via prefGet/prefSet), zodat ze na
+// een re-render en na herladen behouden blijven.
+function loadColWidths(key) {
+  try { const raw = prefGet('colw.' + key, ''); return raw ? JSON.parse(raw) : null; }
+  catch (e) { return null; }
+}
+function saveColWidths(key, ths) {
+  const arr = ths.map(th => Math.round(th.getBoundingClientRect().width));
+  prefSet('colw.' + key, JSON.stringify(arr));
+}
+
+function enhanceResizableTables() {
+  document.querySelectorAll('table[data-resize-key]').forEach(table => {
+    if (table.__resizableInit) return;
+    const key = table.getAttribute('data-resize-key');
+    const head = table.tHead && table.tHead.rows[0];
+    if (!head) return;
+    const ths = Array.from(head.cells);
+    if (!ths.length) return;
+    table.__resizableInit = true;
+
+    // Breedtes bepalen: opgeslagen keuze, anders de huidige (auto) breedte.
+    // Meten moet vóór we naar fixed-layout omschakelen.
+    const stored = loadColWidths(key);
+    const widths = ths.map((th, i) =>
+      (stored && stored[i] > 0) ? stored[i] : Math.round(th.getBoundingClientRect().width));
+
+    // Eerste keer (geen opgeslagen keuze): lege ruimte rechts naar de
+    // eerste kolom, zodat de namen meteen de beschikbare breedte vullen.
+    if (!stored) {
+      const avail = table.parentElement ? table.parentElement.clientWidth : 0;
+      const sum = widths.reduce((a, b) => a + b, 0);
+      if (avail > sum) widths[0] += (avail - sum);
+    }
+
+    table.classList.add('resizable');
+    table.style.tableLayout = 'fixed';
+    table.style.width = widths.reduce((a, b) => a + b, 0) + 'px';
+    ths.forEach((th, i) => { th.style.width = widths[i] + 'px'; });
+
+    // Sleepgreep op de rechterrand van elke kolom (behalve de laatste).
+    ths.forEach((th, i) => {
+      if (i === ths.length - 1) return;
+      const handle = document.createElement('span');
+      handle.className = 'col-resizer';
+      handle.addEventListener('click', e => { e.stopPropagation(); });
+      handle.addEventListener('mousedown', e => {
+        e.preventDefault();
+        e.stopPropagation();
+        const startX = e.clientX;
+        const startW = th.getBoundingClientRect().width;
+        handle.classList.add('active');
+        document.body.style.cursor = 'col-resize';
+        document.body.style.userSelect = 'none';
+        const onMove = ev => {
+          const w = Math.max(50, startW + (ev.clientX - startX));
+          th.style.width = w + 'px';
+          table.style.width = ths.reduce((sum, c) => sum + c.getBoundingClientRect().width, 0) + 'px';
+        };
+        const onUp = () => {
+          document.removeEventListener('mousemove', onMove);
+          document.removeEventListener('mouseup', onUp);
+          handle.classList.remove('active');
+          document.body.style.cursor = '';
+          document.body.style.userSelect = '';
+          saveColWidths(key, ths);
+        };
+        document.addEventListener('mousemove', onMove);
+        document.addEventListener('mouseup', onUp);
+      });
+      th.appendChild(handle);
+    });
+  });
 }
 
 // ── Paginatie helper ────────────────────────────────────────────

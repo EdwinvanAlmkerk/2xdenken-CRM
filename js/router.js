@@ -106,6 +106,7 @@ function renderContent() {
   else if (page === 'training-detail') c.innerHTML = renderTrainingDetail(pageParam);
   else if (page === 'training-analyse') c.innerHTML = renderTrainingAnalysePage();
   else if (page === 'instellingen')    c.innerHTML = renderInstellingen();
+  enhanceResizableTables();
 }
 
 function setSchoolTab(id, tab)    { schoolTab   = tab; renderContent(); }

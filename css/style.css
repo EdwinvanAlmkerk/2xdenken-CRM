@@ -260,6 +260,17 @@ td {
   vertical-align: middle; color: var(--navy3);
 }
 tr:last-child td { border-bottom: none; }
+
+/* Versleepbare kolommen (tabellen met data-resize-key) */
+table.resizable { table-layout: fixed; }
+table.resizable th { position: relative; overflow: hidden; text-overflow: ellipsis; }
+table.resizable td { overflow: hidden; text-overflow: ellipsis; white-space: nowrap; }
+.col-resizer {
+  position: absolute; top: 0; right: 0; width: 9px; height: 100%;
+  cursor: col-resize; user-select: none; z-index: 3;
+  touch-action: none;
+}
+.col-resizer:hover, .col-resizer.active { background: rgba(26,184,184,0.35); }
 .clickable-row { cursor: pointer; transition: background-color .12s ease; }
 .clickable-row:hover td { background: rgba(26,184,184,0.13); }
 .clickable-row:hover td:first-child { box-shadow: inset 3px 0 0 var(--accent); }
