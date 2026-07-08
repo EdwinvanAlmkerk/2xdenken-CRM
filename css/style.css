@@ -270,7 +270,18 @@ table.resizable td { overflow: hidden; text-overflow: ellipsis; white-space: now
   cursor: col-resize; user-select: none; z-index: 3;
   touch-action: none;
 }
+/* Altijd zichtbaar greepje zodat duidelijk is dat de kolom versleepbaar is */
+.col-resizer::before {
+  content: ''; position: absolute; top: 25%; bottom: 25%; right: 3px;
+  width: 2px; border-radius: 2px;
+  background: rgba(30,45,74,0.22);
+  transition: background .12s ease;
+}
 .col-resizer:hover, .col-resizer.active { background: rgba(26,184,184,0.35); }
+.col-resizer:hover::before, .col-resizer.active::before {
+  top: 0; bottom: 0; width: 2px; right: 3px;
+  background: var(--accent);
+}
 .clickable-row { cursor: pointer; transition: background-color .12s ease; }
 .clickable-row:hover td { background: rgba(26,184,184,0.13); }
 .clickable-row:hover td:first-child { box-shadow: inset 3px 0 0 var(--accent); }
