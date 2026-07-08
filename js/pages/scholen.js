@@ -61,7 +61,7 @@ function renderScholen(search = '') {
     </div>
     <div class="card">
       <div class="table-wrap">
-        <table>
+        <table data-resize-key="scholen">
           <thead><tr>${th('naam', 'School')}${th('debiteurnr', 'Debiteurnr')}${th('bestuur', 'Bestuur')}${th('plaats', 'Plaats')}${th('contacten', 'Contacten')}<th></th></tr></thead>
           <tbody>
             ${filtered.length === 0

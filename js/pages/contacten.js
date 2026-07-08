@@ -59,7 +59,7 @@ function renderContacten(search = '') {
     </div>
     <div class="card">
       <div class="table-wrap">
-        <table>
+        <table data-resize-key="contacten">
           <thead><tr>${th('naam', 'Naam')}${th('functie', 'Functie')}${th('type', 'Type')}${th('school', 'School')}<th>E-mail</th><th>Telefoon mobiel</th><th>Telefoon werk</th><th style="width:80px"></th></tr></thead>
           <tbody>
             ${filtered.length === 0
