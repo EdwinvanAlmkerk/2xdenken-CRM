@@ -516,6 +516,9 @@ function renderEmailPage() {
           <button class="btn btn-secondary btn-sm" style="width:100%;justify-content:center" onclick="openEmailOptionsModal()">
             ${svgIcon('settings', 13)} Opties
           </button>
+          <button class="btn btn-secondary btn-sm" style="width:100%;justify-content:center" onclick="openBackfillModal()" title="Doorloop alle mappen vanaf een datum en koppel mail automatisch aan contactpersonen">
+            ${svgIcon('contact', 13)} Historie koppelen
+          </button>
         </div>
 
         <!-- Mappenstructuur -->
@@ -748,6 +751,137 @@ function renderImapExtraFolders() {
 }
 
 // ── E-mail detail ────────────────────────────────────────────────
+// ── Historie koppelen: alle mappen sinds een datum → contactdossiers ─────
+// Volledig handmatig (knop), self-contained en async (yields), dus veilig:
+// raakt de opstart-/renderpaden niet.
+function openBackfillModal() {
+  if (!DB.emailSettings?.imapHost) return showToast('Configureer eerst je e-mailserver in Instellingen', 'error');
+  const jaar = new Date().getFullYear();
+  const vandaag = new Date().toISOString().slice(0, 10);
+  showModal('E-mailhistorie koppelen',
+    `<p style="font-size:13px;color:var(--navy3);margin-bottom:14px;line-height:1.5">Doorloopt <strong>alle mailmappen</strong> (inbox, verzonden, archief, …) vanaf de gekozen datum en koppelt berichten automatisch aan contactpersonen: ontvangen mail op de afzender, verzonden mail op de ontvanger. Al gekoppelde berichten worden overgeslagen. Bij een lange periode kan dit even duren.</p>
+     <div class="form-group">
+       <label>Vanaf datum</label>
+       <input type="date" id="f-backfill-datum" value="${jaar}-01-01" max="${vandaag}"/>
+     </div>
+     <div style="display:flex;gap:8px;flex-wrap:wrap;margin-top:-6px">
+       <button type="button" class="btn btn-secondary btn-sm" onclick="document.getElementById('f-backfill-datum').value='${jaar}-01-01'">1 jan ${jaar}</button>
+       <button type="button" class="btn btn-secondary btn-sm" onclick="document.getElementById('f-backfill-datum').value='2025-01-01'">1 jan 2025</button>
+       <button type="button" class="btn btn-secondary btn-sm" onclick="document.getElementById('f-backfill-datum').value='2024-01-01'">1 jan 2024</button>
+     </div>`,
+    `<button class="btn btn-secondary" onclick="closeModal()">Annuleren</button>
+     <button class="btn btn-primary" onclick="runBackfillAllFolders()">Koppelen starten</button>`);
+}
+
+async function runBackfillAllFolders() {
+  const datum = document.getElementById('f-backfill-datum')?.value;
+  if (!datum) return alert('Kies een datum');
+  closeModal();
+  showLoading();
+  try {
+    const res = await fetch(`${SUPA_URL}/functions/v1/fetch-emails?action=backfill&since=${encodeURIComponent(datum)}`, {
+      headers: { 'apikey': SUPA_KEY, 'Authorization': `Bearer ${currentSession?.access_token || SUPA_KEY}` },
+    });
+    const data = await res.json();
+    if (!res.ok || data.error) throw new Error(data.error || `HTTP ${res.status}`);
+    const r = await _bulkCoupleMails(data.messages || []);
+    let m = `${r.logged} e-mail${r.logged === 1 ? '' : 's'} gekoppeld`;
+    if (r.skippedExisting) m += ` · ${r.skippedExisting} al gekoppeld`;
+    if (r.skippedNoMatch) m += ` · ${r.skippedNoMatch} zonder contactmatch`;
+    if (data.capped) m += ' · (limiet bereikt — kies een latere datum voor de rest)';
+    showToast(m, r.logged > 0 ? 'success' : 'info');
+    renderContent();
+  } catch (e) { toastError(e); } finally { hideLoading(); }
+}
+
+// Matcht en logt een reeks berichten (alle mappen) in bulk aan contacten.
+function _normNaam(s) {
+  return String(s || '').normalize('NFD').replace(/[̀-ͯ]/g, '').toLowerCase().replace(/\s+/g, ' ').trim();
+}
+async function _bulkCoupleMails(messages) {
+  // Lokale naam-index (voor- + achternaam, uniek) — géén globale index, dus
+  // de render-/opstartpaden blijven onaangeroerd.
+  const nameMap = new Map();
+  for (const c of DB.contacten || []) {
+    const k = _normNaam(c.naam);
+    if (!k || !k.includes(' ')) continue;
+    const l = nameMap.get(k); if (l) l.push(c); else nameMap.set(k, [c]);
+  }
+  const existingIds = new Set((DB.dossiers || []).map(d => d.id));
+  const folderKey = f => String(f || '').replace(/[^a-zA-Z0-9]/g, '_').slice(0, 40);
+
+  let logged = 0, skippedNoMatch = 0, skippedExisting = 0;
+  const rows = [], mem = [], learn = new Map();
+
+  for (const msg of messages) {
+    const isSent = !!msg.isSent;
+    const parties = isSent ? (msg.to || []) : (msg.from ? [msg.from] : []);
+    if (!parties.length || !msg.uid) { skippedNoMatch++; continue; }
+
+    let contact = null, matchedEmail = '';
+    for (const p of parties) { if (p.email) { const c = getContactByEmail(p.email); if (c) { contact = c; matchedEmail = p.email; break; } } }
+    if (!contact) {
+      for (const p of parties) {
+        const k = _normNaam(p.name);
+        if (k && k.includes(' ')) { const l = nameMap.get(k); if (l && l.length === 1) { contact = l[0]; matchedEmail = p.email || ''; break; } }
+      }
+    }
+    if (!contact) { skippedNoMatch++; continue; }
+
+    const fk = folderKey(msg.folder);
+    const dosId = isSent
+      ? `sent-${fk}-${msg.uid}`
+      : (msg.folder === 'INBOX' ? `inbox-${msg.uid}` : `inbox-${fk}-${msg.uid}`);
+    if (existingIds.has(dosId)) { skippedExisting++; continue; }
+    existingIds.add(dosId);
+
+    let datum;
+    try { const d = msg.date ? new Date(msg.date) : new Date(); datum = isNaN(d.getTime()) ? new Date().toISOString() : d.toISOString(); }
+    catch { datum = new Date().toISOString(); }
+    const subject = msg.subject || '(geen onderwerp)';
+    const school = contact.schoolId ? getSchool(contact.schoolId) : null;
+    const bronNaam = `${contact.naam}${school?.naam ? ' — ' + school.naam : ''}`;
+    const geenBody = '(kopgegevens gekoppeld; open het bericht in je mailprogramma voor de volledige inhoud)';
+
+    let onderwerp, tekst, type;
+    if (isSent) {
+      const toDisp = (msg.to || []).map(t => t.name ? `${t.name} <${t.email}>` : t.email).join(', ');
+      onderwerp = `E-mail verzonden — ${subject}`;
+      tekst = `Aan: ${toDisp}\nOnderwerp: ${subject}\n\n${geenBody}`;
+      type = 'email-verzonden';
+    } else {
+      const fromDisp = msg.from ? (msg.from.name ? `${msg.from.name} <${msg.from.email}>` : msg.from.email) : '';
+      onderwerp = `E-mail ontvangen — ${subject}`;
+      tekst = `Van: ${fromDisp}\nOnderwerp: ${subject}\n\n${msg.folder === 'INBOX' ? _INBOX_BODY_PLACEHOLDER : geenBody}`;
+      type = 'notitie';
+    }
+
+    rows.push({ id: dosId, school_id: contact.schoolId || null, contact_id: contact.id, datum, type, onderwerp, tekst, bron_naam: bronNaam, bestanden: [] });
+    mem.push({ id: dosId, schoolId: contact.schoolId || '', contactId: contact.id, datum, type, onderwerp, tekst, bronNaam, bestanden: [], bijlagen: [] });
+
+    if (matchedEmail && !contact.email && !learn.has(contact.id)) {
+      const local = matchedEmail.split('@')[0].normalize('NFD').replace(/[̀-ͯ]/g, '').toLowerCase();
+      const delen = _normNaam(contact.naam).split(' ').filter(p => p.length >= 3);
+      if (delen.some(p => local.includes(p))) learn.set(contact.id, matchedEmail);
+    }
+    logged++;
+  }
+
+  for (let i = 0; i < rows.length; i += 100) {
+    await supa('/rest/v1/dossiers', { method: 'POST', headers: { Prefer: 'return=minimal' }, body: JSON.stringify(rows.slice(i, i + 100)) });
+  }
+  for (const it of mem) DB.dossiers.unshift(it);
+
+  for (const [cid, email] of learn) {
+    try {
+      await supa(`/rest/v1/contacten?id=eq.${cid}`, { method: 'PATCH', body: JSON.stringify({ email }) });
+      const c = DB.contacten.find(x => x.id === cid); if (c) c.email = email;
+    } catch (e) { console.warn('E-mailadres leren mislukt:', e); }
+  }
+
+  return { logged, skippedNoMatch, skippedExisting };
+}
+
 function renderEmailDetail(e) {
   const isInbox = e._isInbox;
   const contact = getContact(e.contactId);

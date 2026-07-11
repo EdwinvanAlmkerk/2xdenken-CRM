@@ -458,12 +458,115 @@ class ImapClient {
     return literal;
   }
 
+  // UID's met interne datum >= sinds-datum in de huidige map (IMAP SEARCH SINCE).
+  async searchSince(imapDate: string): Promise<number[]> {
+    const res = await this.command(`UID SEARCH SINCE ${imapDate}`);
+    const uids: number[] = [];
+    for (const line of res) {
+      const m = line.match(/^\*\s+SEARCH\b(.*)$/i);
+      if (m && m[1].trim()) {
+        for (const id of m[1].trim().split(/\s+/)) {
+          const n = parseInt(id);
+          if (!isNaN(n)) uids.push(n);
+        }
+      }
+    }
+    return uids;
+  }
+
+  // Haal ENVELOPE (afzender + ontvangers + onderwerp + datum) op voor een set
+  // UID's, in blokken zodat de commandoregel niet te lang wordt.
+  async fetchEnvelopesByUids(uids: number[]): Promise<any[]> {
+    const out: any[] = [];
+    const CHUNK = 300;
+    for (let i = 0; i < uids.length; i += CHUNK) {
+      const slice = uids.slice(i, i + CHUNK);
+      const res = await this.command(`UID FETCH ${slice.join(",")} (UID FLAGS ENVELOPE)`);
+      let cur: any = null;
+      for (const line of res) {
+        const fetchMatch = line.match(/^\*\s+(\d+)\s+FETCH\s+\(/);
+        if (fetchMatch) { if (cur) out.push(cur); cur = { seq: parseInt(fetchMatch[1]) }; }
+        if (!cur) continue;
+        const uidMatch = line.match(/UID\s+(\d+)/);
+        if (uidMatch) cur.uid = parseInt(uidMatch[1]);
+        const envIdx = line.indexOf("ENVELOPE (");
+        if (envIdx !== -1) {
+          const env = parseEnvelope(line, envIdx + "ENVELOPE ".length);
+          if (env) { cur.from = env.from; cur.to = env.to; cur.subject = env.subject; cur.date = env.date; }
+        }
+      }
+      if (cur) out.push(cur);
+    }
+    return out;
+  }
+
   async logout(): Promise<void> {
     try {
       await this.command("LOGOUT");
       this.conn.close();
     } catch { /* ignore */ }
   }
+}
+
+// Parse een IMAP ENVELOPE S-expressie naar { date, subject, from, to }.
+// `s` is de FETCH-regel; startIdx wijst naar de '(' direct na "ENVELOPE ".
+function parseEnvelope(s: string, startIdx: number): { date: string; subject: string; from: { name: string; email: string } | null; to: { name: string; email: string }[] } | null {
+  let i = startIdx;
+  const skipWs = () => { while (i < s.length && (s[i] === " " || s[i] === "\t")) i++; };
+  function parseValue(): any {
+    skipWs();
+    if (s[i] === '"') {
+      i++; let out = "";
+      while (i < s.length && s[i] !== '"') {
+        if (s[i] === "\\" && i + 1 < s.length) { out += s[i + 1]; i += 2; }
+        else { out += s[i]; i++; }
+      }
+      i++;
+      return { type: "str", value: out };
+    }
+    if (s[i] === "(") {
+      i++; const items: any[] = [];
+      skipWs();
+      while (i < s.length && s[i] !== ")") { items.push(parseValue()); skipWs(); }
+      i++;
+      return { type: "list", value: items };
+    }
+    const start = i;
+    while (i < s.length && s[i] !== " " && s[i] !== "(" && s[i] !== ")") i++;
+    const atom = s.slice(start, i);
+    return { type: atom === "NIL" ? "nil" : "atom", value: atom };
+  }
+  skipWs();
+  const top = parseValue();
+  if (!top || top.type !== "list") return null;
+  const f = top.value;
+  const decodeAddrList = (node: any) => {
+    if (!node || node.type !== "list") return [];
+    return node.value.map((a: any) => {
+      if (!a || a.type !== "list") return null;
+      const name = a.value[0], mailbox = a.value[2], host = a.value[3];
+      const nm = name && name.type === "str" ? decodeImapString(name.value) : "";
+      const mb = mailbox && mailbox.type === "str" ? mailbox.value : "";
+      const hs = host && host.type === "str" ? host.value : "";
+      const email = (mb && hs) ? `${mb}@${hs}` : "";
+      return email ? { name: nm, email } : null;
+    }).filter(Boolean);
+  };
+  const subject = f[1] && f[1].type === "str" ? decodeImapString(f[1].value) : "";
+  const date = f[0] && f[0].type === "str" ? f[0].value : "";
+  const from = decodeAddrList(f[2]);
+  const to = decodeAddrList(f[5]);
+  return { date, subject, from: from[0] || null, to };
+}
+
+// "YYYY-MM-DD" → IMAP-datum "DD-Mon-YYYY" (bv. 01-Jan-2025). null bij ongeldig.
+function toImapDate(iso: string): string | null {
+  const m = /^(\d{4})-(\d{2})-(\d{2})$/.exec(iso || "");
+  if (!m) return null;
+  const months = ["Jan", "Feb", "Mar", "Apr", "May", "Jun", "Jul", "Aug", "Sep", "Oct", "Nov", "Dec"];
+  const y = parseInt(m[1]), mo = parseInt(m[2]), d = parseInt(m[3]);
+  if (mo < 1 || mo > 12 || d < 1 || d > 31) return null;
+  return `${String(d).padStart(2, "0")}-${months[mo - 1]}-${y}`;
 }
 
 // ═══════════════════════════════════════════════════════════════
@@ -507,6 +610,62 @@ serve(async (req) => {
       const folders = await client.listFolders();
       await client.logout();
       return new Response(JSON.stringify({ folders }), {
+        headers: { ...corsHeaders, "Content-Type": "application/json" },
+      });
+    }
+
+    // ── Backfill: alle mappen doorlopen sinds een datum (historisch koppelen) ──
+    if (action === "backfill") {
+      const since = url.searchParams.get("since") || "";
+      const imapDate = toImapDate(since);
+      if (!imapDate) {
+        await client.logout();
+        return new Response(JSON.stringify({ error: "Ongeldige datum (verwacht YYYY-MM-DD)" }), {
+          status: 400, headers: { ...corsHeaders, "Content-Type": "application/json" },
+        });
+      }
+      const allFolders = await client.listFolders();
+      const scanFolders = allFolders.filter(f => {
+        const fl = (f.flags || []).map(x => x.toLowerCase());
+        if (fl.includes("\\noselect") || fl.includes("\\nonexistent")) return false;
+        if (fl.includes("\\trash") || fl.includes("\\junk")) return false;
+        const nm = f.name.toLowerCase();
+        if (/trash|prullenbak|spam|junk|deleted|ongewenst/.test(nm)) return false;
+        return true;
+      });
+      const MAX_TOTAL = 2000;
+      const messages: any[] = [];
+      const scanned: string[] = [];
+      let capped = false;
+      for (const folder of scanFolders) {
+        if (messages.length >= MAX_TOTAL) { capped = true; break; }
+        let total = 0;
+        try { total = await client.select(folder.name); } catch { continue; }
+        scanned.push(folder.name);
+        if (!total) continue;
+        let uids: number[] = [];
+        try { uids = await client.searchSince(imapDate); } catch { continue; }
+        uids.sort((a, b) => a - b);
+        const room = MAX_TOTAL - messages.length;
+        if (uids.length > room) { uids = uids.slice(uids.length - room); capped = true; }
+        const flags = (folder.flags || []).map(x => x.toLowerCase());
+        const isSent = flags.includes("\\sent") || /sent|verzonden/i.test(folder.name);
+        let envs: any[] = [];
+        try { envs = await client.fetchEnvelopesByUids(uids); } catch { continue; }
+        for (const m of envs) {
+          messages.push({
+            uid: m.uid || m.seq,
+            folder: folder.name,
+            isSent,
+            from: m.from || null,
+            to: m.to || [],
+            subject: m.subject || "",
+            date: m.date || "",
+          });
+        }
+      }
+      await client.logout();
+      return new Response(JSON.stringify({ messages, total: messages.length, capped, folders: scanned }), {
         headers: { ...corsHeaders, "Content-Type": "application/json" },
       });
     }
