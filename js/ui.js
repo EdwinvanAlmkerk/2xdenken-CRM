@@ -267,6 +267,7 @@ function closeQuickAdd() { toggleQuickAdd(false); }
 function quickAdd(action) {
   closeQuickAdd();
   switch (action) {
+    case 'taak':     if (typeof openTaakModal === 'function')    openTaakModal();          break;
     case 'agenda':   if (typeof openAgendaModal === 'function')  openAgendaModal();        break;
     case 'factuur':  if (typeof openNieuweFactuurModal === 'function') openNieuweFactuurModal();
                      else if (typeof openFactuurModal === 'function') openFactuurModal(''); break;
