@@ -792,28 +792,38 @@ async function runBackfillAllFolders() {
   if (!datum) return alert('Kies een datum');
   closeModal();
   showLoading();
+  let phase = 'start';
+  const sess = () => `[sess acc=${!!currentSession?.access_token} ref=${!!currentSession?.refresh_token}]`;
   try {
+    phase = `edge-fetch ${sess()}`;
     const res = await _edgeFetch(`action=backfill&since=${encodeURIComponent(datum)}`);
+    phase = `edge-respons status=${res.status} ${sess()}`;
     if (!res.ok) {
-      if (res.status === 401) throw new Error('Supabase 401: sessie verlopen tijdens ophalen');
-      const errBody = await res.json().catch(() => ({}));
-      throw new Error(errBody.error || errBody.message || `HTTP ${res.status}`);
+      const body = await res.text().catch(() => '');
+      throw new Error(`Edge ${res.status}: ${body.slice(0, 250)}`);
     }
     const data = await res.json();
-    if (data.error) throw new Error(data.error);
-    // De mappen-scan kan lang duren; ververs het token vlak vóór het wegschrijven
-    // zodat de inserts niet op een intussen verlopen token stuklopen.
+    if (data.error) throw new Error(`Edge meldt: ${data.error}`);
+    const msgs = data.messages || [];
+    // Ververs het token vlak vóór het wegschrijven (de scan kan lang duren).
+    phase = `refresh na ${msgs.length} berichten ${sess()}`;
     if (typeof refreshCurrentSession === 'function' && currentSession?.refresh_token) {
-      await refreshCurrentSession().catch(() => {});
+      const ok = await refreshCurrentSession().catch(() => false);
+      phase += ok ? ' refresh=ok' : ' refresh=FAIL';
     }
-    const r = await _bulkCoupleMails(data.messages || []);
+    phase = `insert ${msgs.length} berichten ${sess()}`;
+    const r = await _bulkCoupleMails(msgs);
     let m = `${r.logged} e-mail${r.logged === 1 ? '' : 's'} gekoppeld`;
     if (r.skippedExisting) m += ` · ${r.skippedExisting} al gekoppeld`;
     if (r.skippedNoMatch) m += ` · ${r.skippedNoMatch} zonder contactmatch`;
     if (data.capped) m += ' · (limiet bereikt — kies een latere datum voor de rest)';
     showToast(m, r.logged > 0 ? 'success' : 'info');
     renderContent();
-  } catch (e) { toastError(e); } finally { hideLoading(); }
+  } catch (e) {
+    const msg = e?.message || String(e);
+    console.error('Backfill fout in fase', phase, e);
+    alert(`Historie koppelen — foutdetails (maak hier a.u.b. een screenshot van):\n\nStap: ${phase}\n\nFout: ${msg}`);
+  } finally { hideLoading(); }
 }
 
 // Matcht en logt een reeks berichten (alle mappen) in bulk aan contacten.
