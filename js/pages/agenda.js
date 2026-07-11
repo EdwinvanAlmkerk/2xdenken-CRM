@@ -112,6 +112,7 @@ function agendaBadge(type) {
 
 function agendaEventClass(type) {
   if (type === '__outlook__') return 'cal-event-outlook';
+  if (type === '__taak__') return 'cal-event-taak';
   const t = getAgendaType(type);
   const k = AGENDA_KLEUREN[t.kleur] || AGENDA_KLEUREN.navy;
   return k.event;
@@ -119,6 +120,10 @@ function agendaEventClass(type) {
 
 // Click-handler voor agenda items: Outlook events zijn read-only
 function openAgendaItem(id) {
+  if (String(id).startsWith('taak:')) {
+    if (typeof openTaakModal === 'function') openTaakModal(String(id).slice(5));
+    return;
+  }
   if (String(id).startsWith('outlook:')) {
     const ev = _outlookEvents.find(e => e.id === id);
     if (!ev) return;
@@ -216,18 +221,43 @@ const _renderAgendaDeb = debounce(() => smartRender(() => renderAgendaPage()), 1
 function searchAgenda(v) { _agendaSearch = v; _renderAgendaDeb(); }
 function filterAgenda(v) { _agendaFilter = v; prefSet('agenda.filter', v); renderContent(); }
 
+// Zet een ingeplande taak (met uitvoerdatum) om naar de agenda-item-vorm,
+// zodat hij in de dag/week/maand-views meeloopt. Alleen-planning; de taak
+// zelf blijft de bron (klik → taak-modal).
+function taakToAgendaItem(t) {
+  return {
+    id: 'taak:' + t.id,
+    titel: '📋 ' + (t.onderwerp || 'Taak'),
+    datum: t.planDatum,
+    beginTijd: (t.planBeginTijd || '').slice(0, 5),
+    eindTijd: (t.planEindTijd || '').slice(0, 5),
+    type: '__taak__',
+    schoolId: t.schoolId || '',
+    contactId: t.contactId || '',
+    bestuurId: t.bestuurId || '',
+    locatie: '',
+    notitie: t.tekst || '',
+    _isTaak: true,
+  };
+}
+function _ingeplandeTaken() {
+  return (DB.taken || []).filter(t => t.planDatum).map(taakToAgendaItem);
+}
+
 // ── Items ophalen voor een datumreeks ────────────────────────────
 function getItemsForDate(iso) {
   const crm = agendaOpDatum(iso);
   const outlook = _outlookEvents.filter(a => a.datum === iso);
-  return [...crm, ...outlook]
+  const taken = _ingeplandeTaken().filter(a => a.datum === iso);
+  return [...crm, ...outlook, ...taken]
     .sort((a, b) => (a.beginTijd || '').localeCompare(b.beginTijd || ''));
 }
 
 function getItemsForRange(startIso, endIso) {
   const crm = DB.agenda.filter(a => a.datum >= startIso && a.datum <= endIso);
   const outlook = _outlookEvents.filter(a => a.datum >= startIso && a.datum <= endIso);
-  return [...crm, ...outlook];
+  const taken = _ingeplandeTaken().filter(a => a.datum >= startIso && a.datum <= endIso);
+  return [...crm, ...outlook, ...taken];
 }
 
 // ── Tijd → pixel positie ─────────────────────────────────────────

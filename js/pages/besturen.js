@@ -170,6 +170,7 @@ function renderBestuurDetail(id) {
       </div>`;
   } else if (bestuurTab === 'dossier') {
     tabContent = `
+      ${typeof renderTakenDossierSectie === 'function' ? renderTakenDossierSectie(scholen.flatMap(s => takenVanSchool(s.id)), '', '') : ''}
       <div style="display:flex;justify-content:flex-end;gap:8px;margin-bottom:16px">
         <button class="btn btn-secondary" onclick="openBestuurBestandModal('${id}')">${svgIcon('add')} Bestand toevoegen</button>
         <button class="btn btn-primary" onclick="openBestuurDossierModal('${id}')">${svgIcon('add')} Notitie toevoegen</button>

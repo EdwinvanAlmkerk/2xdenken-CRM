@@ -252,6 +252,7 @@ function renderSchoolDetail(id) {
             </div>`).join('')}</div>`}`;
   } else if (schoolTab === 'dossier') {
     tabContent = `
+      ${typeof renderTakenDossierSectie === 'function' ? renderTakenDossierSectie(takenVanSchool(id), '', id) : ''}
       <div style="display:flex;justify-content:flex-end;gap:8px;margin-bottom:16px">
         <button class="btn btn-secondary" onclick="openBestandModal('${id}')">${svgIcon('add')} Bestand toevoegen</button>
         <button class="btn btn-primary" onclick="openDossierModal('${id}')">${svgIcon('add')} Notitie toevoegen</button>

@@ -21,6 +21,7 @@
 const DASHBOARD_WIDGETS = [
   { id: 'kpis',            label: 'KPI-tegels',           fullWidth: true,  defaultVisible: true,  render: renderKpisWidget },
   { id: 'afspraken',       label: 'Afspraken vandaag',    fullWidth: false, defaultVisible: true,  render: renderAfsprakenWidget },
+  { id: 'taken',           label: 'Taken',                fullWidth: false, defaultVisible: true,  render: renderTakenWidget },
   { id: 'nieuws',          label: 'Laatste nieuws',       fullWidth: false, defaultVisible: true,  render: renderNieuwsWidget },
   { id: 'topopenstaand',   label: 'Top 10 openstaand',    fullWidth: false, defaultVisible: false, render: renderTopOpenstaandWidget },
   { id: 'trainingenmaand', label: 'Trainingen deze maand',fullWidth: false, defaultVisible: false, render: renderTrainingenMaandWidget },
@@ -302,6 +303,58 @@ function renderAfsprakenWidget() {
                     ${a.type === '__outlook__' ? '<span class="badge" style="background:#E6EAF2;color:var(--navy)">Extern</span>' : agendaBadge(a.type)}
                     ${school ? `<span style="margin-left:6px">${svgIcon('school', 12)} ${esc(school.naam)}</span>` : ''}
                     ${a.locatie ? `<span style="margin-left:6px">${svgIcon('location', 12)} ${esc(a.locatie)}</span>` : ''}
+                  </div>
+                </div>
+              </div>`;
+            }).join('')}</div>`}
+      </div>
+    </div>`;
+}
+
+// ── Taken-widget: aankomende (open) taken voor vandaag of deze week ──
+let _takenDashRange = 'week'; // 'dag' | 'week'
+function setTakenDashRange(r) { _takenDashRange = r; renderContent(); }
+
+function renderTakenWidget() {
+  const vandaag = new Date().toISOString().slice(0, 10);
+  const horizonD = new Date();
+  horizonD.setDate(horizonD.getDate() + (_takenDashRange === 'dag' ? 0 : 7));
+  const horizon = horizonD.toISOString().slice(0, 10);
+
+  const open = (DB.taken || []).filter(t => (t.status || 'open') !== 'afgerond');
+  const teLaat = open.filter(t => t.deadline && t.deadline < vandaag)
+    .sort((a, b) => (a.deadline || '').localeCompare(b.deadline || ''));
+  const komend = open.filter(t => t.deadline && t.deadline >= vandaag && t.deadline <= horizon)
+    .sort((a, b) => (a.deadline || '').localeCompare(b.deadline || ''));
+  const lijst = [...teLaat, ...komend];
+
+  const rangeBtn = (val, label) =>
+    `<button class="btn btn-sm ${_takenDashRange === val ? 'btn-primary' : 'btn-secondary'}" onclick="event.stopPropagation();setTakenDashRange('${val}')">${label}</button>`;
+
+  return `
+    <div class="card">
+      <div class="card-header">
+        <h3>${svgIcon('board', 16)} Taken</h3>
+        <div style="display:flex;gap:6px;align-items:center">
+          ${rangeBtn('dag', 'Vandaag')}
+          ${rangeBtn('week', 'Week')}
+          <button class="btn btn-secondary btn-sm" onclick="navigate('taken')">Alle</button>
+        </div>
+      </div>
+      <div class="card-body">
+        ${lijst.length === 0
+          ? `<div class="empty-state-compact">Geen ${_takenDashRange === 'dag' ? 'taken voor vandaag' : 'taken deze week'}</div>`
+          : `<div style="display:flex;flex-direction:column;gap:8px">${lijst.map(t => {
+              const teLaatItem = t.deadline < vandaag;
+              const contact = t.contactId ? getContact(t.contactId) : null;
+              return `<div style="display:flex;gap:10px;align-items:center;padding:8px 12px;border-radius:8px;background:var(--mint1)">
+                <input type="checkbox" onclick="event.stopPropagation();toggleTaakStatus('${t.id}')" title="Afvinken" style="width:17px;height:17px;cursor:pointer;flex-shrink:0"/>
+                <div style="flex:1;min-width:0;cursor:pointer" onclick="openTaakModal('${t.id}')">
+                  <div style="font-weight:600;font-size:13.5px;white-space:nowrap;overflow:hidden;text-overflow:ellipsis">${esc(t.onderwerp)}</div>
+                  <div style="font-size:11.5px;color:var(--ink3);display:flex;gap:8px;align-items:center;flex-wrap:wrap;margin-top:2px">
+                    ${typeof taakTypeBadge === 'function' ? taakTypeBadge(t.taakTypeId) : ''}
+                    <span style="color:${teLaatItem ? 'var(--s-rood,#C0392B)' : 'var(--navy4)'};font-weight:${teLaatItem ? '700' : '500'}">${svgIcon('clock', 11)} ${fmtDateShort(t.deadline)}</span>
+                    ${contact ? `<span>${svgIcon('contact', 11)} ${esc(contact.naam)}</span>` : ''}
                   </div>
                 </div>
               </div>`;

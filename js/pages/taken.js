@@ -111,6 +111,26 @@ function renderTaakRow(t) {
     </tr>`;
 }
 
+// Compacte takensectie voor in het dossier (contact-, school- of bestuur-
+// niveau). `taken` = de al-gefilterde lijst; prefill* voor de "Nieuwe taak"-knop.
+function renderTakenDossierSectie(taken, prefillContactId = '', prefillSchoolId = '') {
+  const open = (taken || []).filter(_taakIsOpen).sort((a, b) => (a.deadline || '9999').localeCompare(b.deadline || '9999'));
+  const klaar = (taken || []).filter(t => !_taakIsOpen(t)).sort((a, b) => (b.afgerondOp || '').localeCompare(a.afgerondOp || ''));
+  const lijst = [...open, ...klaar];
+  return `
+    <div class="card" style="margin-bottom:16px">
+      <div class="card-header">
+        <h3>${svgIcon('board', 16)} Taken${open.length ? ` <span style="color:var(--navy4);font-weight:500;font-size:13px">(${open.length} open)</span>` : ''}</h3>
+        <button class="btn btn-primary btn-sm" onclick="openTaakModal('','${prefillContactId}','${prefillSchoolId}')">${svgIcon('add', 14)} Nieuwe taak</button>
+      </div>
+      <div class="card-body" style="padding:0">
+        ${lijst.length === 0
+          ? `<div class="empty-state" style="padding:20px;font-size:13px"><p>Nog geen taken</p></div>`
+          : `<table><tbody>${lijst.map(renderTaakRow).join('')}</tbody></table>`}
+      </div>
+    </div>`;
+}
+
 // ── Taak-modal (nieuw/bewerken) ──────────────────────────────────
 // prefillContactId/prefillSchoolId: bij openen vanaf een detailpagina.
 function openTaakModal(id = '', prefillContactId = '', prefillSchoolId = '') {

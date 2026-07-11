@@ -236,6 +236,7 @@ function renderContactDetail(schoolId, contactId) {
            </table></div></div>`}`;
   } else if (contactTab === 'dossier') {
     tabContent = `
+      ${typeof renderTakenDossierSectie === 'function' ? renderTakenDossierSectie(takenVanContact(contactId), contactId, '') : ''}
       <div style="display:flex;justify-content:flex-end;gap:8px;margin-bottom:16px">
         <button class="btn btn-secondary" onclick="openBestandModalContact('${schoolId}','${contactId}')">${svgIcon('add', 14)} Bestand toevoegen</button>
         <button class="btn btn-primary" onclick="openDossierModalContact('${schoolId}','${contactId}')">${svgIcon('add', 14)} Notitie toevoegen</button>
