@@ -258,15 +258,17 @@ async function sendEmail(schoolId, factuurId, draftId) {
       DB.emailLog.unshift({ id: logId, templateId: '', schoolId: schoolId || '', contactId: contactId || '', factuurId: factuurId || '', aanEmail: email, aanNaam: contact?.naam || '', onderwerp, body, status: 'verzonden', datum: now });
     }
 
-    // Log naar dossier als school gekoppeld
-    if (schoolId) {
-      const school = DB.scholen.find(s => s.id === schoolId);
-      const bronNaam = contact ? `${contact.naam} — ${school?.naam || ''}` : (school?.naam || '');
+    // Log naar dossier onder het contact (en daarmee de school). Ook als er
+    // geen school direct is meegegeven halen we die uit het contact, zodat de
+    // mail netjes onder de persoon én de school in de tijdlijn verschijnt.
+    const effSchoolId = schoolId || contact?.schoolId || '';
+    if (effSchoolId || contactId) {
+      const school = effSchoolId ? DB.scholen.find(s => s.id === effSchoolId) : null;
+      const bronNaam = contact ? `${contact.naam}${school?.naam ? ' — ' + school.naam : ''}` : (school?.naam || '');
       const tekst = `E-mail ${sentViaSmtp ? 'verzonden' : 'geopend'} aan: ${email}\nOnderwerp: ${onderwerp}\n\n${body}`;
       const dosId = uid();
-      const item = { id: dosId, schoolId, contactId: contactId || null, datum: now, type: 'notitie', onderwerp: `E-mail — ${onderwerp}`, tekst, bronNaam, bestanden: [], bijlagen: [] };
-      const payload = { id: dosId, school_id: schoolId, datum: now, type: 'notitie', onderwerp: item.onderwerp, tekst, bron_naam: bronNaam, bestanden: [] };
-      await supa('/rest/v1/dossiers', { method: 'POST', body: JSON.stringify(payload) });
+      const item = { id: dosId, schoolId: effSchoolId || '', contactId: contactId || null, datum: now, type: 'email-verzonden', onderwerp: `E-mail verzonden — ${onderwerp}`, tekst, bronNaam, bestanden: [], bijlagen: [] };
+      await supa('/rest/v1/dossiers', { method: 'POST', body: JSON.stringify({ id: dosId, ...toDB_dossier(item) }) });
       DB.dossiers.unshift(item);
     }
 

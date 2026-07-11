@@ -298,9 +298,10 @@ function renderDossierItem(d, opts = {}) {
   const titel = d.onderwerp || '(geen onderwerp)';
   const isBestand = d.type === 'bestand';
   const isInboxLogged = typeof d.id === 'string' && d.id.startsWith('inbox-');
-  const typeIcon = isBestand ? '📎' : (isInboxLogged ? '📧' : '📝');
+  const isSentMail = d.type === 'email-verzonden';
+  const typeIcon = isBestand ? '📎' : (isInboxLogged ? '📧' : (isSentMail ? '📤' : '📝'));
   const typeCls  = isBestand ? 'dossier-type-bestand' : 'dossier-type-notitie';
-  const iconTitle = isBestand ? 'Bestand' : (isInboxLogged ? 'Ontvangen e-mail' : 'Notitie');
+  const iconTitle = isBestand ? 'Bestand' : (isInboxLogged ? 'Ontvangen e-mail' : (isSentMail ? 'Verzonden e-mail' : 'Notitie'));
 
   // Inbox-mails krijgen een ontkoppel-actie i.p.v. een hard delete
   let effDelBtn = delBtn;
@@ -363,10 +364,16 @@ function isFactuurDossier(d) {
   return !!findFactuurVoorDossier(d);
 }
 
-// Auto-gelogde inbox-e-mail: hoort alleen thuis op de contact-detailpagina,
-// niet bij de school of in algemene dossier-overzichten.
+// Auto-gelogde inbox-e-mail: herkenbaar aan het deterministische `inbox-<uid>`-id.
 function isInboxLogged(d) {
   return !!(d && typeof d.id === 'string' && d.id.startsWith('inbox-'));
+}
+
+// E-maildossier-item (ontvangen óf verzonden). Gebruikt om mails wél op de
+// contact- en schoolpagina te tonen, maar het bestuursdossier bij notities
+// te houden.
+function isEmailDossier(d) {
+  return isInboxLogged(d) || (d && d.type === 'email-verzonden');
 }
 
 function renderFactuurLinkVoorDossier(d) {

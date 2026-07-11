@@ -401,11 +401,11 @@ function rebuildIndexes() {
   i.scholenByBestuur  = _groupBy(DB.scholen || [],   'bestuurId');
   // Verberg ontkoppelde inbox-mails (soft-delete tombstones) overal
   // behalve in dossierById — die blijft compleet voor dedup-checks.
-  // Auto-gelogde inbox-mails komen alleen in dossiersByContact, niet bij
-  // de school: ze horen thuis op de contact-detailpagina.
+  // E-mails (ontvangen én verzonden) rollen mee naar het schooldossier zodat
+  // de correspondentie met contacten ook op schoolniveau zichtbaar is. Het
+  // bestuursdossier filtert mails er zelf weer uit (zie besturen.js).
   const visibleDossiers = (DB.dossiers || []).filter(d => d.type !== 'inbox-archived');
-  const schoolDossiers = visibleDossiers.filter(d => !(typeof d.id === 'string' && d.id.startsWith('inbox-')));
-  i.dossiersBySchool  = _groupBy(schoolDossiers, 'schoolId');
+  i.dossiersBySchool  = _groupBy(visibleDossiers, 'schoolId');
   i.dossiersByContact = _groupBy(visibleDossiers, 'contactId');
   i.facturenBySchool  = _groupBy(DB.facturen || [],  'schoolId');
   i.facturenByBestuur = _groupBy(DB.facturen || [],  'bestuurId');

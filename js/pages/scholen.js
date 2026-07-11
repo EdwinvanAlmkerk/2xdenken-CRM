@@ -183,7 +183,7 @@ function renderSchoolDetail(id) {
           <div class="card-header"><h3>Snel overzicht</h3></div>
           <div class="card-body">
             <div style="display:flex;gap:12px;flex-wrap:wrap">
-              ${[['Contacten', contacten.length], ['Notities', dossiers.length], ['Facturen', facturen.length]].map(([l, n]) => `
+              ${[['Contacten', contacten.length], ['Dossier', dossiers.length], ['Facturen', facturen.length]].map(([l, n]) => `
                 <div style="background:var(--bg);border-radius:8px;padding:14px 18px;flex:1;min-width:80px">
                   <div style="font-size:24px;font-weight:800">${n}</div>
                   <div style="font-size:12px;color:var(--navy4);margin-top:2px">${l}</div>
@@ -219,7 +219,7 @@ function renderSchoolDetail(id) {
                 ${c.telefoonWerk ? `<div class="c-row">${svgIcon('phone', 13)} <a href="tel:${esc(c.telefoonWerk)}">${esc(c.telefoonWerk)}</a> <span style="color:var(--navy4);font-size:11px">werk</span></div>` : ''}
               </div>
               ${(() => {
-                const cDossiers = dossiersVanContact(c.id).filter(d => !isFactuurDossier(d) && !isInboxLogged(d)).sort((a, b) => new Date(b.datum) - new Date(a.datum));
+                const cDossiers = dossiersVanContact(c.id).filter(d => !isFactuurDossier(d)).sort((a, b) => new Date(b.datum) - new Date(a.datum));
                 return cDossiers.length > 0 ? `
                   <div style="margin-top:10px;padding-top:10px;border-top:1px solid var(--bg3)">
                     <div style="font-size:11px;font-weight:700;text-transform:uppercase;letter-spacing:.6px;color:var(--navy4);margin-bottom:8px">Dossiernotities</div>
