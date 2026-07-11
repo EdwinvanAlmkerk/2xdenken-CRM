@@ -372,10 +372,31 @@ function getSignature() {
 // fetches geen duplicaten maken. Returnt true als er een nieuw item is gelogd.
 const _INBOX_BODY_PLACEHOLDER = '(klik op het bericht in Postvak IN om de volledige inhoud op te halen)';
 
+// Vul het e-mailadres bij een contact aan als dat nog leeg is en het adres
+// duidelijk persoonlijk is (local-part bevat de voor- of achternaam). Dat
+// voorkomt dat een generiek adres (info@, administratie@) wordt toegewezen.
+async function _maybeLearnContactEmail(contact, email) {
+  if (!contact || !email || contact.email) return;
+  const local = String(email).split('@')[0].normalize('NFD').replace(/[̀-ͯ]/g, '').toLowerCase();
+  const naamDelen = _normalizeName(contact.naam).split(' ').filter(p => p.length >= 3);
+  if (!naamDelen.some(p => local.includes(p))) return;
+  try {
+    await supa(`/rest/v1/contacten?id=eq.${contact.id}`, { method: 'PATCH', body: JSON.stringify({ email }) });
+    const c = DB.contacten.find(x => x.id === contact.id);
+    if (c) c.email = email;
+  } catch (e) {
+    console.warn('E-mailadres leren mislukt voor contact', contact.id, ':', e);
+  }
+}
+
 async function logInboxToDossier(msg) {
   if (!msg || !msg.from?.email || !msg.uid) return false;
 
-  const contact = getContactByEmail(msg.from.email);
+  // Eerst matchen op e-mailadres; lukt dat niet, dan op afzendersnaam
+  // (confident: voor- + achternaam, uniek). Zo werkt de koppeling ook voor
+  // contacten waarvan het adres nog niet is ingevuld.
+  let contact = getContactByEmail(msg.from.email);
+  if (!contact) contact = getContactByName(msg.from.name);
   if (!contact) return false;
 
   const dosId = `inbox-${msg.uid}`;
@@ -421,6 +442,8 @@ async function logInboxToDossier(msg) {
       bestanden: [],
       bijlagen: [],
     });
+    // Adres "leren" bij een naam-match, zodat vervolgmail vanzelf op adres gaat.
+    await _maybeLearnContactEmail(contact, msg.from.email);
     return true;
   } catch (e) {
     const err = String(e?.message || e);
