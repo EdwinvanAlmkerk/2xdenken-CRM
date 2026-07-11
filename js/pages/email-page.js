@@ -773,15 +773,30 @@ function openBackfillModal() {
      <button class="btn btn-primary" onclick="runBackfillAllFolders()">Koppelen starten</button>`);
 }
 
+// Roept de edge function aan met JWT-refresh-retry, zodat een verlopen
+// toegangstoken tijdens een lange operatie niet meteen tot "sessie verlopen"
+// leidt (de kale fetch ververst zelf niet, in tegenstelling tot supa()).
+async function _edgeFetch(qs) {
+  const doFetch = () => fetch(`${SUPA_URL}/functions/v1/fetch-emails?${qs}`, {
+    headers: { 'apikey': SUPA_KEY, 'Authorization': `Bearer ${currentSession?.access_token || SUPA_KEY}` },
+  });
+  let res = await doFetch();
+  if (res.status === 401 && typeof refreshCurrentSession === 'function' && await refreshCurrentSession()) {
+    res = await doFetch();
+  }
+  return res;
+}
+
 async function runBackfillAllFolders() {
   const datum = document.getElementById('f-backfill-datum')?.value;
   if (!datum) return alert('Kies een datum');
   closeModal();
   showLoading();
   try {
-    const res = await fetch(`${SUPA_URL}/functions/v1/fetch-emails?action=backfill&since=${encodeURIComponent(datum)}`, {
-      headers: { 'apikey': SUPA_KEY, 'Authorization': `Bearer ${currentSession?.access_token || SUPA_KEY}` },
-    });
+    // De backfill kan lang duren; ververs de sessie proactief zodat het token
+    // gedurende de hele operatie geldig blijft.
+    if (typeof refreshCurrentSession === 'function') { try { await refreshCurrentSession(); } catch (e) { /* val terug op retry */ } }
+    const res = await _edgeFetch(`action=backfill&since=${encodeURIComponent(datum)}`);
     const data = await res.json();
     if (!res.ok || data.error) throw new Error(data.error || `HTTP ${res.status}`);
     const r = await _bulkCoupleMails(data.messages || []);
