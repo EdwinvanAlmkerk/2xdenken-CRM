@@ -11,6 +11,8 @@ let HAS_TRAINING_LINKS_COLUMN = false;
 let HAS_DASHBOARD_SETTINGS_TABLE = false;
 let HAS_KOSTEN_TYPES_TABLE = false;
 let HAS_INKOOPFACTUREN_TABLE = false;
+let HAS_TAKEN_TABLE = false;
+let HAS_TAAK_TYPES_TABLE = false;
 
 let DB = {
   besturen: [], scholen: [], contacten: [],
@@ -26,7 +28,9 @@ let DB = {
   rssItemsRead: [],
   dashboardSettings: null,
   inkoopfacturen: [],
-  kostenTypes: []
+  kostenTypes: [],
+  taken: [],
+  taakTypes: []
 };
 
 function uid() {
@@ -219,11 +223,49 @@ function toDB_inkoopfactuur(d) {
   };
 }
 
+// ── Taken + taaktypes ────────────────────────────────────────────
+function fromDB_taakType(r) { return { id: r.id, naam: r.naam, kleur: r.kleur || 'navy' }; }
+function toDB_taakType(d)   { return { naam: d.naam, kleur: d.kleur || 'navy' }; }
+function fromDB_taak(r) {
+  return {
+    id: r.id,
+    onderwerp: r.onderwerp || '',
+    tekst: r.tekst || '',
+    taakTypeId: r.taak_type_id || '',
+    deadline: r.deadline || '',
+    planDatum: r.plan_datum || '',
+    planBeginTijd: r.plan_begin_tijd || '',
+    planEindTijd: r.plan_eind_tijd || '',
+    status: r.status || 'open',
+    afgerondOp: r.afgerond_op || '',
+    schoolId: r.school_id || '',
+    contactId: r.contact_id || '',
+    bestuurId: r.bestuur_id || '',
+    createdAt: r.created_at
+  };
+}
+function toDB_taak(d) {
+  return {
+    onderwerp: d.onderwerp,
+    tekst: d.tekst || '',
+    taak_type_id: d.taakTypeId || null,
+    deadline: d.deadline || null,
+    plan_datum: d.planDatum || null,
+    plan_begin_tijd: d.planBeginTijd || null,
+    plan_eind_tijd: d.planEindTijd || null,
+    status: d.status || 'open',
+    afgerond_op: d.afgerondOp || null,
+    school_id: d.schoolId || null,
+    contact_id: d.contactId || null,
+    bestuur_id: d.bestuurId || null
+  };
+}
+
 // ── Load all data from Supabase ───────────────────────────────────
 async function loadAllData() {
   showLoading();
   try {
-    const [besturen, scholen, contacten, dossiers, facturen, trainingen, uitvoeringen, agenda, agendaTypes, trainingTypes, trainingCategories, _trainingBestandenProbe, _trainingLinksProbe, emailTemplates, emailLog, emailSettingsArr, outlookSettingsArr, rssFeeds, rssItemsRead, dashboardSettingsArr, kostenTypes, inkoopfacturen] = await Promise.all([
+    const [besturen, scholen, contacten, dossiers, facturen, trainingen, uitvoeringen, agenda, agendaTypes, trainingTypes, trainingCategories, _trainingBestandenProbe, _trainingLinksProbe, emailTemplates, emailLog, emailSettingsArr, outlookSettingsArr, rssFeeds, rssItemsRead, dashboardSettingsArr, kostenTypes, inkoopfacturen, taakTypes, taken] = await Promise.all([
       supa('/rest/v1/besturen?select=*&order=naam'),
       supa('/rest/v1/scholen?select=*&order=naam'),
       supa('/rest/v1/contacten?select=*&order=naam'),
@@ -260,6 +302,12 @@ async function loadAllData() {
       supa('/rest/v1/inkoopfacturen?select=*&order=factuurdatum.desc')
         .then(r => { HAS_INKOOPFACTUREN_TABLE = true; return r; })
         .catch(() => { HAS_INKOOPFACTUREN_TABLE = false; return []; }),
+      supa('/rest/v1/taak_types?select=*&order=naam', { silent: true })
+        .then(r => { HAS_TAAK_TYPES_TABLE = true; return r; })
+        .catch(() => { HAS_TAAK_TYPES_TABLE = false; return []; }),
+      supa('/rest/v1/taken?select=*&order=deadline.asc', { silent: true })
+        .then(r => { HAS_TAKEN_TABLE = true; return r; })
+        .catch(() => { HAS_TAKEN_TABLE = false; return []; }),
     ]);
     DB.besturen     = (besturen || []).map(fromDB_bestuur);
     DB.scholen      = (scholen || []).map(fromDB_school);
@@ -281,6 +329,8 @@ async function loadAllData() {
     DB.dashboardSettings = (dashboardSettingsArr || []).map(fromDB_dashboardSettings)[0] || null;
     DB.kostenTypes        = (kostenTypes || []).map(fromDB_kostenType);
     DB.inkoopfacturen     = (inkoopfacturen || []).map(fromDB_inkoopfactuur);
+    DB.taakTypes          = (taakTypes || []).map(fromDB_taakType);
+    DB.taken              = (taken || []).map(fromDB_taak);
     rebuildIndexes();
     // Genereer ontbrekende terugkerende inkoopfacturen (idempotent, niet-blokkerend).
     if (HAS_INKOOPFACTUREN_TABLE && typeof generateRecurringInkoop === 'function') {
@@ -327,6 +377,8 @@ DB._idx = {
   agendaByBestuur:      new Map(),
   agendaByDate:         new Map(),
   contactByEmail:       new Map(),
+  takenBySchool:        new Map(),
+  takenByContact:       new Map(),
 };
 
 function _groupBy(arr, key) {
@@ -365,6 +417,7 @@ function _snapshotDB() {
     at: DB.agendaTypes,  atL: (DB.agendaTypes || []).length,
     tt: DB.trainingTypes, ttL: (DB.trainingTypes || []).length,
     tc: DB.trainingCategories, tcL: (DB.trainingCategories || []).length,
+    tk: DB.taken,        tkL: (DB.taken || []).length,
   };
 }
 
@@ -380,7 +433,8 @@ function _snapshotMatches(a, b) {
       && a.u === b.u && a.uL === b.uL
       && a.at === b.at && a.atL === b.atL
       && a.tt === b.tt && a.ttL === b.ttL
-      && a.tc === b.tc && a.tcL === b.tcL;
+      && a.tc === b.tc && a.tcL === b.tcL
+      && a.tk === b.tk && a.tkL === b.tkL;
 }
 
 // Rebuildt de indexes alleen als de DB-state daadwerkelijk is veranderd
@@ -423,6 +477,8 @@ function rebuildIndexes() {
   i.agendaByContact   = _groupBy(DB.agenda || [], 'contactId');
   i.agendaByBestuur   = _groupBy(DB.agenda || [], 'bestuurId');
   i.agendaByDate      = _groupBy(DB.agenda || [], 'datum');
+  i.takenBySchool     = _groupBy(DB.taken || [], 'schoolId');
+  i.takenByContact    = _groupBy(DB.taken || [], 'contactId');
   i.contactByEmail.clear();
   for (const c of DB.contacten || []) {
     if (c.email) i.contactByEmail.set(c.email.toLowerCase(), c);
@@ -454,6 +510,8 @@ function contactenVanSchool(id)   { ensureIndexes(); return DB._idx.contactenByS
 function scholenVanBestuur(id)    { ensureIndexes(); return DB._idx.scholenByBestuur.get(id)   || []; }
 function dossiersVanSchool(id)    { ensureIndexes(); return DB._idx.dossiersBySchool.get(id)   || []; }
 function dossiersVanContact(id)   { ensureIndexes(); return DB._idx.dossiersByContact.get(id)  || []; }
+function takenVanSchool(id)       { ensureIndexes(); return DB._idx.takenBySchool.get(id)      || []; }
+function takenVanContact(id)      { ensureIndexes(); return DB._idx.takenByContact.get(id)     || []; }
 function facturenVanSchool(id)    { ensureIndexes(); return DB._idx.facturenBySchool.get(id)   || []; }
 function facturenVanBestuur(id)   { ensureIndexes(); return DB._idx.facturenByBestuur.get(id)  || []; }
 function facturenVanContact(id)   { ensureIndexes(); return DB._idx.facturenByContact.get(id)  || []; }

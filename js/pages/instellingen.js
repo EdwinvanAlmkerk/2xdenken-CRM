@@ -101,6 +101,14 @@ function renderInstellingenCategorieen() {
         t => (DB.inkoopfacturen || []).filter(f => f.kostenTypeId === t.id).length,
         'openKostenTypeModal', 'delKostenType'
       )}
+    </div>
+    <div class="grid-2" style="margin-top:14px">
+      ${typeCard(
+        'Taaktypes', 'board', 'Taaktype toevoegen',
+        'openTaakTypeModal', (typeof getTaakTypeList === 'function' ? getTaakTypeList() : (DB.taakTypes || [])),
+        t => (DB.taken || []).filter(tk => tk.taakTypeId === t.id).length,
+        'openTaakTypeModal', 'delTaakType'
+      )}
     </div>`;
 }
 
