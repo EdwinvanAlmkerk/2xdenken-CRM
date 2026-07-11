@@ -792,38 +792,22 @@ async function runBackfillAllFolders() {
   if (!datum) return alert('Kies een datum');
   closeModal();
   showLoading();
-  let phase = 'start';
-  const sess = () => `[sess acc=${!!currentSession?.access_token} ref=${!!currentSession?.refresh_token}]`;
   try {
-    phase = `edge-fetch ${sess()}`;
     const res = await _edgeFetch(`action=backfill&since=${encodeURIComponent(datum)}`);
-    phase = `edge-respons status=${res.status} ${sess()}`;
     if (!res.ok) {
-      const body = await res.text().catch(() => '');
-      throw new Error(`Edge ${res.status}: ${body.slice(0, 250)}`);
+      const body = await res.json().catch(() => ({}));
+      throw new Error(body.error || body.message || `HTTP ${res.status}`);
     }
     const data = await res.json();
-    if (data.error) throw new Error(`Edge meldt: ${data.error}`);
-    const msgs = data.messages || [];
-    // Ververs het token vlak vóór het wegschrijven (de scan kan lang duren).
-    phase = `refresh na ${msgs.length} berichten ${sess()}`;
-    if (typeof refreshCurrentSession === 'function' && currentSession?.refresh_token) {
-      const ok = await refreshCurrentSession().catch(() => false);
-      phase += ok ? ' refresh=ok' : ' refresh=FAIL';
-    }
-    phase = `insert ${msgs.length} berichten ${sess()}`;
-    const r = await _bulkCoupleMails(msgs);
+    if (data.error) throw new Error(data.error);
+    const r = await _bulkCoupleMails(data.messages || []);
     let m = `${r.logged} e-mail${r.logged === 1 ? '' : 's'} gekoppeld`;
     if (r.skippedExisting) m += ` · ${r.skippedExisting} al gekoppeld`;
     if (r.skippedNoMatch) m += ` · ${r.skippedNoMatch} zonder contactmatch`;
     if (data.capped) m += ' · (limiet bereikt — kies een latere datum voor de rest)';
     showToast(m, r.logged > 0 ? 'success' : 'info');
     renderContent();
-  } catch (e) {
-    const msg = e?.message || String(e);
-    console.error('Backfill fout in fase', phase, e);
-    alert(`Historie koppelen — foutdetails (maak hier a.u.b. een screenshot van):\n\nStap: ${phase}\n\nFout: ${msg}`);
-  } finally { hideLoading(); }
+  } catch (e) { toastError(e); } finally { hideLoading(); }
 }
 
 // Matcht en logt een reeks berichten (alle mappen) in bulk aan contacten.
@@ -899,8 +883,10 @@ async function _bulkCoupleMails(messages) {
     logged++;
   }
 
+  // Let op: géén custom `headers` meegeven aan supa() — dat overschrijft de
+  // apikey/Authorization-headers (foutmelding "No API key found").
   for (let i = 0; i < rows.length; i += 100) {
-    await supa('/rest/v1/dossiers', { method: 'POST', headers: { Prefer: 'return=minimal' }, body: JSON.stringify(rows.slice(i, i + 100)) });
+    await supa('/rest/v1/dossiers', { method: 'POST', body: JSON.stringify(rows.slice(i, i + 100)) });
   }
   for (const it of mem) DB.dossiers.unshift(it);
 
