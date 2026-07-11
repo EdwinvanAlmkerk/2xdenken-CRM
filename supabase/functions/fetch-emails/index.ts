@@ -408,8 +408,8 @@ class ImapClient {
     throw new Error("Geen Prullenbak-map gevonden op IMAP-server");
   }
 
-  // Parse de regels van een FETCH-respons (UID FLAGS ENVELOPE) naar berichten.
-  parseFetchLines(res: string[]): any[] {
+  async fetchList(startSeq: number, endSeq: number): Promise<any[]> {
+    const res = await this.command(`FETCH ${startSeq}:${endSeq} (UID FLAGS ENVELOPE)`);
     const messages: any[] = [];
     let cur: any = null;
 
@@ -452,42 +452,6 @@ class ImapClient {
     return messages;
   }
 
-  async fetchList(startSeq: number, endSeq: number): Promise<any[]> {
-    const res = await this.command(`FETCH ${startSeq}:${endSeq} (UID FLAGS ENVELOPE)`);
-    return this.parseFetchLines(res);
-  }
-
-  // UID's van berichten met interne datum >= sinds-datum (IMAP SEARCH SINCE).
-  async searchSince(imapDate: string): Promise<number[]> {
-    const res = await this.command(`UID SEARCH SINCE ${imapDate}`);
-    const uids: number[] = [];
-    for (const line of res) {
-      const m = line.match(/^\*\s+SEARCH\b(.*)$/i);
-      if (m) {
-        const ids = m[1].trim();
-        if (ids) for (const id of ids.split(/\s+/)) {
-          const n = parseInt(id);
-          if (!isNaN(n)) uids.push(n);
-        }
-      }
-    }
-    return uids;
-  }
-
-  // Haal envelope-headers op voor een set UID's. In blokken zodat de IMAP-
-  // commandoregel niet te lang wordt bij veel berichten.
-  async fetchByUids(uids: number[]): Promise<any[]> {
-    if (uids.length === 0) return [];
-    const out: any[] = [];
-    const CHUNK = 300;
-    for (let i = 0; i < uids.length; i += CHUNK) {
-      const slice = uids.slice(i, i + CHUNK);
-      const res = await this.command(`UID FETCH ${slice.join(",")} (UID FLAGS ENVELOPE)`);
-      out.push(...this.parseFetchLines(res));
-    }
-    return out;
-  }
-
   async fetchSingle(uid: number): Promise<string> {
     // Haal maximaal 256KB op (genoeg voor headers + tekst, bijlagen worden afgekapt)
     const { literal } = await this.commandWithLiteral(`UID FETCH ${uid} (BODY.PEEK[]<0.262144>)`);
@@ -500,17 +464,6 @@ class ImapClient {
       this.conn.close();
     } catch { /* ignore */ }
   }
-}
-
-// Converteer "YYYY-MM-DD" naar IMAP-datumformaat "DD-Mon-YYYY" (bv. 01-Jan-2025).
-// Geeft null terug bij een ongeldige datum.
-function toImapDate(iso: string): string | null {
-  const m = /^(\d{4})-(\d{2})-(\d{2})$/.exec(iso || "");
-  if (!m) return null;
-  const months = ["Jan", "Feb", "Mar", "Apr", "May", "Jun", "Jul", "Aug", "Sep", "Oct", "Nov", "Dec"];
-  const y = parseInt(m[1]), mo = parseInt(m[2]), d = parseInt(m[3]);
-  if (mo < 1 || mo > 12 || d < 1 || d > 31) return null;
-  return `${String(d).padStart(2, "0")}-${months[mo - 1]}-${y}`;
 }
 
 // ═══════════════════════════════════════════════════════════════
@@ -544,7 +497,6 @@ serve(async (req) => {
     const limit = parseInt(url.searchParams.get("limit") || "30");
     const uid = url.searchParams.get("uid");
     const action = url.searchParams.get("action");
-    const since = url.searchParams.get("since"); // YYYY-MM-DD → historische backfill
 
     const client = new ImapClient();
     await client.connect(settings.imap_host, settings.imap_port || 993);
@@ -628,40 +580,6 @@ serve(async (req) => {
       const body = extractTextFromMime(rawMessage);
 
       return new Response(JSON.stringify({ subject, from, date, body }), {
-        headers: { ...corsHeaders, "Content-Type": "application/json" },
-      });
-    }
-
-    // ── Backfill: alle berichten sinds een datum (historisch koppelen) ──
-    if (since) {
-      const imapDate = toImapDate(since);
-      if (!imapDate) {
-        return new Response(JSON.stringify({ error: "Ongeldige datum (verwacht YYYY-MM-DD)" }), {
-          status: 400, headers: { ...corsHeaders, "Content-Type": "application/json" },
-        });
-      }
-      const total = await client.select(folder);
-      let uids = total > 0 ? await client.searchSince(imapDate) : [];
-      uids.sort((a, b) => a - b);
-      const MAX_BACKFILL = 1500;
-      let capped = false;
-      if (uids.length > MAX_BACKFILL) { uids = uids.slice(uids.length - MAX_BACKFILL); capped = true; }
-      const list = await client.fetchByUids(uids);
-      list.reverse(); // nieuwste eerst
-      await client.logout();
-      return new Response(JSON.stringify({
-        messages: list.map(m => ({
-          uid: m.uid || m.seq,
-          seq: m.seq,
-          flags: m.flags || [],
-          from: m.from || { name: "", email: "" },
-          subject: m.subject || "(geen onderwerp)",
-          date: m.date || "",
-          read: (m.flags || []).includes("\\Seen"),
-        })),
-        total: list.length,
-        capped,
-      }), {
         headers: { ...corsHeaders, "Content-Type": "application/json" },
       });
     }

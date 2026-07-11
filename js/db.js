@@ -280,11 +280,6 @@ async function loadAllData() {
     if (HAS_INKOOPFACTUREN_TABLE && typeof generateRecurringInkoop === 'function') {
       generateRecurringInkoop().catch(e => console.warn('Recurring inkoop generatie mislukt:', e));
     }
-    // Sync de inbox op de achtergrond zodat inkomende mail automatisch in de
-    // contactdossiers wordt gelogd — ook zonder de E-mailpagina te openen.
-    if (DB.emailSettings?.imapHost && typeof fetchInbox === 'function') {
-      queueMicrotask(() => { try { fetchInbox(); } catch (e) { console.warn('Inbox-achtergrondsync mislukt:', e); } });
-    }
   } catch (e) {
     showToast('Gegevens laden mislukt: ' + mapSupaError(e), 'error'); console.error(e);
   } finally {
@@ -326,7 +321,6 @@ DB._idx = {
   agendaByBestuur:      new Map(),
   agendaByDate:         new Map(),
   contactByEmail:       new Map(),
-  contactByName:        new Map(),
 };
 
 function _groupBy(arr, key) {
@@ -424,14 +418,8 @@ function rebuildIndexes() {
   i.agendaByBestuur   = _groupBy(DB.agenda || [], 'bestuurId');
   i.agendaByDate      = _groupBy(DB.agenda || [], 'datum');
   i.contactByEmail.clear();
-  i.contactByName.clear();
   for (const c of DB.contacten || []) {
     if (c.email) i.contactByEmail.set(c.email.toLowerCase(), c);
-    const nk = _normalizeName(c.naam);
-    if (nk) {
-      const list = i.contactByName.get(nk);
-      if (list) list.push(c); else i.contactByName.set(nk, [c]);
-    }
   }
   i._builtFrom = _snapshotDB();
 }
@@ -440,25 +428,6 @@ function getContactByEmail(email) {
   if (!email) return null;
   ensureIndexes();
   return DB._idx.contactByEmail.get(String(email).toLowerCase()) || null;
-}
-
-// Normaliseer een naam voor matching: kleine letters, accenten weg, spaties
-// samengevoegd. Geeft '' terug als er niets bruikbaars overblijft.
-function _normalizeName(naam) {
-  return String(naam || '')
-    .normalize('NFD').replace(/[̀-ͯ]/g, '')
-    .toLowerCase().replace(/\s+/g, ' ').trim();
-}
-
-// Zoek een contact op afzendersnaam. Alleen een confident match telt:
-// de naam moet uit ≥2 woorden bestaan (voor- + achternaam) en er mag maar
-// één contact met die naam zijn — anders is het te dubbelzinnig.
-function getContactByName(naam) {
-  const nk = _normalizeName(naam);
-  if (!nk || !nk.includes(' ')) return null;
-  ensureIndexes();
-  const list = DB._idx.contactByName.get(nk);
-  return (list && list.length === 1) ? list[0] : null;
 }
 
 // ── By-id getters (O(1)) ─────────────────────────────────────────
