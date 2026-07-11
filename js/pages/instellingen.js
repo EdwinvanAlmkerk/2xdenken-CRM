@@ -203,10 +203,36 @@ function renderInstellingenEmail() {
 
 // ── Tab: Agenda (ICS-feed) ──────────────────────────────────────
 function renderInstellingenAgenda() {
+  const feedUrl = `${SUPA_URL}/functions/v1/agenda-feed?token=${DB.feedToken || ''}`;
+  const webcalUrl = feedUrl.replace(/^https?:\/\//, 'webcal://');
   return `
     <div style="max-width:780px">
+      <div class="card" style="margin-bottom:16px">
+        <div class="card-header"><h3>${svgIcon('calendar', 16)} Agenda op je telefoon (abonnement)</h3></div>
+        <div class="card-body">
+          <p style="font-size:13px;color:var(--navy3);line-height:1.55;margin-bottom:14px">Abonneer je iPhone (of andere agenda-app zoals Easy Calendar) op deze feed om je CRM-<strong>afspraken</strong> en <strong>ingeplande taken</strong> automatisch op je telefoon te zien. Alleen-lezen en ververst periodiek. <strong>Houd deze link privé</strong> — iedereen met de link kan de agenda inzien.</p>
+          ${DB.feedToken ? `
+            <div class="form-group">
+              <label>Jouw persoonlijke feed-URL</label>
+              <div style="display:flex;gap:8px">
+                <input type="text" readonly value="${esc(webcalUrl)}" onclick="this.select()" style="flex:1;font-size:12px;color:var(--navy3)"/>
+                <button class="btn btn-primary" onclick="navigator.clipboard.writeText('${webcalUrl}').then(()=>showToast('Feed-URL gekopieerd','success')).catch(()=>showToast('Kopiëren mislukt — selecteer en kopieer handmatig','error'))">${svgIcon('add', 14)} Kopieer</button>
+              </div>
+            </div>
+            <div style="margin-top:8px;font-size:11.5px;color:var(--navy4);line-height:1.7">
+              <strong>Op je iPhone toevoegen (eenmalig):</strong>
+              <ol style="margin:6px 0 0 18px;padding:0">
+                <li>Kopieer de URL hierboven</li>
+                <li>iPhone: <strong>Instellingen → Agenda → Accounts → Nieuw account → Andere</strong></li>
+                <li>Tik op <strong>Abonnementsagenda</strong>, plak de URL, tik <strong>Volgende</strong> → <strong>Bewaar</strong></li>
+              </ol>
+              Daarna verschijnt de agenda in <strong>Easy Calendar</strong> en elke andere agenda-app op je telefoon.
+            </div>
+          ` : `<div style="padding:10px 14px;background:var(--s-goud-s);border:1px solid rgba(217,119,6,0.2);border-radius:var(--r);font-size:13px;color:var(--geel)">Feed nog niet geladen — ververs de pagina (Ctrl+F5) en probeer opnieuw.</div>`}
+        </div>
+      </div>
       <div class="card">
-        <div class="card-header"><h3>${svgIcon('calendar', 16)} Agenda (gepubliceerde feed)</h3></div>
+        <div class="card-header"><h3>${svgIcon('calendar', 16)} Externe agenda tonen in CRM (inkomend)</h3></div>
         <div class="card-body">
           ${DB.outlookSettings?.icsUrl ? `<div style="margin-bottom:16px;padding:10px 14px;background:var(--s-groen-s);border:1px solid rgba(22,163,74,0.2);border-radius:var(--r);font-size:13px;color:var(--groen);display:flex;align-items:center;gap:8px">
             ${svgIcon('lightning', 14)} Gekoppeld${DB.outlookSettings.calendarName ? ` — kalender: <strong>${esc(DB.outlookSettings.calendarName)}</strong>` : ''}

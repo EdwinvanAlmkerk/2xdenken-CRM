@@ -30,7 +30,8 @@ let DB = {
   inkoopfacturen: [],
   kostenTypes: [],
   taken: [],
-  taakTypes: []
+  taakTypes: [],
+  feedToken: ''
 };
 
 function uid() {
@@ -265,7 +266,7 @@ function toDB_taak(d) {
 async function loadAllData() {
   showLoading();
   try {
-    const [besturen, scholen, contacten, dossiers, facturen, trainingen, uitvoeringen, agenda, agendaTypes, trainingTypes, trainingCategories, _trainingBestandenProbe, _trainingLinksProbe, emailTemplates, emailLog, emailSettingsArr, outlookSettingsArr, rssFeeds, rssItemsRead, dashboardSettingsArr, kostenTypes, inkoopfacturen, taakTypes, taken] = await Promise.all([
+    const [besturen, scholen, contacten, dossiers, facturen, trainingen, uitvoeringen, agenda, agendaTypes, trainingTypes, trainingCategories, _trainingBestandenProbe, _trainingLinksProbe, emailTemplates, emailLog, emailSettingsArr, outlookSettingsArr, rssFeeds, rssItemsRead, dashboardSettingsArr, kostenTypes, inkoopfacturen, taakTypes, taken, feedSettingsArr] = await Promise.all([
       supa('/rest/v1/besturen?select=*&order=naam'),
       supa('/rest/v1/scholen?select=*&order=naam'),
       supa('/rest/v1/contacten?select=*&order=naam'),
@@ -308,6 +309,7 @@ async function loadAllData() {
       supa('/rest/v1/taken?select=*&order=deadline.asc', { silent: true })
         .then(r => { HAS_TAKEN_TABLE = true; return r; })
         .catch(() => { HAS_TAKEN_TABLE = false; return []; }),
+      supa('/rest/v1/feed_settings?select=token&id=eq.main', { silent: true }).catch(() => []),
     ]);
     DB.besturen     = (besturen || []).map(fromDB_bestuur);
     DB.scholen      = (scholen || []).map(fromDB_school);
@@ -331,6 +333,7 @@ async function loadAllData() {
     DB.inkoopfacturen     = (inkoopfacturen || []).map(fromDB_inkoopfactuur);
     DB.taakTypes          = (taakTypes || []).map(fromDB_taakType);
     DB.taken              = (taken || []).map(fromDB_taak);
+    DB.feedToken          = (feedSettingsArr || [])[0]?.token || '';
     rebuildIndexes();
     // Genereer ontbrekende terugkerende inkoopfacturen (idempotent, niet-blokkerend).
     if (HAS_INKOOPFACTUREN_TABLE && typeof generateRecurringInkoop === 'function') {
