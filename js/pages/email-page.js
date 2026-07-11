@@ -793,12 +793,19 @@ async function runBackfillAllFolders() {
   closeModal();
   showLoading();
   try {
-    // De backfill kan lang duren; ververs de sessie proactief zodat het token
-    // gedurende de hele operatie geldig blijft.
-    if (typeof refreshCurrentSession === 'function') { try { await refreshCurrentSession(); } catch (e) { /* val terug op retry */ } }
     const res = await _edgeFetch(`action=backfill&since=${encodeURIComponent(datum)}`);
+    if (!res.ok) {
+      if (res.status === 401) throw new Error('Supabase 401: sessie verlopen tijdens ophalen');
+      const errBody = await res.json().catch(() => ({}));
+      throw new Error(errBody.error || errBody.message || `HTTP ${res.status}`);
+    }
     const data = await res.json();
-    if (!res.ok || data.error) throw new Error(data.error || `HTTP ${res.status}`);
+    if (data.error) throw new Error(data.error);
+    // De mappen-scan kan lang duren; ververs het token vlak vóór het wegschrijven
+    // zodat de inserts niet op een intussen verlopen token stuklopen.
+    if (typeof refreshCurrentSession === 'function' && currentSession?.refresh_token) {
+      await refreshCurrentSession().catch(() => {});
+    }
     const r = await _bulkCoupleMails(data.messages || []);
     let m = `${r.logged} e-mail${r.logged === 1 ? '' : 's'} gekoppeld`;
     if (r.skippedExisting) m += ` · ${r.skippedExisting} al gekoppeld`;
