@@ -62,16 +62,22 @@ async function refreshCurrentSession() {
 }
 
 // ── Supabase fetch helper ─────────────────────────────────────────
+// options.silent: onderdruk de console.error bij een verwachte fout (bijv.
+// feature-detectie van optionele tabellen/kolommen).
+// LET OP: `headers` en `silent` worden hier uit options gehaald zodat een
+// custom `headers` de apikey/Authorization NIET overschrijft (die worden
+// correct samengevoegd).
 async function supa(path, options = {}, retryOnAuthFailure = true) {
+  const { silent, headers: customHeaders, ...fetchOpts } = options;
   const res = await fetch(`${SUPA_URL}${path}`, {
     headers: {
       'apikey': SUPA_KEY,
       'Authorization': `Bearer ${currentSession?.access_token || SUPA_KEY}`,
       'Content-Type': 'application/json',
       'Prefer': 'return=representation',
-      ...options.headers
+      ...customHeaders
     },
-    ...options
+    ...fetchOpts
   });
   if (!res.ok) {
     const err = await res.text();
@@ -80,7 +86,7 @@ async function supa(path, options = {}, retryOnAuthFailure = true) {
       return supa(path, options, false);
     }
 
-    console.error('Supabase error:', res.status, err);
+    if (!silent) console.error('Supabase error:', res.status, err);
     throw new Error(`Supabase ${res.status}: ${err}`);
   }
   const text = await res.text();
@@ -227,16 +233,16 @@ async function loadAllData() {
       supa('/rest/v1/uitvoeringen?select=*&order=datum.desc'),
       supa('/rest/v1/agenda?select=*&order=datum.asc,begin_tijd.asc'),
       supa('/rest/v1/agenda_types?select=*&order=naam'),
-      supa('/rest/v1/training_types?select=*&order=naam')
+      supa('/rest/v1/training_types?select=*&order=naam', { silent: true })
         .then(r => { HAS_TRAINING_TYPES_TABLE = true; return r; })
         .catch(() => { HAS_TRAINING_TYPES_TABLE = false; return []; }),
-      supa('/rest/v1/training_categories?select=*&order=naam')
+      supa('/rest/v1/training_categories?select=*&order=naam', { silent: true })
         .then(r => { HAS_TRAINING_CATEGORIES_TABLE = true; return r; })
         .catch(() => { HAS_TRAINING_CATEGORIES_TABLE = false; return []; }),
-      supa('/rest/v1/trainingen?select=bestanden&limit=1')
+      supa('/rest/v1/trainingen?select=bestanden&limit=1', { silent: true })
         .then(r => { HAS_TRAINING_BESTANDEN_COLUMN = true; return r; })
         .catch(() => { HAS_TRAINING_BESTANDEN_COLUMN = false; return []; }),
-      supa('/rest/v1/trainingen?select=tips_links&limit=1')
+      supa('/rest/v1/trainingen?select=tips_links&limit=1', { silent: true })
         .then(r => { HAS_TRAINING_LINKS_COLUMN = true; return r; })
         .catch(() => { HAS_TRAINING_LINKS_COLUMN = false; return []; }),
       supa('/rest/v1/email_templates?select=*&order=naam'),
