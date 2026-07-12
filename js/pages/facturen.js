@@ -524,7 +524,9 @@ function getFactuurHtml(fid) {
     return str.replace(/'/g, '');
   };
 
-  const klantNaam = bestuur ? bestuur.naam : (school ? school.naam : '');
+  // School heeft voorrang: is er een school gekozen, dan is die de geadresseerde
+  // (of/of); anders het bestuur. (Voorheen stond hier altijd het bestuur.)
+  const klantNaam = school ? school.naam : (bestuur ? bestuur.naam : '');
   const adresLines = [];
   if (f.tav) adresLines.push('t.a.v. ' + esc(f.tav));
   else {
