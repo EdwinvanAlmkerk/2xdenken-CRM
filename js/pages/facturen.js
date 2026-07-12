@@ -380,25 +380,36 @@ function renderRegels(regels) {
   _regels = regels;
   const wrap = document.getElementById('regels-wrap');
   if (!wrap) return;
-  wrap.innerHTML = `<div style="overflow-x:auto"><table style="width:100%;min-width:640px">
-    <thead><tr>
-      <th style="width:110px">Omschrijving</th>
-      <th style="min-width:300px">Toelichting</th>
-      <th style="width:84px">Datum</th>
-      <th style="width:82px">Uren</th>
-      <th style="width:88px">Bedrag (€)</th>
-      <th style="width:34px"></th>
-    </tr></thead>
-    <tbody>${regels.map((r, i) => `
-      <tr>
-        <td style="width:110px"><input type="text" value="${esc(r.omschrijving || '')}" oninput="updateRegel(${i},'omschrijving',this.value)" placeholder="Coachessie 3"/></td>
-        <td style="min-width:300px"><textarea rows="3" oninput="updateRegel(${i},'toelichting',this.value)" placeholder="Meerdere regels mogelijk — komt zo ook op de factuur onder elkaar" style="width:100%;min-height:66px;resize:vertical;line-height:1.4">${esc(r.toelichting || '')}</textarea></td>
-        <td><input type="date" value="${esc(r.datum || '')}" oninput="updateRegel(${i},'datum',this.value)" style="width:100%;min-width:0"/></td>
-        <td><input type="text" value="${esc(r.uren || '')}" oninput="updateRegel(${i},'uren',this.value)" placeholder="2,5 uur" style="width:100%;min-width:0"/></td>
-        <td><input type="text" inputmode="decimal" value="${esc(r.bedrag || '')}" oninput="updateRegel(${i},'bedrag',this.value)" placeholder="0,00"/></td>
-        <td><button class="btn btn-ghost btn-icon btn-sm" onclick="delRegel(${i})">${svgIcon('trash', 13)}</button></td>
-      </tr>`).join('')}
-    </tbody></table></div>`;
+  const lbl = 'font-size:11px;font-weight:600;color:var(--navy4);margin-bottom:2px;display:block';
+  // Per regel een blokje: bovenaan de korte velden (omschrijving/datum/uren/
+  // bedrag, wrappen op smalle schermen), daaronder de toelichting op volle
+  // breedte. Zo blijft alles zichtbaar, ook op een 13"-laptop.
+  wrap.innerHTML = regels.map((r, i) => `
+    <div style="border:1px solid var(--bg3);border-radius:8px;padding:10px 12px;margin-bottom:10px;background:var(--bg)">
+      <div style="display:flex;gap:8px;flex-wrap:wrap;align-items:flex-end">
+        <div style="flex:1 1 150px;min-width:120px">
+          <label style="${lbl}">Omschrijving</label>
+          <input type="text" value="${esc(r.omschrijving || '')}" oninput="updateRegel(${i},'omschrijving',this.value)" placeholder="Coachsessie 3" style="width:100%"/>
+        </div>
+        <div style="width:140px">
+          <label style="${lbl}">Datum</label>
+          <input type="date" value="${esc(r.datum || '')}" oninput="updateRegel(${i},'datum',this.value)" style="width:100%;min-width:0"/>
+        </div>
+        <div style="width:80px">
+          <label style="${lbl}">Uren</label>
+          <input type="text" value="${esc(r.uren || '')}" oninput="updateRegel(${i},'uren',this.value)" placeholder="2,5" style="width:100%;min-width:0"/>
+        </div>
+        <div style="width:110px">
+          <label style="${lbl}">Bedrag (€)</label>
+          <input type="text" inputmode="decimal" value="${esc(r.bedrag || '')}" oninput="updateRegel(${i},'bedrag',this.value)" placeholder="0,00" style="width:100%;min-width:0"/>
+        </div>
+        <button class="btn btn-ghost btn-icon btn-sm" onclick="delRegel(${i})" title="Regel verwijderen" style="color:var(--s-rood);margin-bottom:2px">${svgIcon('trash', 13)}</button>
+      </div>
+      <div style="margin-top:8px">
+        <label style="${lbl}">Toelichting</label>
+        <textarea rows="2" oninput="updateRegel(${i},'toelichting',this.value)" placeholder="Meerdere regels mogelijk — komt zo ook op de factuur onder elkaar" style="width:100%;min-height:54px;resize:vertical;line-height:1.4">${esc(r.toelichting || '')}</textarea>
+      </div>
+    </div>`).join('');
   updateFactuurTotaal();
 }
 
