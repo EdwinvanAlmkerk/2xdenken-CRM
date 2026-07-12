@@ -380,7 +380,7 @@ function renderRegels(regels) {
   _regels = regels;
   const wrap = document.getElementById('regels-wrap');
   if (!wrap) return;
-  wrap.innerHTML = `<div style="overflow-x:auto"><table style="width:100%;min-width:580px">
+  wrap.innerHTML = `<div style="overflow-x:auto"><table style="width:100%;min-width:660px">
     <thead><tr>
       <th style="min-width:130px">Omschrijving</th>
       <th>Toelichting</th>
@@ -392,7 +392,7 @@ function renderRegels(regels) {
     <tbody>${regels.map((r, i) => `
       <tr>
         <td><input type="text" value="${esc(r.omschrijving || '')}" oninput="updateRegel(${i},'omschrijving',this.value)" placeholder="Coachessie 3"/></td>
-        <td><input type="text" value="${esc(r.toelichting || '')}" oninput="updateRegel(${i},'toelichting',this.value)" placeholder="Nader te bepalen…"/></td>
+        <td style="min-width:200px"><textarea rows="3" oninput="updateRegel(${i},'toelichting',this.value)" placeholder="Meerdere regels mogelijk — komt zo ook op de factuur onder elkaar" style="width:100%;min-height:66px;resize:vertical;line-height:1.4">${esc(r.toelichting || '')}</textarea></td>
         <td><input type="date" value="${esc(r.datum || '')}" oninput="updateRegel(${i},'datum',this.value)"/></td>
         <td><input type="text" value="${esc(r.uren || '')}" oninput="updateRegel(${i},'uren',this.value)" placeholder="2,5 uur"/></td>
         <td><input type="text" inputmode="decimal" value="${esc(r.bedrag || '')}" oninput="updateRegel(${i},'bedrag',this.value)" placeholder="0,00"/></td>
@@ -584,8 +584,8 @@ function getFactuurHtml(fid) {
   .rt thead th.r{text-align:right;padding-right:0}
   .rt tbody td{padding:13px 12px 13px 0;vertical-align:top;border-bottom:1px solid var(--line);line-height:1.55}
   .rt tbody td.r{text-align:right;padding-right:0;white-space:nowrap;font-weight:700}
-  .rt tbody td.omschrijving{font-weight:700;color:var(--ink)}
-  .rt tbody td.toelichting{color:var(--ink-l);font-size:9.5pt}
+  .rt tbody td.omschrijving{font-weight:700;color:var(--ink);white-space:pre-wrap}
+  .rt tbody td.toelichting{color:var(--ink-l);font-size:9.5pt;white-space:pre-wrap}
   .rt tbody td.datum,.rt tbody td.uren{color:var(--ink-l);white-space:nowrap;font-size:9.5pt}
   .rt tbody tr:last-child td{border-bottom:none}
 
