@@ -230,9 +230,17 @@ async function openFactuurModal(schoolId, fid = '', prefillContactId = '', prefi
   const prefillContact = getContact(activeContactId);
 
   const nextNr = (() => {
-    const yr = new Date().getFullYear();
-    const allNrs = DB.facturen.map(x => { const m = String(x.nummer || '').match(/(\d+)$/); return m ? parseInt(m[1]) : 0; });
-    return String(yr) + String(Math.max(0, ...allNrs) + 1).padStart(2, '0');
+    // Formaat: <jaar><volgnummer>, per jaar oplopend vanaf 01 (bv. 202661).
+    // Alleen nummers van het HUIDIGE jaar meetellen; anders zouden oudere
+    // jaren met 3-cijferige volgnummers (bv. 2025159) het nummer verpesten.
+    const prefix = String(new Date().getFullYear());
+    const seqs = DB.facturen
+      .map(x => String(x.nummer || ''))
+      .filter(n => n.startsWith(prefix) && /^\d+$/.test(n) && n.length > prefix.length)
+      .map(n => parseInt(n.slice(prefix.length), 10))
+      .filter(n => Number.isFinite(n));
+    const next = (seqs.length ? Math.max(...seqs) : 0) + 1;
+    return prefix + String(next).padStart(2, '0');
   })();
 
   const prefillDebnr = f?.debiteurnr || school?.debiteurnr || bestuur?.debiteurnr || '';
