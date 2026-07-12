@@ -350,7 +350,6 @@ function refreshFactuurKlantInfo() {
     wrap.innerHTML = `
       <div style="background:var(--bg2);border:1px solid var(--bg3);border-radius:var(--r);padding:12px 16px;margin-bottom:18px;font-size:13px;color:var(--navy3)">
         <div style="font-weight:800;color:var(--navy);margin-bottom:4px">${svgIcon('school', 15)} ${esc(school.naam)}</div>
-        ${bestuur ? `<div>Bestuur: ${esc(bestuur.naam)}</div>` : ''}
         ${school.adres ? `<div>${esc(school.adres)}</div>` : ''}
         ${(school.postcode || school.plaats) ? `<div>${[school.postcode, school.plaats].filter(Boolean).map(esc).join(' ')}</div>` : ''}
         ${school.debiteurnr ? `<div style="margin-top:4px">Debiteur: <strong>${esc(school.debiteurnr)}</strong></div>` : ''}
@@ -468,7 +467,6 @@ function updateNieuweFactuurInfo() {
     el.innerHTML = `
       <div style="background:var(--glass);border:1px solid var(--bg3);border-radius:var(--r);padding:12px 16px;margin-bottom:18px;font-size:13px;color:var(--navy3)">
         <div style="font-weight:700;color:var(--navy);margin-bottom:4px">${svgIcon('school', 15)} ${esc(school.naam)}</div>
-        ${bestuur ? `<div>Bestuur: ${esc(bestuur.naam)}</div>` : ''}
         ${school.adres ? `<div>${esc(school.adres)}</div>` : ''}
         ${(school.postcode || school.plaats) ? `<div>${[school.postcode, school.plaats].filter(Boolean).map(esc).join(' ')}</div>` : ''}
         ${school.debiteurnr ? `<div style="margin-top:4px">Debiteurnummer: <strong>${esc(school.debiteurnr)}</strong></div>` : ''}
