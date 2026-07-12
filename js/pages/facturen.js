@@ -384,8 +384,8 @@ function renderRegels(regels) {
     <thead><tr>
       <th style="width:110px">Omschrijving</th>
       <th style="min-width:300px">Toelichting</th>
-      <th style="width:96px">Datum</th>
-      <th style="width:56px">Uren</th>
+      <th style="width:84px">Datum</th>
+      <th style="width:82px">Uren</th>
       <th style="width:88px">Bedrag (€)</th>
       <th style="width:34px"></th>
     </tr></thead>
@@ -393,8 +393,8 @@ function renderRegels(regels) {
       <tr>
         <td style="width:110px"><input type="text" value="${esc(r.omschrijving || '')}" oninput="updateRegel(${i},'omschrijving',this.value)" placeholder="Coachessie 3"/></td>
         <td style="min-width:300px"><textarea rows="3" oninput="updateRegel(${i},'toelichting',this.value)" placeholder="Meerdere regels mogelijk — komt zo ook op de factuur onder elkaar" style="width:100%;min-height:66px;resize:vertical;line-height:1.4">${esc(r.toelichting || '')}</textarea></td>
-        <td><input type="date" value="${esc(r.datum || '')}" oninput="updateRegel(${i},'datum',this.value)"/></td>
-        <td><input type="text" value="${esc(r.uren || '')}" oninput="updateRegel(${i},'uren',this.value)" placeholder="2,5 uur"/></td>
+        <td><input type="date" value="${esc(r.datum || '')}" oninput="updateRegel(${i},'datum',this.value)" style="width:100%;min-width:0"/></td>
+        <td><input type="text" value="${esc(r.uren || '')}" oninput="updateRegel(${i},'uren',this.value)" placeholder="2,5 uur" style="width:100%;min-width:0"/></td>
         <td><input type="text" inputmode="decimal" value="${esc(r.bedrag || '')}" oninput="updateRegel(${i},'bedrag',this.value)" placeholder="0,00"/></td>
         <td><button class="btn btn-ghost btn-icon btn-sm" onclick="delRegel(${i})">${svgIcon('trash', 13)}</button></td>
       </tr>`).join('')}
