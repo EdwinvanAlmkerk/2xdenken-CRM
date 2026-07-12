@@ -194,6 +194,21 @@ function renderFacturenTab(schoolId) {
 }
 
 // ── Factuur modal ─────────────────────────────────────────────────
+// Datum-ISO + n dagen → ISO (UTC-rekenwerk, voorkomt off-by-one door tijdzone).
+function _datumPlusDagen(iso, n) {
+  if (!iso) return '';
+  const d = new Date(iso + 'T00:00:00Z');
+  if (isNaN(d.getTime())) return '';
+  d.setUTCDate(d.getUTCDate() + n);
+  return d.toISOString().slice(0, 10);
+}
+// Herbereken de vervaldatum op factuurdatum + 14 dagen (standaard betaaltermijn).
+function factuurUpdateVerval() {
+  const datum = document.getElementById('f-datum')?.value;
+  const verval = document.getElementById('f-verval');
+  if (datum && verval) verval.value = _datumPlusDagen(datum, 14);
+}
+
 async function openFactuurModal(schoolId, fid = '', prefillContactId = '', prefillBestuurId = '') {
   const f = getFactuur(fid);
 
@@ -247,8 +262,8 @@ async function openFactuurModal(schoolId, fid = '', prefillContactId = '', prefi
        <div class="form-group"><label>Debiteurnummer</label><input type="text" id="f-debnr" value="${esc(prefillDebnr)}" placeholder="DB15"/></div>
      </div>
      <div class="form-row">
-       <div class="form-group"><label>Factuurdatum</label><input type="date" id="f-datum" value="${esc(f?.datum?.slice(0, 10) || new Date().toISOString().slice(0, 10))}"/></div>
-       <div class="form-group"><label>Vervaldatum</label><input type="date" id="f-verval" value="${esc(f?.vervaldatum?.slice(0, 10) || '')}"/></div>
+       <div class="form-group"><label>Factuurdatum</label><input type="date" id="f-datum" value="${esc(f?.datum?.slice(0, 10) || new Date().toISOString().slice(0, 10))}" onchange="factuurUpdateVerval()"/></div>
+       <div class="form-group"><label>Vervaldatum</label><input type="date" id="f-verval" value="${esc(f?.vervaldatum?.slice(0, 10) || _datumPlusDagen(f?.datum?.slice(0, 10) || new Date().toISOString().slice(0, 10), 14))}"/></div>
      </div>
      <div class="form-row">
        <div class="form-group"><label>Status</label>
