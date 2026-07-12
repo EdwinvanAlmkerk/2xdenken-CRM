@@ -380,19 +380,19 @@ function renderRegels(regels) {
   _regels = regels;
   const wrap = document.getElementById('regels-wrap');
   if (!wrap) return;
-  wrap.innerHTML = `<div style="overflow-x:auto"><table style="width:100%;min-width:660px">
+  wrap.innerHTML = `<div style="overflow-x:auto"><table style="width:100%;min-width:640px">
     <thead><tr>
-      <th style="min-width:130px">Omschrijving</th>
-      <th>Toelichting</th>
-      <th style="width:110px">Datum</th>
-      <th style="width:80px">Uren</th>
-      <th style="width:105px">Bedrag (€)</th>
+      <th style="width:110px">Omschrijving</th>
+      <th style="min-width:300px">Toelichting</th>
+      <th style="width:96px">Datum</th>
+      <th style="width:56px">Uren</th>
+      <th style="width:88px">Bedrag (€)</th>
       <th style="width:34px"></th>
     </tr></thead>
     <tbody>${regels.map((r, i) => `
       <tr>
-        <td><input type="text" value="${esc(r.omschrijving || '')}" oninput="updateRegel(${i},'omschrijving',this.value)" placeholder="Coachessie 3"/></td>
-        <td style="min-width:200px"><textarea rows="3" oninput="updateRegel(${i},'toelichting',this.value)" placeholder="Meerdere regels mogelijk — komt zo ook op de factuur onder elkaar" style="width:100%;min-height:66px;resize:vertical;line-height:1.4">${esc(r.toelichting || '')}</textarea></td>
+        <td style="width:110px"><input type="text" value="${esc(r.omschrijving || '')}" oninput="updateRegel(${i},'omschrijving',this.value)" placeholder="Coachessie 3"/></td>
+        <td style="min-width:300px"><textarea rows="3" oninput="updateRegel(${i},'toelichting',this.value)" placeholder="Meerdere regels mogelijk — komt zo ook op de factuur onder elkaar" style="width:100%;min-height:66px;resize:vertical;line-height:1.4">${esc(r.toelichting || '')}</textarea></td>
         <td><input type="date" value="${esc(r.datum || '')}" oninput="updateRegel(${i},'datum',this.value)"/></td>
         <td><input type="text" value="${esc(r.uren || '')}" oninput="updateRegel(${i},'uren',this.value)" placeholder="2,5 uur"/></td>
         <td><input type="text" inputmode="decimal" value="${esc(r.bedrag || '')}" oninput="updateRegel(${i},'bedrag',this.value)" placeholder="0,00"/></td>
