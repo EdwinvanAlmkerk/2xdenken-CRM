@@ -88,7 +88,9 @@ async function delSchool(id) {
 async function saveContact(schoolId, cid) {
   const naam = document.getElementById('f-naam').value.trim();
   if (!naam) return alert('Naam is verplicht');
-  const data = { naam, functie: document.getElementById('f-func').value.trim(), type: document.getElementById('f-type').value, email: document.getElementById('f-email').value.trim(), telefoonMobiel: document.getElementById('f-tel-mobiel').value.trim(), telefoonWerk: document.getElementById('f-tel-werk').value.trim(), schoolId };
+  // Gekozen school uit de dropdown (maakt verplaatsen naar een andere school mogelijk).
+  const gekozenSchoolId = document.getElementById('f-contact-school')?.value || schoolId;
+  const data = { naam, functie: document.getElementById('f-func').value.trim(), type: document.getElementById('f-type').value, email: document.getElementById('f-email').value.trim(), telefoonMobiel: document.getElementById('f-tel-mobiel').value.trim(), telefoonWerk: document.getElementById('f-tel-werk').value.trim(), schoolId: gekozenSchoolId };
   showLoading();
   try {
     if (cid) {

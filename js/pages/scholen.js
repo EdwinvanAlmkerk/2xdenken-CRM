@@ -392,8 +392,13 @@ function openUitvoeringVanSchoolModal(schoolId, preselectContactId = '') {
 // ── Contact modals ────────────────────────────────────────────────
 function openContactModal(schoolId, cid = '') {
   const c = getContact(cid);
+  const huidigeSchoolId = c?.schoolId || schoolId || '';
+  const schoolOpts = [...(DB.scholen || [])]
+    .sort((a, b) => (a.naam || '').localeCompare(b.naam || '', 'nl'))
+    .map(s => { const b = getBestuur(s.bestuurId); return `<option value="${s.id}"${s.id === huidigeSchoolId ? ' selected' : ''}>${esc(s.naam)}${b ? ' — ' + esc(b.naam) : ''}</option>`; }).join('');
   showModal(c ? 'Contactpersoon bewerken' : 'Contactpersoon toevoegen',
     `<div class="form-group"><label>Naam *</label><input type="text" id="f-naam" value="${esc(c?.naam || '')}" placeholder="Jan de Vries"/></div>
+     <div class="form-group"><label>School</label><select id="f-contact-school">${schoolOpts}</select></div>
      <div class="form-row">
        <div class="form-group"><label>Functie</label><input type="text" id="f-func" value="${esc(c?.functie || '')}" placeholder="Directeur"/></div>
        <div class="form-group"><label>Type</label>
