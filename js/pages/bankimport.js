@@ -84,7 +84,8 @@ function openBankimportModal() {
     `<p style="font-size:13.5px;color:var(--navy3);line-height:1.6;margin-bottom:14px">
        Maak in Mijn ING een export met bestandstype <strong>CSV</strong> en kies dit bestand hieronder.
        Het CRM zoekt per bijgeschreven bedrag een openstaande factuur (op factuurnummer en/of bedrag)
-       en toont een voorstel. Pas na jouw bevestiging worden facturen op <strong>Betaald</strong> gezet.
+       en toont een voorstel. Staan er meerdere factuurnummers in één omschrijving, dan worden die
+       facturen samen herkend. Pas na jouw bevestiging worden facturen op <strong>Betaald</strong> gezet.
      </p>
      <div class="form-group">
        <label>ING CSV-bestand</label>
@@ -115,9 +116,12 @@ function handleBankimportFile(input) {
   reader.readAsText(file);
 }
 
+let _bankGroepTeller = 0;
+
 function buildBankimportProposals(text) {
   _bankimportProposals = [];
   _bankimportOnmatched = 0;
+  _bankGroepTeller = 0;
 
   const delim = _bankDetectDelim(text);
   const rows = _bankCsvParse(text, delim);
@@ -153,39 +157,54 @@ function buildBankimportProposals(text) {
     const datum = idxDatum >= 0 ? String(r[idxDatum] || '').trim() : '';
     const zoektekst = `${mededeling} ${naam}`;
 
-    // 1) Match op factuurnummer.
-    let match = null, reden = '', sterk = false;
-    for (const f of openFacturen) {
-      if (gebruikt.has(f.id)) continue;
-      if (_bankNummerMatcht(f.nummer, zoektekst)) { match = f; break; }
-    }
-    if (match) {
-      if (_bankBedragGelijk(match.totaal, bedrag)) { reden = 'Factuurnummer + bedrag'; sterk = true; }
-      else { reden = `Factuurnummer (bedrag wijkt af: factuur ${fmtEuro(match.totaal)})`; sterk = false; }
+    // 1) Match op factuurnummer(s). Eén betaling kan meerdere facturen
+    // afdekken: scholen zetten soms alle factuurnummers in de omschrijving.
+    // We zoeken dus ALLE openstaande facturen waarvan het nummer voorkomt.
+    let genoemd = openFacturen.filter(f => !gebruikt.has(f.id) && _bankNummerMatcht(f.nummer, zoektekst));
+    let matches = [], reden = '', sterk = false;
+
+    if (genoemd.length > 0) {
+      const som = Math.round(genoemd.reduce((s, f) => s + (f.totaal || 0), 0) * 100) / 100;
+      const totaalKlopt = _bankBedragGelijk(som, bedrag);
+      matches = genoemd;
+      if (genoemd.length === 1) {
+        reden = totaalKlopt ? 'Factuurnummer + bedrag' : `Factuurnummer (bedrag wijkt af: factuur ${fmtEuro(som)})`;
+        sterk = totaalKlopt;
+      } else {
+        reden = totaalKlopt
+          ? `${genoemd.length} facturen in 1 betaling — totaal klopt`
+          : `${genoemd.length} facturen in 1 betaling — totaal ${fmtEuro(som)} ≠ ontvangen ${fmtEuro(bedrag)}`;
+        sterk = totaalKlopt;
+      }
     } else {
-      // 2) Match op uniek bedrag.
+      // 2) Geen nummer gevonden → match op uniek bedrag (enkelvoudig).
       const kandidaten = openFacturen.filter(f => !gebruikt.has(f.id) && _bankBedragGelijk(f.totaal, bedrag));
-      if (kandidaten.length === 1) { match = kandidaten[0]; reden = 'Bedrag (uniek)'; sterk = true; }
-      else if (kandidaten.length > 1) { /* meerdere gelijke bedragen → geen automatische keuze */ }
+      if (kandidaten.length === 1) { matches = kandidaten; reden = 'Bedrag (uniek)'; sterk = true; }
     }
 
-    if (match) {
-      gebruikt.add(match.id);
-      _bankimportProposals.push({
-        factuurId: match.id,
-        nummer: match.nummer,
-        klant: factuurKlantNaam(match),
-        factuurTotaal: match.totaal,
-        betaling: { datum, bedrag, naam, mededeling },
-        reden, sterk,
-      });
+    if (matches.length > 0) {
+      const groepId = ++_bankGroepTeller;
+      const betaling = { datum, bedrag, naam, mededeling };
+      for (const f of matches) {
+        gebruikt.add(f.id);
+        _bankimportProposals.push({
+          factuurId: f.id,
+          nummer: f.nummer,
+          klant: factuurKlantNaam(f),
+          factuurTotaal: f.totaal,
+          betaling,
+          reden, sterk,
+          groepId,
+          groepGrootte: matches.length,
+        });
+      }
     } else {
       _bankimportOnmatched++;
     }
   }
 
-  // Sterke matches bovenaan.
-  _bankimportProposals.sort((a, b) => (b.sterk ? 1 : 0) - (a.sterk ? 1 : 0));
+  // Sterke matches bovenaan; regels van dezelfde betaling blijven bij elkaar.
+  _bankimportProposals.sort((a, b) => (b.sterk ? 1 : 0) - (a.sterk ? 1 : 0) || (a.groepId - b.groepId));
 }
 
 // ── Resultaat tonen ──────────────────────────────────────────────
@@ -204,15 +223,33 @@ function renderBankimportResult() {
     return;
   }
 
-  const rijen = _bankimportProposals.map((p, i) => `
-    <tr>
-      <td style="text-align:center"><input type="checkbox" id="bimp-${i}" ${p.sterk ? 'checked' : ''} style="width:17px;height:17px;cursor:pointer"/></td>
-      <td style="font-weight:700;white-space:nowrap">${esc(p.nummer || '')}</td>
-      <td style="font-size:13px">${esc(p.klant || '—')}</td>
-      <td style="font-weight:600;white-space:nowrap">${fmtEuro(p.betaling.bedrag)}</td>
-      <td style="white-space:nowrap;font-size:12.5px;color:var(--navy3)">${esc(_bankFmtDatum(p.betaling.datum))}</td>
-      <td style="font-size:12px;color:${p.sterk ? 'var(--groen)' : 'var(--s-oranje, #b26a00)'};font-weight:600">${esc(p.reden)}</td>
-    </tr>`).join('');
+  // Regels opbouwen; bij een betaling met meerdere facturen komt er eerst
+  // een groepskop die de bijschrijving samenvat.
+  let rijen = '';
+  let vorigeGroep = null;
+  _bankimportProposals.forEach((p, i) => {
+    if (p.groepGrootte > 1 && p.groepId !== vorigeGroep) {
+      rijen += `
+        <tr style="background:var(--bg2)">
+          <td></td>
+          <td colspan="5" style="font-size:12px;color:var(--navy3);font-weight:600;padding-top:9px">
+            ${svgIcon('euro', 13)} Betaling ${fmtEuro(p.betaling.bedrag)} op ${esc(_bankFmtDatum(p.betaling.datum))}${p.betaling.naam ? ` — ${esc(p.betaling.naam)}` : ''}
+            <span style="color:${p.sterk ? 'var(--groen)' : 'var(--s-oranje, #b26a00)'}"> · ${esc(p.reden)}</span>
+          </td>
+        </tr>`;
+    }
+    vorigeGroep = p.groepId;
+    const enkel = p.groepGrootte === 1;
+    rijen += `
+      <tr>
+        <td style="text-align:center"><input type="checkbox" id="bimp-${i}" ${p.sterk ? 'checked' : ''} style="width:17px;height:17px;cursor:pointer"/></td>
+        <td style="font-weight:700;white-space:nowrap${enkel ? '' : ';padding-left:22px'}">${esc(p.nummer || '')}</td>
+        <td style="font-size:13px">${esc(p.klant || '—')}</td>
+        <td style="font-weight:600;white-space:nowrap">${fmtEuro(p.factuurTotaal)}</td>
+        <td style="white-space:nowrap;font-size:12.5px;color:var(--navy3)">${esc(_bankFmtDatum(p.betaling.datum))}</td>
+        <td style="font-size:12px;color:${p.sterk ? 'var(--groen)' : 'var(--s-oranje, #b26a00)'};font-weight:600">${enkel ? esc(p.reden) : 'onderdeel van betaling'}</td>
+      </tr>`;
+  });
 
   const aantalSterk = _bankimportProposals.filter(p => p.sterk).length;
 
@@ -227,7 +264,7 @@ function renderBankimportResult() {
           <th style="width:36px;text-align:center">✓</th>
           <th>Factuur</th>
           <th>Klant</th>
-          <th>Ontvangen</th>
+          <th>Factuurbedrag</th>
           <th>Datum</th>
           <th>Match</th>
         </tr></thead>
