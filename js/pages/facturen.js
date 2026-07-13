@@ -93,6 +93,10 @@ function renderFacturenPage(search = '') {
         ${statusFilters.map(f => `<button class="btn btn-sm ${_factuurFilter === f ? 'btn-primary' : 'btn-secondary'}"
           onclick="setFactuurFilter('${f}')">${flabels[f]}</button>`).join('')}
       </div>
+      <button class="btn btn-secondary btn-sm" onclick="openBankimportModal()"
+        style="display:flex;align-items:center;gap:6px;white-space:nowrap;border-color:var(--navy);color:var(--navy);font-weight:700">
+        ${svgIcon('download', 15)} Bankimport
+      </button>
       <button class="btn btn-secondary btn-sm" onclick="exportFacturenExcel()"
         style="display:flex;align-items:center;gap:6px;white-space:nowrap;border-color:var(--groen);color:var(--groen);font-weight:700">
         ${svgIcon('invoice', 15)} Excel export
