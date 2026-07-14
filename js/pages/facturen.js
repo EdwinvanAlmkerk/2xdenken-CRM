@@ -738,11 +738,44 @@ function getFactuurHtml(fid) {
   return html;
 }
 
+// Script dat in het printvenster draait: meet de factuur op de échte
+// A4-printbreedte en verkleint (zoom) de inhoud net genoeg zodat hij
+// altijd op één pagina past — ongeacht het aantal factuurregels.
+const FACTUUR_FIT_SCRIPT = `
+<script>
+(function(){
+  function mm(v){return v*96/25.4;}
+  function fit(){
+    var page=document.querySelector('.page');
+    var header=document.querySelector('.header');
+    var footer=document.querySelector('.footer');
+    if(!page||!header||!footer)return;
+    // Match de printlayout: @page-marges 12mm boven / 16mm zijkanten / 10mm onder op A4.
+    page.style.zoom='';
+    page.style.width=mm(210-16-16)+'px';
+    page.style.maxWidth='none';
+    page.style.margin='0 auto';
+    page.style.padding='0';
+    void page.offsetHeight; // reflow forceren
+    var availH=mm(297-12-10);
+    var used=footer.getBoundingClientRect().bottom-header.getBoundingClientRect().top;
+    if(used>availH){
+      var scale=(availH/used)*0.99; // kleine veiligheidsmarge
+      page.style.zoom=scale;
+    }
+  }
+  function run(){setTimeout(fit,60);}
+  if(document.fonts&&document.fonts.ready){document.fonts.ready.then(run);}
+  window.addEventListener('load',run);
+})();
+<\/script>`;
+
 function printFactuur(fid) {
   const html = getFactuurHtml(fid);
   if (!html) return;
+  const withFit = html.replace('</body>', FACTUUR_FIT_SCRIPT + '\n</body>');
   const win = window.open('', '_blank', 'width=900,height=1150');
-  win.document.write(html);
+  win.document.write(withFit);
   win.document.close();
 }
 
