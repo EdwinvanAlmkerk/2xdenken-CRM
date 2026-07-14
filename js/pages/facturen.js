@@ -572,8 +572,26 @@ function getFactuurHtml(fid) {
     --bg:#FAF7F2;--line:#E8E4DC;
   }
   body{font-family:'Nunito',Arial,sans-serif;font-size:10.5pt;color:var(--ink);background:#fff;line-height:1.5}
-  @page{size:A4;margin:15mm 18mm 18mm 18mm}
-  @media print{.no-print{display:none!important}}
+  @page{size:A4;margin:12mm 16mm 10mm 16mm}
+  @media print{
+    .no-print{display:none!important}
+    /* Compacte print-modus: voorkom dat de factuur naar een 2e pagina loopt.
+       De @page geeft al marges, dus de extra padding/marges in .page worden hier ingekort. */
+    html,body{-webkit-print-color-adjust:exact;print-color-adjust:exact}
+    .page{padding:0!important;max-width:none!important}
+    .page::before{left:0;right:0}
+    .header{margin-top:14px;margin-bottom:20px;padding-bottom:16px}
+    .meta-row{margin-bottom:18px}
+    .betreft{margin-bottom:14px;padding:9px 15px}
+    .rt tbody td{padding:9px 12px 9px 0}
+    .rt thead th{padding:7px 12px 7px 0}
+    .totaal-row{margin-top:10px;margin-bottom:18px}
+    .payment-section{margin-bottom:12px;padding:12px 20px}
+    .btw-notice{padding:5px 0;margin-bottom:10px}
+    .footer{padding-top:10px}
+    /* Nooit een factuurregel of blok over een paginagrens breken. */
+    .rt tr,.totaal-row,.payment-section,.footer{page-break-inside:avoid}
+  }
   .page{max-width:800px;margin:0 auto;padding:28px 30px 30px;position:relative}
   .page::before{content:'';position:absolute;top:0;left:30px;right:30px;height:4px;background:linear-gradient(90deg,var(--teal) 0%,var(--teal) 60%,var(--peach) 100%);border-radius:2px}
 
