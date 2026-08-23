@@ -60,14 +60,34 @@ function _kostAlleTermijnen() {
   return out;
 }
 
-// Omschrijving inclusief afschrijvings-aanduiding (voor exports).
-function _kostOmschr(f) {
-  const base = f.omschrijving || '';
-  if (f.afschrijvingTotaal > 1) {
-    const suf = `afschrijving ${f.afschrijvingTermijn}/${f.afschrijvingTotaal} van ${fmtEuro(f.afschrijvingBedragOrigineel)}`;
-    return base ? `${base} — ${suf}` : suf;
+// Afschrijvings-aanduiding voor een originele factuur (bv. "5 jaar (€ 500,00/jr)").
+function _kostAfschrLabel(f) {
+  const n = Math.min(5, Math.max(1, Number(f.afschrijvingsperiode) || 1));
+  if (n <= 1) return '—';
+  return `${n} jaar (${fmtEuro((Number(f.bedrag) || 0) / n)}/jr)`;
+}
+
+// De originele inkoopfacturen die bijdragen aan een set (uitgesmeerde) termijnen,
+// ontdubbeld op id. Zo verschijnt bij een afschrijving de volledige factuur in
+// de export, ook al valt de aankoopdatum buiten het gefilterde jaar.
+function _kostOriginelen(termijnen) {
+  const ids = new Set(termijnen.map(t => t.id));
+  return (DB.inkoopfacturen || [])
+    .filter(f => ids.has(f.id))
+    .sort((a, b) => (a.factuurdatum || '') < (b.factuurdatum || '') ? -1 : (a.factuurdatum || '') > (b.factuurdatum || '') ? 1 : 0);
+}
+
+function _kostAggJaar(rows) {
+  const map = new Map();
+  for (const f of rows) {
+    const y = (f.factuurdatum || '').slice(0, 4);
+    if (!y) continue;
+    const cur = map.get(y) || { key: y, totaal: 0, aantal: 0 };
+    cur.totaal += Number(f.bedrag) || 0;
+    cur.aantal++;
+    map.set(y, cur);
   }
-  return base;
+  return [...map.values()].sort((a, b) => a.key.localeCompare(b.key));
 }
 
 function _kostFilterFacturen(jaar = _kostJaar, type = _kostType) {
@@ -287,52 +307,73 @@ function renderKostenOverzichtPage() {
 }
 
 // ── Excel-export ─────────────────────────────────────────────────
+// Structuur: (1) overzicht met subtotalen per type én per jaar (afgeschreven),
+// (2) alle originele inkoopfacturen (volledig bedrag) met afschrijvingskolom.
 function exportKostenExcel() {
-  const facturen = _kostFilterFacturen();
-  if (!facturen.length) { showToast('Geen kosten om te exporteren', 'error'); return; }
+  const termijnen = _kostFilterFacturen();
+  if (!termijnen.length) { showToast('Geen kosten om te exporteren', 'error'); return; }
 
-  const sorted = [...facturen].sort((a, b) => (a.factuurdatum || '') < (b.factuurdatum || '') ? -1 : 1);
+  const originals = _kostOriginelen(termijnen);
   const Q = s => '"' + String(s ?? '').replace(/"/g, '""').replace(/\r?\n/g, ' ').replace(/\t/g, ' ') + '"';
   const EUR = n => Number(n || 0).toFixed(2).replace('.', ',');
 
   const jaarLabel = _kostJaar === 'alle' ? 'alle jaren' : _kostJaar;
   const typeLabel = _kostType === 'alle' ? 'alle types' : kostenTypeLabel(_kostType);
   const titel = `Kostenoverzicht 2xDenken — ${jaarLabel} · ${typeLabel}`;
-  const totaal = sorted.reduce((s, f) => s + (Number(f.bedrag) || 0), 0);
 
-  const headers = ['Datum', 'Leverancier', 'Factuurnr', 'Type', 'Omschrijving', 'Bedrag (€)', 'Recurring', 'Notitie'];
+  const totaalAfgeschreven = termijnen.reduce((s, f) => s + (Number(f.bedrag) || 0), 0);
+  const totaalOrigineel = originals.reduce((s, f) => s + (Number(f.bedrag) || 0), 0);
+  const perType = _kostAggType(termijnen);
+  const perJaar = _kostAggJaar(termijnen);
+  const heeftAfschrijving = originals.some(f => (Number(f.afschrijvingsperiode) || 1) > 1);
+
+  const headers = ['Datum', 'Leverancier', 'Factuurnr', 'Type', 'Omschrijving', 'Bedrag (€)', 'Afschrijving', 'Recurring', 'Notitie'];
   const cols = headers.length;
   const empty = Array(cols).fill('');
-
-  // Per type subtotalen
-  const perType = _kostAggType(sorted);
+  const pad = arr => [...arr, ...Array(Math.max(0, cols - arr.length)).fill('')];
 
   const rows = [
-    [Q(titel), ...Array(cols - 1).fill('')],
+    pad([Q(titel)]),
+    pad([Q(`Selectie: ${jaarLabel} · ${typeLabel}`)]),
     empty,
+    // ── Overzicht ──
+    pad([Q('OVERZICHT (AFGESCHREVEN)')]),
+    pad([Q('Totaal deze selectie'), '', '', '', '', EUR(totaalAfgeschreven)]),
+    pad([Q('Aantal originele facturen'), Q(String(originals.length))]),
+    empty,
+    pad([Q('Subtotaal per type')]),
+    ...perType.map(r => pad([Q(r.label), '', '', '', Q(`${r.aantal} termijn(en)`), EUR(r.totaal)])),
+    ...(perJaar.length > 1 ? [
+      empty,
+      pad([Q('Subtotaal per jaar')]),
+      ...perJaar.map(r => pad([Q(r.key), '', '', '', Q(`${r.aantal} termijn(en)`), EUR(r.totaal)])),
+    ] : []),
+    empty,
+    // ── Originele facturen ──
+    pad([Q('ALLE INKOOPFACTUREN (ORIGINEEL)')]),
     headers.map(Q),
-    ...sorted.map(f => {
+    ...originals.map(f => {
       const rec = f.isRecurring && !f.parentId
         ? `Template (${f.recurringInterval || 'maand'})`
         : (f.parentId ? 'Auto-gegenereerd' : '');
+      const afschr = (Number(f.afschrijvingsperiode) || 1) > 1 ? _kostAfschrLabel(f) : '';
       return [
         Q(fmtDateShort(f.factuurdatum)),
         Q(f.leverancier || ''),
         Q(f.factuurnummer || ''),
         Q(kostenTypeLabel(f.kostenTypeId)),
-        Q(_kostOmschr(f)),
+        Q(f.omschrijving || ''),
         EUR(f.bedrag),
+        Q(afschr),
         Q(rec),
         Q(f.notitie || ''),
       ];
     }),
     empty,
-    [Q('SUBTOTAAL PER TYPE'), ...Array(cols - 1).fill('')],
-    ...perType.map(r => [Q(r.label), '', '', '', `${r.aantal} fact.`, EUR(r.totaal), '', '']),
+    pad([Q('TOTAAL ORIGINELE FACTUREN'), '', '', '', '', EUR(totaalOrigineel)]),
+    ...(heeftAfschrijving ? [pad([Q(`↳ waarvan toegerekend aan deze selectie (afgeschreven): ${EUR(totaalAfgeschreven)}`)])] : []),
     empty,
-    [Q('TOTAAL'), '', '', '', '', EUR(totaal), '', ''],
-    empty,
-    [Q(`Geëxporteerd op: ${new Date().toLocaleDateString('nl-NL')} | Aantal: ${sorted.length}`), ...Array(cols - 1).fill('')],
+    pad([Q(`Geëxporteerd op: ${new Date().toLocaleDateString('nl-NL')} | Originele facturen: ${originals.length}`)]),
   ];
 
   const csv  = '﻿' + rows.map(r => r.join(';')).join('\r\n');
@@ -345,19 +386,22 @@ function exportKostenExcel() {
   a.click();
   document.body.removeChild(a);
   URL.revokeObjectURL(url);
-  showToast(`${sorted.length} ko${sorted.length === 1 ? 'st' : 'sten'} geëxporteerd`);
+  showToast(`${originals.length} inkoopfactu${originals.length === 1 ? 'ur' : 'ren'} geëxporteerd`);
 }
 
 // ── PDF-export (A4 landscape print window, zelfde stijl als uitvoeringen) ──
 function exportKostenPDF() {
-  const facturen = _kostFilterFacturen();
-  if (!facturen.length) { showToast('Geen kosten om te exporteren', 'error'); return; }
-  const sorted = [...facturen].sort((a, b) => (a.factuurdatum || '') < (b.factuurdatum || '') ? -1 : 1);
+  const termijnen = _kostFilterFacturen();
+  if (!termijnen.length) { showToast('Geen kosten om te exporteren', 'error'); return; }
 
-  const totaal = sorted.reduce((s, f) => s + (Number(f.bedrag) || 0), 0);
-  const perType = _kostAggType(sorted);
-  const monthSet = new Set(sorted.map(f => (f.factuurdatum || '').slice(0, 7)).filter(Boolean));
-  const gemPerMaand = monthSet.size ? totaal / monthSet.size : 0;
+  const originals = _kostOriginelen(termijnen);
+  const totaalAfgeschreven = termijnen.reduce((s, f) => s + (Number(f.bedrag) || 0), 0);
+  const totaalOrigineel = originals.reduce((s, f) => s + (Number(f.bedrag) || 0), 0);
+  const perType = _kostAggType(termijnen);
+  const perJaar = _kostAggJaar(termijnen);
+  const heeftAfschrijving = originals.some(f => (Number(f.afschrijvingsperiode) || 1) > 1);
+  const monthSet = new Set(termijnen.map(f => (f.factuurdatum || '').slice(0, 7)).filter(Boolean));
+  const gemPerMaand = monthSet.size ? totaalAfgeschreven / monthSet.size : 0;
 
   const jaarLabel = _kostJaar === 'alle' ? 'Alle jaren' : `Jaar ${_kostJaar}`;
   const typeLabel = _kostType === 'alle' ? 'Alle types' : kostenTypeLabel(_kostType);
@@ -371,13 +415,15 @@ function exportKostenPDF() {
   };
   const fmtEurStr = (n) => '€ ' + Number(n || 0).toFixed(2).replace('.', ',');
 
-  const rowsHtml = sorted.map(f => {
+  const rowsHtml = originals.map(f => {
     const recIcon = f.isRecurring && !f.parentId ? ' 🔁' : (f.parentId ? ' <span style="color:#999">🔁</span>' : '');
+    const afschr = (Number(f.afschrijvingsperiode) || 1) > 1 ? esc(_kostAfschrLabel(f)) : '<span style="color:#bbb">—</span>';
     return `<tr>
       <td class="nowrap">${fmtDutchDate(f.factuurdatum)}</td>
       <td><strong>${esc(f.leverancier || '–')}</strong>${f.factuurnummer ? `<div class="sub">${esc(f.factuurnummer)}</div>` : ''}</td>
       <td>${esc(kostenTypeLabel(f.kostenTypeId) || '–')}</td>
-      <td>${esc(_kostOmschr(f))}${recIcon}</td>
+      <td>${esc(f.omschrijving || '')}${recIcon}</td>
+      <td class="nowrap">${afschr}</td>
       <td class="nowrap right">${fmtEurStr(f.bedrag)}</td>
     </tr>`;
   }).join('');
@@ -387,6 +433,19 @@ function exportKostenPDF() {
     <td class="right">${r.aantal}</td>
     <td class="right"><strong>${fmtEurStr(r.totaal)}</strong></td>
   </tr>`).join('');
+
+  const perJaarHtml = perJaar.map(r => `<tr>
+    <td>${esc(r.key)}</td>
+    <td class="right">${r.aantal}</td>
+    <td class="right"><strong>${fmtEurStr(r.totaal)}</strong></td>
+  </tr>`).join('');
+
+  const perJaarSectie = perJaar.length > 1 ? `
+  <h2>Subtotalen per jaar (afgeschreven)</h2>
+  <table>
+    <thead><tr><th>Jaar</th><th class="right">Termijnen</th><th class="right">Totaal</th></tr></thead>
+    <tbody>${perJaarHtml}</tbody>
+  </table>` : '';
 
   const html = `<!DOCTYPE html>
 <html lang="nl">
@@ -444,19 +503,20 @@ function exportKostenPDF() {
   </div>
 
   <div class="stats">
-    <div class="stat"><div class="stat-label">Totaal kosten</div><div class="stat-value">${fmtEurStr(totaal)}</div></div>
-    <div class="stat"><div class="stat-label">Aantal facturen</div><div class="stat-value">${sorted.length}</div></div>
+    <div class="stat"><div class="stat-label">Totaal (afgeschreven)</div><div class="stat-value">${fmtEurStr(totaalAfgeschreven)}</div></div>
+    <div class="stat"><div class="stat-label">Aantal facturen</div><div class="stat-value">${originals.length}</div></div>
     <div class="stat"><div class="stat-label">Gemiddeld/maand</div><div class="stat-value">${fmtEurStr(gemPerMaand)}</div></div>
     <div class="stat"><div class="stat-label">Aantal types</div><div class="stat-value">${perType.length}</div></div>
   </div>
 
-  <h2>Subtotalen per type</h2>
+  <h2>Subtotalen per type (afgeschreven)</h2>
   <table>
-    <thead><tr><th>Type</th><th class="right">Aantal</th><th class="right">Totaal</th></tr></thead>
+    <thead><tr><th>Type</th><th class="right">Termijnen</th><th class="right">Totaal</th></tr></thead>
     <tbody>${perTypeHtml}</tbody>
   </table>
+  ${perJaarSectie}
 
-  <h2>Alle inkoopfacturen</h2>
+  <h2>Alle inkoopfacturen (origineel)</h2>
   <table>
     <thead>
       <tr>
@@ -464,14 +524,16 @@ function exportKostenPDF() {
         <th>Leverancier</th>
         <th>Type</th>
         <th>Omschrijving</th>
+        <th>Afschrijving</th>
         <th class="right">Bedrag</th>
       </tr>
     </thead>
     <tbody>
       ${rowsHtml}
-      <tr class="totaal-row"><td colspan="4" class="right">Totaal</td><td class="right">${fmtEurStr(totaal)}</td></tr>
+      <tr class="totaal-row"><td colspan="5" class="right">Totaal originele facturen</td><td class="right">${fmtEurStr(totaalOrigineel)}</td></tr>
     </tbody>
   </table>
+  ${heeftAfschrijving ? `<div style="font-size:8.5pt;color:var(--ink-l);margin-top:8px">Toelichting: het bedrag van afgeschreven facturen wordt in het overzicht uitgesmeerd over de afschrijvingsperiode. De bovenstaande facturen tonen het volledige (originele) bedrag; hiervan is <strong>${fmtEurStr(totaalAfgeschreven)}</strong> toegerekend aan deze selectie (${esc(filterDesc)}).</div>` : ''}
 
   <div class="footer">2xDenken — Kostenoverzicht — Pagina <span class="pageNum"></span></div>
 </div>
