@@ -230,6 +230,9 @@ function openInkoopfactuurModal(id = '') {
   const today = new Date().toISOString().slice(0, 10);
   const interval = f?.recurringInterval || 'maand';
   const bedragStr = f ? Number(f.bedrag).toFixed(2).replace('.', ',') : '';
+  const afschrijving = Math.min(5, Math.max(1, Number(f?.afschrijvingsperiode) || 1));
+  const afschrijvingOpts = [1, 2, 3, 4, 5]
+    .map(n => `<option value="${n}"${afschrijving === n ? ' selected' : ''}>${n === 1 ? 'Niet afschrijven — volledig bedrag in aankoopjaar' : `${n} jaar`}</option>`).join('');
 
   const title = f
     ? (isChild ? 'Inkoopfactuur bewerken (uit terugkerende reeks)' : (f.isRecurring ? 'Inkoopfactuur bewerken (terugkerend)' : 'Inkoopfactuur bewerken'))
@@ -255,9 +258,15 @@ function openInkoopfactuurModal(id = '') {
        <div class="form-group"><label>Bedrag (€) *</label>
          <input type="text" inputmode="decimal" id="f-ink-bedrag" value="${esc(bedragStr)}" placeholder="0,00"/></div>
      </div>
-     <div class="form-group"><label>Kostentype</label>
-       <select id="f-ink-type">${typeOpts}</select>
-       ${typeList.length === 0 ? `<div style="font-size:11px;color:var(--navy4);margin-top:4px">Geen kostentypes geconfigureerd. Voeg er één toe via <a onclick="closeModal();navigate('instellingen')" style="color:var(--blue);cursor:pointer;font-weight:600">Instellingen → Categorieën</a>.</div>` : ''}
+     <div class="form-row">
+       <div class="form-group"><label>Kostentype</label>
+         <select id="f-ink-type">${typeOpts}</select>
+         ${typeList.length === 0 ? `<div style="font-size:11px;color:var(--navy4);margin-top:4px">Geen kostentypes geconfigureerd. Voeg er één toe via <a onclick="closeModal();navigate('instellingen')" style="color:var(--blue);cursor:pointer;font-weight:600">Instellingen → Categorieën</a>.</div>` : ''}
+       </div>
+       <div class="form-group"><label>Afschrijving</label>
+         <select id="f-ink-afschrijving">${afschrijvingOpts}</select>
+         <div style="font-size:11px;color:var(--navy4);margin-top:4px">Bij 2–5 jaar wordt het bedrag in het kostenoverzicht gelijkmatig uitgesmeerd over de gekozen periode (bedrag ÷ jaren, per jaar geboekt in de aankoopmaand).</div>
+       </div>
      </div>
      <div class="form-group"><label>Omschrijving</label>
        <textarea id="f-ink-omschr" rows="2" placeholder="Wat is er gekocht / waarvoor?">${esc(f?.omschrijving || '')}</textarea></div>

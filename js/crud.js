@@ -871,6 +871,7 @@ async function saveInkoopfactuur(id) {
   const isRecurring = document.getElementById('f-ink-recurring')?.checked || false;
   const recurringInterval = isRecurring ? (document.getElementById('f-ink-interval')?.value || 'maand') : '';
   const recurringEndDate = isRecurring ? (document.getElementById('f-ink-einddatum')?.value || '') : '';
+  const afschrijvingsperiode = Math.min(5, Math.max(1, parseInt(document.getElementById('f-ink-afschrijving')?.value, 10) || 1));
 
   const data = {
     factuurnummer: document.getElementById('f-ink-nr').value.trim(),
@@ -879,6 +880,7 @@ async function saveInkoopfactuur(id) {
     factuurdatum,
     omschrijving: document.getElementById('f-ink-omschr').value.trim(),
     bedrag,
+    afschrijvingsperiode,
     isRecurring,
     recurringInterval,
     recurringEndDate,
@@ -1004,6 +1006,7 @@ async function generateRecurringInkoop() {
         factuurdatum: d,
         omschrijving: t.omschrijving,
         bedrag: t.bedrag,
+        afschrijvingsperiode: 1, // terugkerende termijnen worden niet afgeschreven
         isRecurring: false,
         recurringInterval: '',
         recurringEndDate: '',

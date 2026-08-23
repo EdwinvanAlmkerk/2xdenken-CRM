@@ -22,8 +22,56 @@ function sortKost(col) {
   smartRender(renderKostenOverzichtPage);
 }
 
+// ── Afschrijving uitsmeren ───────────────────────────────────────
+// Een inkoopfactuur met afschrijvingsperiode N (2–5) telt in het
+// kostenoverzicht als N gelijke termijnen: bedrag/N, geboekt in de
+// aankoopmaand van elk opeenvolgend jaar. De onderliggende factuur
+// blijft ongewijzigd; dit is puur een weergave-/analyse-transformatie.
+function _kostShiftJaar(iso, k) {
+  if (!iso || !k) return iso;
+  const p = String(iso).split('-');
+  if (p.length < 3) return iso;
+  return `${Number(p[0]) + k}-${p[1]}-${p[2]}`;
+}
+
+function _kostExpandFactuur(f) {
+  const n = Math.min(5, Math.max(1, Number(f.afschrijvingsperiode) || 1));
+  if (n <= 1) return [f];
+  const per = (Number(f.bedrag) || 0) / n;
+  const rows = [];
+  for (let k = 0; k < n; k++) {
+    rows.push({
+      ...f,
+      factuurdatum: _kostShiftJaar(f.factuurdatum, k),
+      bedrag: per,
+      afschrijvingTermijn: k + 1,
+      afschrijvingTotaal: n,
+      afschrijvingBedragOrigineel: Number(f.bedrag) || 0,
+    });
+  }
+  return rows;
+}
+
+function _kostAlleTermijnen() {
+  const out = [];
+  for (const f of (DB.inkoopfacturen || [])) {
+    for (const r of _kostExpandFactuur(f)) out.push(r);
+  }
+  return out;
+}
+
+// Omschrijving inclusief afschrijvings-aanduiding (voor exports).
+function _kostOmschr(f) {
+  const base = f.omschrijving || '';
+  if (f.afschrijvingTotaal > 1) {
+    const suf = `afschrijving ${f.afschrijvingTermijn}/${f.afschrijvingTotaal} van ${fmtEuro(f.afschrijvingBedragOrigineel)}`;
+    return base ? `${base} — ${suf}` : suf;
+  }
+  return base;
+}
+
 function _kostFilterFacturen(jaar = _kostJaar, type = _kostType) {
-  return (DB.inkoopfacturen || []).filter(f => {
+  return _kostAlleTermijnen().filter(f => {
     if (jaar !== 'alle' && (f.factuurdatum || '').slice(0, 4) !== jaar) return false;
     if (type !== 'alle' && (f.kostenTypeId || '') !== type) return false;
     return true;
@@ -100,7 +148,7 @@ function renderKostenOverzichtPage() {
   if (!Array.isArray(DB.inkoopfacturen)) DB.inkoopfacturen = [];
   ensureKostenTypes();
 
-  const allJaren = [...new Set((DB.inkoopfacturen || []).map(f => (f.factuurdatum || '').slice(0, 4)).filter(Boolean))].sort().reverse();
+  const allJaren = [...new Set(_kostAlleTermijnen().map(f => (f.factuurdatum || '').slice(0, 4)).filter(Boolean))].sort().reverse();
   const huidigJaar = String(new Date().getFullYear());
   if (!allJaren.includes(_kostJaar) && _kostJaar !== 'alle') {
     _kostJaar = allJaren.includes(huidigJaar) ? huidigJaar : (allJaren[0] || 'alle');
@@ -186,6 +234,10 @@ function renderKostenOverzichtPage() {
         style="display:flex;align-items:center;gap:6px;white-space:nowrap">
         ${svgIcon('eye', 15)} PDF
       </button>
+      <button class="btn btn-primary btn-sm" onclick="openInkoopfactuurModal()"
+        style="display:flex;align-items:center;gap:6px;white-space:nowrap">
+        ${svgIcon('add', 14)} Nieuwe inkoopfactuur
+      </button>
     </div>
 
     <div style="display:grid;grid-template-columns:repeat(auto-fit,minmax(170px,1fr));gap:10px;margin-bottom:14px">
@@ -224,7 +276,7 @@ function renderKostenOverzichtPage() {
                   <td style="white-space:nowrap">${fmtDateShort(f.factuurdatum)}</td>
                   <td style="font-weight:600">${esc(f.leverancier || '')}${f.factuurnummer ? `<div style="font-size:11px;color:var(--navy4);margin-top:2px">${esc(f.factuurnummer)}</div>` : ''}</td>
                   <td>${f.kostenTypeId ? kostenTypeBadge(f.kostenTypeId) : `<span style="font-size:11px;color:var(--navy4)">–</span>`}</td>
-                  <td style="font-size:12.5px;color:var(--navy3)">${esc(f.omschrijving || '')}${(f.isRecurring && !f.parentId) ? ` <span title="Terugkerend" style="color:var(--accent);font-weight:700">🔁</span>` : (f.parentId ? ` <span title="Uit terugkerende reeks" style="color:var(--navy4)">🔁</span>` : '')}</td>
+                  <td style="font-size:12.5px;color:var(--navy3)">${esc(f.omschrijving || '')}${(f.isRecurring && !f.parentId) ? ` <span title="Terugkerend" style="color:var(--accent);font-weight:700">🔁</span>` : (f.parentId ? ` <span title="Uit terugkerende reeks" style="color:var(--navy4)">🔁</span>` : '')}${f.afschrijvingTotaal > 1 ? ` <span title="Afschrijving ${f.afschrijvingTermijn} van ${f.afschrijvingTotaal} — origineel bedrag ${fmtEuro(f.afschrijvingBedragOrigineel)}" style="display:inline-block;background:var(--bg3);color:var(--navy3);border-radius:6px;padding:1px 6px;font-size:10.5px;font-weight:700;white-space:nowrap;margin-left:2px">afschr. ${f.afschrijvingTermijn}/${f.afschrijvingTotaal}</span>` : ''}</td>
                   <td style="font-weight:700;white-space:nowrap;text-align:right">${fmtEuro(f.bedrag || 0)}</td>
                 </tr>`).join('')}
           </tbody>
@@ -268,7 +320,7 @@ function exportKostenExcel() {
         Q(f.leverancier || ''),
         Q(f.factuurnummer || ''),
         Q(kostenTypeLabel(f.kostenTypeId)),
-        Q(f.omschrijving || ''),
+        Q(_kostOmschr(f)),
         EUR(f.bedrag),
         Q(rec),
         Q(f.notitie || ''),
@@ -325,7 +377,7 @@ function exportKostenPDF() {
       <td class="nowrap">${fmtDutchDate(f.factuurdatum)}</td>
       <td><strong>${esc(f.leverancier || '–')}</strong>${f.factuurnummer ? `<div class="sub">${esc(f.factuurnummer)}</div>` : ''}</td>
       <td>${esc(kostenTypeLabel(f.kostenTypeId) || '–')}</td>
-      <td>${esc(f.omschrijving || '')}${recIcon}</td>
+      <td>${esc(_kostOmschr(f))}${recIcon}</td>
       <td class="nowrap right">${fmtEurStr(f.bedrag)}</td>
     </tr>`;
   }).join('');

@@ -11,6 +11,7 @@ let HAS_TRAINING_LINKS_COLUMN = false;
 let HAS_DASHBOARD_SETTINGS_TABLE = false;
 let HAS_KOSTEN_TYPES_TABLE = false;
 let HAS_INKOOPFACTUREN_TABLE = false;
+let HAS_INKOOP_AFSCHRIJVING_COLUMN = false;
 let HAS_TAKEN_TABLE = false;
 let HAS_TAAK_TYPES_TABLE = false;
 
@@ -170,6 +171,7 @@ function fromDB_inkoopfactuur(r) {
     factuurdatum: r.factuurdatum || '',
     omschrijving: r.omschrijving || '',
     bedrag: Number(r.bedrag) || 0,
+    afschrijvingsperiode: Math.min(5, Math.max(1, Number(r.afschrijvingsperiode) || 1)),
     isRecurring: !!r.is_recurring,
     recurringInterval: r.recurring_interval || '',
     recurringEndDate: r.recurring_end_date || '',
@@ -208,7 +210,7 @@ function toDB_rssFeed(d)  { return { naam: d.naam, url: d.url, categorie: d.cate
 function toDB_dashboardSettings(d) { return { widgets: Array.isArray(d.widgets) ? d.widgets : [], updated_at: new Date().toISOString() }; }
 function toDB_kostenType(d) { return { naam: d.naam, kleur: d.kleur || 'navy' }; }
 function toDB_inkoopfactuur(d) {
-  return {
+  const payload = {
     factuurnummer: d.factuurnummer || null,
     leverancier: d.leverancier || '',
     kosten_type_id: d.kostenTypeId || null,
@@ -222,6 +224,11 @@ function toDB_inkoopfactuur(d) {
     bestanden: Array.isArray(d.bestanden) ? d.bestanden : [],
     notitie: d.notitie || null
   };
+  // Alleen meesturen als de kolom bestaat (feature-detectie zoals bij trainingen).
+  if (HAS_INKOOP_AFSCHRIJVING_COLUMN) {
+    payload.afschrijvingsperiode = Math.min(5, Math.max(1, Number(d.afschrijvingsperiode) || 1));
+  }
+  return payload;
 }
 
 // ── Taken + taaktypes ────────────────────────────────────────────
@@ -266,7 +273,7 @@ function toDB_taak(d) {
 async function loadAllData() {
   showLoading();
   try {
-    const [besturen, scholen, contacten, dossiers, facturen, trainingen, uitvoeringen, agenda, agendaTypes, trainingTypes, trainingCategories, _trainingBestandenProbe, _trainingLinksProbe, emailTemplates, emailLog, emailSettingsArr, outlookSettingsArr, rssFeeds, rssItemsRead, dashboardSettingsArr, kostenTypes, inkoopfacturen, taakTypes, taken, feedSettingsArr] = await Promise.all([
+    const [besturen, scholen, contacten, dossiers, facturen, trainingen, uitvoeringen, agenda, agendaTypes, trainingTypes, trainingCategories, _trainingBestandenProbe, _trainingLinksProbe, emailTemplates, emailLog, emailSettingsArr, outlookSettingsArr, rssFeeds, rssItemsRead, dashboardSettingsArr, kostenTypes, inkoopfacturen, _inkoopAfschrijvingProbe, taakTypes, taken, feedSettingsArr] = await Promise.all([
       supa('/rest/v1/besturen?select=*&order=naam'),
       supa('/rest/v1/scholen?select=*&order=naam'),
       supa('/rest/v1/contacten?select=*&order=naam'),
@@ -303,6 +310,9 @@ async function loadAllData() {
       supa('/rest/v1/inkoopfacturen?select=*&order=factuurdatum.desc')
         .then(r => { HAS_INKOOPFACTUREN_TABLE = true; return r; })
         .catch(() => { HAS_INKOOPFACTUREN_TABLE = false; return []; }),
+      supa('/rest/v1/inkoopfacturen?select=afschrijvingsperiode&limit=1', { silent: true })
+        .then(r => { HAS_INKOOP_AFSCHRIJVING_COLUMN = true; return r; })
+        .catch(() => { HAS_INKOOP_AFSCHRIJVING_COLUMN = false; return []; }),
       supa('/rest/v1/taak_types?select=*&order=naam', { silent: true })
         .then(r => { HAS_TAAK_TYPES_TABLE = true; return r; })
         .catch(() => { HAS_TAAK_TYPES_TABLE = false; return []; }),
