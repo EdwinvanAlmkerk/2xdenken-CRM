@@ -1,0 +1,633 @@
+/* ─────────────────────────────────────────────────────────────
+   2xDenken CRM — E-INK / BOOX MODUS
+   ──────────────────────────────────────────────────────────────
+   Alles hieronder is gescoped onder html.eink en heeft dus geen
+   effect zolang die klasse niet gezet is (zie js/eink.js).
+
+   Ontwerpregels voor e-paper (Boox / Carta-scherm, 16 grijstinten,
+   trage partiele refresh, ghosting):
+     1. Alleen zwart, wit en een paar duidelijk verschillende grijzen.
+        Alles tussen 5% en 15% dekking valt op e-ink volledig weg.
+     2. Geen transparantie, blur of gradients — die worden grijze pap
+        en kosten onnodig veel rekentijd op het trage paneel.
+     3. Geen animaties/transities: elke tussenstap is een aparte
+        schermrefresh en laat spookbeelden achter.
+     4. Kleurcodering vervangen door vormcodering (randstijl, vulling,
+        inversie). Kleur is op grijswaarde-e-ink niet te onderscheiden.
+     5. Dikkere randen (1–3px massief zwart) en zwaardere letters;
+        haarlijnen en light-gewichten verdwijnen in het raster.
+     6. Grotere raakvlakken (min. ±44px) voor vinger en stylus, en
+        geen hover-effecten (een stylus kent geen hover, en bij touch
+        blijft hij "plakken", wat extra ghosting oplevert).
+──────────────────────────────────────────────────────────────── */
+
+/* ═══ 1. TOKENS — hele palet naar zwart/wit/grijs ═══
+   De app gebruikt op honderden plekken var(--navy4), var(--accent)
+   enzovoort in inline styles. Door alleen de tokens om te zetten
+   volgt het overgrote deel van de UI automatisch mee. */
+html.eink {
+  --bg1: #ffffff;
+  --bg2: #ffffff;
+  --bg:  #ffffff;
+  --bg-card: #ffffff;
+  --bg3: #d8d8d8;
+  --bg4: #c4c4c4;
+  --glass: #ffffff;
+  --glass-border: #000000;
+  --glass2: #ffffff;
+  --card-bg: #ffffff;
+  --card-border: #000000;
+
+  --accent:  #000000;
+  --accent2: #000000;
+  --accent3: #000000;
+
+  --navy:  #000000;
+  --navy2: #000000;
+  --navy3: #1c1c1c;
+  --navy4: #454545;
+  --ink3:  #454545;
+  --blue:  #000000;
+  --wit:   #ffffff;
+  --text:  #000000;
+  --muted: #3a3a3a;
+
+  --mint:  #ededed;
+  --mint1: #e4e4e4;
+  --mint2: #dcdcdc;
+  --mint3: #d2d2d2;
+
+  --rood:   #000000;
+  --oranje: #000000;
+  --geel:   #000000;
+  --groen:  #000000;
+  --paars:  #000000;
+  --s-groen:  #000000;  --s-groen-s: #e8e8e8;
+  --s-blauw:  #000000;  --s-blauw-s: #ededed;
+  --s-goud:   #000000;  --s-goud-s:  #e2e2e2;
+  --s-rood:   #000000;  --s-rood-s:  #dcdcdc;
+  --s-oranje: #000000;
+
+  --sidebar-bg:      #ffffff;
+  --sidebar-border:  #000000;
+  --sidebar-divider: #b4b4b4;
+
+  --kpi-orange: #000000;
+  --kpi-teal:   #000000;
+  --kpi-purple: #000000;
+  --kpi-red:    #000000;
+  --kpi-green:  #000000;
+  --kpi-amber:  #000000;
+
+  --brand:  #000000;
+  --brand2: #000000;
+  --brand-s: #ececec;
+
+  /* Legacy-tokens die alleen in inline styles voorkomen en nergens
+     gedefinieerd zijn; in e-ink-modus geven we ze wel een waarde
+     zodat die elementen een duidelijke zwarte lijn/letter krijgen. */
+  --ink:    #000000;
+  --ink-l:  #2a2a2a;
+  --ink-xl: #555555;
+  --line:   #000000;
+  --teal:   #000000;
+  --teal-l: #ededed;
+  --teal-d: #000000;
+
+  --r: 3px; --r2: 4px; --r3: 4px;
+  --sh: none; --shl: none;
+
+  /* Eigen e-ink-tokens */
+  --e-line:  #000000;
+  --e-line2: #8c8c8c;
+  --e-fill:  #ededed;
+  --e-fill2: #d9d9d9;
+}
+
+/* ═══ 2. ALLE EFFECTEN UIT ═══
+   Animaties/transities veroorzaken op e-ink smeer en spookbeelden;
+   schaduwen en blur worden onleesbare grijze vlekken. */
+html.eink *,
+html.eink *::before,
+html.eink *::after {
+  animation: none !important;
+  transition: none !important;
+  box-shadow: none !important;
+  text-shadow: none !important;
+  backdrop-filter: none !important;
+  -webkit-backdrop-filter: none !important;
+  scroll-behavior: auto !important;
+}
+
+/* ═══ 3. BASIS ═══ */
+html.eink,
+html.eink body { height: 100%; }
+html.eink body {
+  background: #ffffff;
+  color: #000000;
+  font-weight: 500;                 /* Outfit 300/400 is te dun voor e-paper */
+  -webkit-font-smoothing: auto;     /* subpixel-antialiasing = vuil op grijswaarde */
+  text-rendering: optimizeSpeed;
+}
+html.eink body::before { display: none !important; }   /* decoratieve mesh weg */
+html.eink #app { height: 100%; }
+html.eink ::selection { background: #000000; color: #ffffff; }
+
+/* Tekstgrootte — Boox-schermen lopen van 6" tot 13".
+   Standaard = geen schaling, zodat er niets kan breken. */
+html.eink[data-eink-size="groot"] { zoom: 1.15; }
+html.eink[data-eink-size="xl"]    { zoom: 1.30; }
+
+/* Scrollbars zichtbaar en breed: op e-ink is subtiel = onzichtbaar. */
+html.eink ::-webkit-scrollbar { width: 14px; height: 14px; }
+html.eink ::-webkit-scrollbar-track { background: #ffffff; }
+html.eink ::-webkit-scrollbar-thumb { background: #000000; border: 4px solid #ffffff; border-radius: 0; }
+html.eink ::-webkit-scrollbar-corner { background: #ffffff; }
+
+/* ═══ 4. SIDEBAR — wit in plaats van donkerblauw ═══
+   Grote zwarte vlakken zijn op e-ink traag om te verversen en laten
+   sterke spookbeelden achter; daarom omgekeerd contrast. */
+html.eink .sidebar {
+  background: #ffffff;
+  border-right: 2px solid #000000;
+  padding: 12px 0;
+}
+html.eink .sidebar-logo { border-bottom: 2px solid #000000; padding: 0 16px 12px; }
+html.eink .sidebar-logo-text { color: #000000; font-size: 20px; }
+html.eink .sidebar-logo-text em {
+  background: none; -webkit-background-clip: border-box; background-clip: border-box;
+  -webkit-text-fill-color: #000000; color: #000000;
+}
+html.eink .sidebar-logo-sub { color: #3a3a3a; font-size: 11px; letter-spacing: 1.2px; }
+html.eink .nav-section {
+  color: #000000; font-size: 11px; letter-spacing: 1.4px;
+  padding: 14px 16px 6px;
+}
+html.eink .nav-section::after { background: #000000; height: 2px; }
+html.eink .nav-item {
+  color: #000000; font-size: 15px; font-weight: 500;
+  padding: 11px 16px; margin: 0 6px 2px;
+  border-radius: 3px; border: 1px solid transparent;
+}
+html.eink .nav-item svg {
+  opacity: 1; background: none; padding: 0;
+  width: 20px; height: 20px; color: #000000;
+}
+html.eink .nav-item:hover { background: transparent; color: #000000; }
+html.eink .nav-item:hover svg { background: none; opacity: 1; }
+html.eink .nav-item.active {
+  background: #000000; color: #ffffff; font-weight: 700;
+  border-color: #000000;
+}
+html.eink .nav-item.active svg { color: #ffffff; background: none; }
+html.eink .nav-item.active::before { display: none; }
+
+/* Drawer op smalle schermen: dekkend wit in plaats van halftransparant */
+html.eink .sidebar-backdrop { background: #ffffff; }
+@media (max-width: 900px) {
+  html.eink .sidebar { border-right: 3px solid #000000; height: 100%; }
+}
+
+/* ═══ 5. TOPBAR ═══ */
+html.eink .topbar {
+  background: #ffffff;
+  border-bottom: 2px solid #000000;
+  height: 64px; padding: 0 18px;
+}
+html.eink .topbar-title { font-size: 22px; color: #000000; }
+html.eink .topbar-account { border-left: 2px solid #000000; padding-left: 12px; }
+html.eink .topbar-user { color: #000000; font-weight: 600; }
+html.eink .topbar-logout,
+html.eink .hamburger-btn {
+  color: #000000; border: 2px solid #000000; border-radius: 3px;
+  min-width: 42px; min-height: 42px;
+}
+html.eink .topbar-logout:hover,
+html.eink .hamburger-btn:hover { background: #ffffff; color: #000000; }
+html.eink .content { padding: 20px 22px; }
+
+/* ═══ 6. KNOPPEN ═══ */
+html.eink .btn {
+  background: #ffffff; color: #000000;
+  border: 2px solid #000000; border-radius: 3px;
+  font-size: 15px; font-weight: 600;
+  padding: 9px 16px; min-height: 44px;
+}
+html.eink .btn:hover { background: #ffffff; color: #000000; border-color: #000000; }
+html.eink .btn-primary { background: #000000; color: #ffffff; border-color: #000000; }
+html.eink .btn-primary:hover { background: #000000; color: #ffffff; }
+html.eink .btn-secondary { background: #ffffff; color: #000000; }
+html.eink .btn-secondary:hover { background: #ffffff; }
+html.eink .btn-ghost { background: #ffffff; color: #000000; border: 2px solid #000000; padding: 8px 12px; }
+html.eink .btn-ghost:hover { background: #ffffff; color: #000000; }
+html.eink .btn-sm { min-height: 36px; padding: 6px 12px; font-size: 13.5px; }
+html.eink .btn-icon { min-width: 44px; padding: 8px; justify-content: center; }
+html.eink .btn-sm.btn-icon { min-width: 36px; min-height: 36px; }
+html.eink .btn:disabled, html.eink .btn[disabled] {
+  opacity: 1; color: #8a8a8a; border-color: #8a8a8a; background: #ffffff;
+}
+html.eink .btn:active { background: #000000; color: #ffffff; }
+html.eink .row-actions .btn-del { color: #000000; }
+
+/* ═══ 7. KAARTEN ═══ */
+html.eink .card,
+html.eink .detail-header,
+html.eink .contact-card,
+html.eink .welcome-banner {
+  background: #ffffff; border: 2px solid #000000; border-radius: 4px;
+}
+html.eink .card-header {
+  background: #ffffff; border-bottom: 2px solid #000000; padding: 12px 16px;
+}
+html.eink .card-header h3 { font-size: 17px; font-weight: 700; color: #000000; }
+html.eink .card-body { padding: 16px; }
+html.eink .welcome-banner::before,
+html.eink .welcome-banner::after { display: none !important; }
+html.eink .welcome-text h2 { font-size: 19px; }
+html.eink .welcome-text p { color: #2a2a2a; font-size: 14px; }
+html.eink .detail-title { font-size: 27px; }
+html.eink .detail-subtitle,
+html.eink .meta-item { color: #2a2a2a; font-size: 14px; }
+html.eink .meta-item a { color: #000000; text-decoration: underline; }
+html.eink .contact-card { border-top: 4px solid #000000; }
+html.eink .contact-name { color: #000000; font-size: 16px; }
+html.eink .contact-role,
+html.eink .c-row { color: #2a2a2a; font-size: 13.5px; }
+html.eink .c-row a { color: #000000; text-decoration: underline; }
+html.eink .divider { background: #000000; height: 2px; }
+html.eink .breadcrumb { color: #2a2a2a; font-size: 14px; }
+html.eink .breadcrumb a { color: #000000; text-decoration: underline; }
+html.eink .empty-state {
+  background: #ffffff; border: 2px dashed #000000; color: #1c1c1c; padding: 40px 20px;
+}
+html.eink .empty-state svg { opacity: 1; }
+html.eink .empty-state p,
+html.eink .empty-state-compact { font-size: 15px; color: #1c1c1c; }
+html.eink .invoice-total { font-size: 22px; }
+
+/* ═══ 8. TABELLEN — belangrijkste leesvlak van de CRM ═══ */
+html.eink table { font-size: 15px; }
+html.eink th {
+  background: #000000; color: #ffffff;
+  font-size: 12px; letter-spacing: .5px;
+  padding: 11px 12px; border-bottom: 2px solid #000000;
+}
+html.eink td {
+  color: #000000; padding: 13px 12px;
+  border-bottom: 1px solid #000000;
+}
+html.eink tbody tr:nth-child(even) td { background: #ededed; }
+html.eink tr:last-child td { border-bottom: none; }
+html.eink .clickable-row:hover td { background: inherit; }
+html.eink tbody tr:nth-child(even).clickable-row:hover td { background: #ededed; }
+html.eink .clickable-row:hover td:first-child { box-shadow: none; }
+html.eink .clickable-row:active td { background: #c8c8c8 !important; }
+html.eink .col-resizer::before { background: #000000; width: 2px; }
+html.eink .col-resizer:hover, html.eink .col-resizer.active { background: #d0d0d0; }
+
+/* ═══ 9. FORMULIEREN ═══ */
+html.eink label {
+  color: #000000; font-size: 12.5px; font-weight: 700; letter-spacing: .4px;
+}
+html.eink input[type=text], html.eink input[type=email], html.eink input[type=tel],
+html.eink input[type=date], html.eink input[type=time], html.eink input[type=number],
+html.eink input[type=url], html.eink input[type=password], html.eink input[type=search],
+html.eink select, html.eink textarea {
+  background: #ffffff; color: #000000;
+  border: 2px solid #000000; border-radius: 3px;
+  font-size: 16px;                    /* voorkomt auto-zoom en leest beter */
+  padding: 11px 12px; min-height: 46px;
+}
+html.eink textarea { min-height: 120px; line-height: 1.55; }
+html.eink input:focus, html.eink select:focus, html.eink textarea:focus {
+  border-color: #000000; background: #ffffff;
+  outline: 3px solid #000000; outline-offset: 1px;
+}
+html.eink input::placeholder, html.eink textarea::placeholder { color: #6e6e6e; }
+html.eink input:disabled, html.eink select:disabled, html.eink textarea:disabled {
+  opacity: 1; color: #7a7a7a; border-color: #9a9a9a; background: #f4f4f4;
+}
+html.eink input[type=checkbox], html.eink input[type=radio] {
+  width: 22px; height: 22px; accent-color: #000000; vertical-align: middle;
+}
+html.eink .form-group { margin-bottom: 20px; }
+html.eink a:focus-visible, html.eink button:focus-visible,
+html.eink [onclick]:focus-visible { outline: 3px solid #000000; outline-offset: 2px; }
+
+/* ═══ 10. MODALS ═══
+   Dekkend wit in plaats van halftransparant: doorschijnende lagen
+   zijn op e-ink onleesbare ruis. De dikke rand markeert het venster. */
+html.eink .modal-overlay { background: #ffffff; padding: 12px; }
+html.eink .modal {
+  border: 3px solid #000000; border-radius: 4px; max-height: 92%;
+}
+html.eink .modal-header { background: #ffffff; border-bottom: 2px solid #000000; }
+html.eink .modal-header h2 { font-size: 21px; }
+html.eink .modal-footer { background: #ffffff; border-top: 2px solid #000000; }
+
+/* ═══ 11. BADGES — kleur vervangen door vorm ═══
+   gevuld = afgerond/definitief, massief = actief,
+   streepjes = concept, dubbel = probleem, stippen = secundair. */
+html.eink .badge {
+  background: #ffffff; color: #000000;
+  border: 2px solid #000000; border-radius: 3px;
+  padding: 3px 9px; font-size: 12px; font-weight: 700;
+  text-transform: uppercase; letter-spacing: .4px;
+}
+html.eink .badge-betaald     { background: #000000; color: #ffffff; }
+html.eink .badge-verzonden   { background: #ffffff; }
+html.eink .badge-concept     { background: #ffffff; border-style: dashed; }
+html.eink .badge-vervallen   { background: #ffffff; border-style: double; border-width: 4px; }
+html.eink .badge-oranje      { background: #d9d9d9; }
+html.eink .badge-beslisser   { background: #000000; color: #ffffff; }
+html.eink .badge-beinvloeder { background: #ffffff; border-style: dotted; border-width: 3px; }
+
+/* ═══ 12. TABS ═══ */
+html.eink .tabs {
+  background: #ffffff; border: 2px solid #000000;
+  border-radius: 3px; padding: 0; gap: 0;
+}
+html.eink .tab {
+  color: #000000; font-size: 15px; font-weight: 600;
+  padding: 11px 18px; border-radius: 0;
+  border-right: 1px solid #000000; min-height: 44px;
+  display: flex; align-items: center; gap: 6px;
+}
+html.eink .tab:last-child { border-right: none; }
+html.eink .tab:hover:not(.active) { background: #ffffff; color: #000000; }
+html.eink .tab.active {
+  background: #000000; color: #ffffff; font-weight: 700;
+  border: none; border-right: 1px solid #000000;
+}
+
+/* ═══ 13. DASHBOARD-KPI'S ═══ */
+html.eink .stat-card {
+  background: #ffffff; border: 2px solid #000000;
+  border-radius: 4px; padding: 12px 14px;
+}
+html.eink .stat-card::after { display: none !important; }
+html.eink .stat-card:hover { transform: none; }
+html.eink .stat-icon { background: #000000; color: #ffffff; border-radius: 3px; }
+html.eink .stat-value { font-size: 26px; color: #000000; }
+html.eink .stat-label { font-size: 11.5px; color: #000000; font-weight: 700; }
+html.eink .widget-edit-wrap { background: #ffffff; border: 2px dashed #000000; }
+html.eink .widget-edit-bar { background: #ededed; border-bottom: 2px solid #000000; font-size: 13px; }
+html.eink .widget-drag-handle { color: #000000; }
+
+/* ═══ 14. ZOEKEN ═══ */
+html.eink .search-wrap .search-icon { color: #000000; }
+html.eink .gs-kbd-badge { display: none; }
+html.eink #global-search-results {
+  background: #ffffff !important;
+  border: 3px solid #000000 !important;
+  border-radius: 3px !important;
+}
+html.eink .gs-group-label {
+  background: #000000; color: #ffffff; font-size: 11px;
+  border-top: none; padding: 6px 14px;
+}
+html.eink .gs-row { padding: 12px 14px; border-left: 3px solid transparent; border-bottom: 1px solid #000000; }
+html.eink .gs-row:hover { background: #ffffff; }
+html.eink .gs-row.is-active { background: #ededed; border-left-color: #000000; }
+html.eink .gs-row .gs-icon, html.eink .gs-row.is-active .gs-icon { color: #000000; }
+html.eink .gs-label { font-size: 15px; color: #000000; }
+html.eink .gs-sub { font-size: 12.5px; color: #3a3a3a; }
+html.eink .gs-mark { background: #000000; color: #ffffff; }
+html.eink .gs-empty { color: #000000; font-size: 14px; }
+html.eink .gs-footer { background: #ffffff; color: #000000; border-top: 2px solid #000000; font-size: 12px; }
+html.eink .gs-footer kbd { border: 2px solid #000000; color: #000000; font-size: 11px; }
+
+/* ═══ 15. DOSSIER & BIJLAGEN ═══
+   Bijlagen zijn op de Boox het belangrijkst: daar landen de
+   notities en tekeningen die vanaf het apparaat worden geupload. */
+html.eink .dossier-item {
+  background: #ffffff; border: 1px solid #000000;
+  border-left: 5px solid #000000; border-radius: 3px; padding: 14px 16px;
+}
+html.eink .dossier-type-bestand { border-left-style: double; border-left-width: 7px; }
+html.eink .dossier-source, html.eink .dossier-onderwerp { color: #000000; }
+html.eink .dossier-onderwerp { font-size: 16px; }
+html.eink .dossier-date { color: #2a2a2a; font-size: 12.5px; }
+html.eink .dossier-text { color: #000000; font-size: 15px; }
+html.eink .dossier-body { border-top: 1px solid #000000; }
+html.eink .dossier-header:hover .dossier-onderwerp { color: #000000; }
+html.eink .bijlage-chip {
+  background: #ffffff; border: 2px solid #000000; border-radius: 3px;
+  color: #000000; font-size: 13.5px; padding: 8px 12px; min-height: 40px;
+}
+html.eink .bijlage-chip:hover { background: #ffffff; }
+html.eink .bijlage-del { color: #000000; font-size: 18px; padding: 0 6px; }
+
+/* ═══ 16. LAADINDICATOR & TOAST ═══
+   De draaiende spinner is een animatie en dus op e-ink onbruikbaar
+   (elke frame = een refresh). Vervangen door een stilstaand kader. */
+html.eink .loading-overlay { background: rgba(255,255,255,0.92); }
+html.eink .spinner { display: none; }
+html.eink .loading-overlay::after {
+  content: 'Bezig…';
+  border: 3px solid #000000; background: #ffffff; color: #000000;
+  padding: 16px 32px; font-size: 18px; font-weight: 700; border-radius: 3px;
+}
+html.eink .toast {
+  background: #ffffff; color: #000000;
+  border: 3px solid #000000; border-radius: 3px;
+  font-size: 16px; padding: 14px 20px;
+}
+html.eink .toast.error { background: #000000; color: #ffffff; }   /* inversie in plaats van rood */
+html.eink .toast.success { background: #ffffff; color: #000000; border-style: double; border-width: 5px; }
+
+/* ═══ 17. QUICK-ADD ═══ */
+html.eink .qa-fab {
+  background: #000000; color: #ffffff;
+  border: 2px solid #000000; border-radius: 4px;
+  width: 60px; height: 60px;
+}
+html.eink .qa-fab:hover { transform: none; background: #000000; }
+html.eink #quick-add.open .qa-fab svg { transform: rotate(45deg); }
+html.eink .qa-menu {
+  background: #ffffff; border: 3px solid #000000;
+  border-radius: 4px; padding: 0; min-width: 250px;
+}
+html.eink .qa-item {
+  color: #000000; font-size: 16px; padding: 14px;
+  border-radius: 0; border-bottom: 1px solid #000000; min-height: 50px;
+}
+html.eink .qa-item:last-child { border-bottom: none; }
+html.eink .qa-item:hover { background: #ffffff; color: #000000; }
+html.eink .qa-item svg { color: #000000; }
+
+/* ═══ 18. AGENDA — kleurcodering wordt randstijl/vulling ═══ */
+html.eink .cal-grid, html.eink .cal-month {
+  background: #ffffff; border: 2px solid #000000; border-radius: 4px;
+}
+html.eink .cal-header, html.eink .cal-allday, html.eink .cal-sticky-top {
+  background: #ffffff; border-bottom: 2px solid #000000;
+}
+html.eink .cal-header-cell, html.eink .cal-allday-cell {
+  border-left: 1px solid #000000; color: #000000; font-size: 12px;
+}
+html.eink .cal-header-cell .cal-day-num { color: #000000; font-size: 21px; }
+html.eink .cal-header-cell.cal-today .cal-day-num {
+  background: #000000; color: #ffffff; border-radius: 3px;
+}
+html.eink .cal-toolbar-title { font-size: 19px; color: #000000; }
+html.eink .cal-time-col, html.eink .cal-day-col { border-color: #000000; }
+html.eink .cal-time-label { color: #000000; font-size: 11.5px; }
+html.eink .cal-hour-line { border-bottom: 1px solid #000000; }
+html.eink .cal-hour-line-half { border-bottom: 1px dashed #9a9a9a; }
+html.eink .cal-now-line { background: #000000; height: 3px; }
+html.eink .cal-now-dot { background: #000000; border-radius: 0; width: 10px; height: 10px; }
+html.eink .cal-event {
+  background: #ffffff; color: #000000;
+  border: 1px solid #000000; border-left: 5px solid #000000;
+  border-radius: 2px; font-size: 12px;
+}
+html.eink .cal-event-meta { opacity: 1; color: inherit; }
+html.eink .cal-event-afspraak    { background: #ffffff; }
+html.eink .cal-event-belafspraak { background: #ededed; border-left-style: double; border-left-width: 7px; }
+html.eink .cal-event-opvolging   { background: #ffffff; border-left-style: dashed; }
+html.eink .cal-event-training    { background: #000000; color: #ffffff; border-color: #000000; }
+html.eink .cal-event-overig      { background: #dcdcdc; }
+html.eink .cal-event-rood        { background: #ffffff; border-width: 2px; border-left-width: 7px; }
+html.eink .cal-event-oranje      { background: #e4e4e4; }
+html.eink .cal-event-taak        { background: #ffffff; border-style: dashed; border-left-style: dashed; }
+html.eink .cal-event-outlook {
+  background: repeating-linear-gradient(135deg, #ffffff, #ffffff 4px, #cccccc 4px, #cccccc 8px);
+  color: #000000; border-color: #000000; border-left-style: dotted; border-left-width: 6px;
+}
+html.eink .cal-month-header {
+  background: #000000; color: #ffffff; font-size: 12px; border-bottom: 2px solid #000000;
+}
+html.eink .cal-month-day { border-left: 1px solid #000000; border-bottom: 1px solid #000000; }
+html.eink .cal-month-day:hover { background: #ffffff; }
+html.eink .cal-month-day.cal-other { background: #f2f2f2; }
+html.eink .cal-month-day.cal-other .cal-month-num { color: #6e6e6e; opacity: 1; }
+html.eink .cal-month-day.cal-today .cal-month-num { background: #000000; color: #ffffff; border-radius: 3px; }
+html.eink .cal-month-num { color: #000000; font-size: 14px; }
+html.eink .cal-month-event { border-left: 4px solid #000000; border-radius: 2px; font-size: 12px; }
+html.eink .cal-month-more { color: #000000; font-size: 11.5px; text-decoration: underline; }
+/* Geen geneste scrollvlakken: e-ink scrollt prettiger in een vlak. */
+html.eink .cal-body-scroll { max-height: none; }
+
+/* ═══ 19. E-MAIL & RSS ═══ */
+html.eink .email-row:hover { background: #ffffff !important; }
+html.eink .email-row.is-unread { background: #ededed; }
+html.eink .email-row.is-unread:hover { background: #ededed !important; }
+html.eink .email-row.is-active:hover { background: #dcdcdc !important; }
+html.eink .rss-layout { height: auto; min-height: 0; }
+html.eink .rss-sidebar, html.eink .rss-list, html.eink .rss-article {
+  max-height: none; overflow: visible;
+}
+html.eink .rss-filter-group { border: 2px solid #000000; border-radius: 3px; }
+html.eink .rss-filter-group button {
+  background: #ffffff; color: #000000; font-size: 13.5px; min-height: 42px;
+  border-right: 1px solid #000000;
+}
+html.eink .rss-filter-group button:last-child { border-right: none; }
+html.eink .rss-filter-group button.active { background: #000000; color: #ffffff; }
+html.eink .rss-badge { background: #000000; color: #ffffff; border-radius: 3px; }
+html.eink .rss-filter-group button.active .rss-badge { background: #ffffff; color: #000000; }
+html.eink .rss-feed-item { border-left: 4px solid transparent; padding: 12px 14px; }
+html.eink .rss-feed-item:hover { background: #ffffff; }
+html.eink .rss-feed-item.active { background: #ededed; border-left-color: #000000; }
+html.eink .rss-feed-name { color: #000000; font-size: 14.5px; }
+html.eink .rss-feed-cat, html.eink .rss-feed-error { color: #3a3a3a; font-size: 12px; }
+html.eink .rss-list-item { border-bottom: 1px solid #000000; border-left: 4px solid #000000; }
+html.eink .rss-list-item:hover { background: #ffffff; }
+html.eink .rss-list-item.read { opacity: 1; border-left-color: transparent; }
+html.eink .rss-list-item.read .rss-list-item-title { color: #3a3a3a; font-weight: 500; }
+html.eink .rss-list-item.selected {
+  background: #ededed; border-left-color: #000000;
+  border-left-style: double; border-left-width: 6px;
+}
+html.eink .rss-list-item-title { color: #000000; font-size: 15px; }
+html.eink .rss-list-item-summary, html.eink .rss-list-item-meta { color: #1c1c1c; }
+html.eink .rss-article-title { color: #000000; }
+html.eink .rss-article-body { font-size: 16px; line-height: 1.7; color: #000000; }
+html.eink .rss-article-body a, html.eink .rss-article-link { color: #000000; text-decoration: underline; }
+html.eink .rss-article-body blockquote { border-left: 4px solid #000000; background: #ededed; color: #000000; }
+html.eink .rss-article-body img { border-radius: 0; border: 1px solid #000000; }
+html.eink .rss-article-header { border-bottom: 2px solid #000000; }
+
+/* ═══ 20. LOGIN ═══ */
+html.eink #login-screen { background: #ffffff; }
+html.eink #login-screen::before { display: none; }
+html.eink .login-box {
+  background: #ffffff; border: 3px solid #000000;
+  border-radius: 4px; padding: 36px 32px;
+}
+html.eink .login-title { color: #000000; }
+html.eink .login-sub, html.eink .login-loading, html.eink .login-reset-note { color: #1c1c1c; font-size: 15px; }
+html.eink .login-btn {
+  background: #000000; color: #ffffff; border: 2px solid #000000;
+  border-radius: 3px; padding: 15px; font-size: 17px; min-height: 52px;
+}
+html.eink .login-btn:hover { background: #000000; }
+html.eink .login-link-btn { color: #000000; text-decoration: underline; font-size: 14px; }
+html.eink .login-error { background: #000000; color: #ffffff; border-radius: 3px; }
+html.eink .login-info { background: #ffffff; color: #000000; border: 2px solid #000000; border-radius: 3px; }
+
+/* ═══ 21. HARDGECODEERDE KLEUREN IN INLINE STYLES ═══
+   Een deel van de app zet kleuren rechtstreeks in style="…".
+   Die kunnen niet via tokens worden omgezet, dus vangen we de
+   voorkomende waarden hier gericht af. */
+html.eink [style*="#C0392B"],
+html.eink [style*="#2E7D52"],
+html.eink [style*="#D1662E"],
+html.eink [style*="#6D4AA2"],
+html.eink [style*="#2D3054"],
+html.eink [style*="#9B6B00"],
+html.eink [style*="#6B6B8A"],
+html.eink [style*="#E4A800"],
+html.eink [style*="#b26a00"] { color: #000000 !important; }
+
+html.eink [style*="#FDE8E8"],
+html.eink [style*="#FBF3E0"],
+html.eink [style*="#E6F4EE"],
+html.eink [style*="#F0F0F5"],
+html.eink [style*="#E8F3F2"],
+html.eink [style*="#FAFAF7"] { background: #ededed !important; }
+
+/* Lege sterren moeten wel licht blijven, anders zijn ze niet van
+   ingevulde sterren te onderscheiden. */
+html.eink [style*="#C2D8D9"] { color: #b4b4b4 !important; }
+
+/* ═══ 22. E-INK-BEDIENING ═══ */
+/* Knop in de topbalk waarmee de modus aan/uit gaat. */
+.eink-btn {
+  display: inline-flex; align-items: center; justify-content: center;
+  background: none; border: none; cursor: pointer; padding: 7px;
+  color: var(--muted); border-radius: var(--r); flex-shrink: 0;
+}
+.eink-btn:hover { color: var(--accent); background: rgba(26,184,184,0.10); }
+html.eink .eink-btn {
+  color: #000000; border: 2px solid #000000; border-radius: 3px;
+  min-width: 42px; min-height: 42px; background: #ffffff;
+}
+html.eink .eink-btn:hover { background: #ffffff; color: #000000; }
+html.eink .eink-btn.is-on { background: #000000; color: #ffffff; }
+
+/* Volledige-schermflits die de e-ink-controller tot een complete
+   refresh dwingt en zo opgebouwde spookbeelden wegpoetst. */
+.eink-flash {
+  position: fixed; inset: 0; z-index: 99999;
+  background: #000000; pointer-events: none;
+}
+
+/* Uitlegblokje in Instellingen */
+.eink-note {
+  border: 1px solid rgba(30,45,74,0.12);
+  background: rgba(255,255,255,0.6);
+  border-radius: var(--r); padding: 12px 14px;
+  font-size: 13.5px; line-height: 1.6; color: var(--navy3);
+}
+html.eink .eink-note { border: 2px solid #000000; background: #ffffff; color: #000000; font-size: 15px; }
+.eink-opt-row { display: flex; flex-wrap: wrap; gap: 10px; align-items: center; margin-bottom: 14px; }
+
+/* ═══ 23. AFDRUKKEN ═══
+   De Boox-browser drukt af als PDF; zorg dat de app-chrome dan
+   niet meegaat. */
+@media print {
+  html.eink .sidebar, html.eink .topbar, html.eink #quick-add, html.eink .eink-btn { display: none !important; }
+  html.eink .content { padding: 0 !important; overflow: visible !important; }
+}

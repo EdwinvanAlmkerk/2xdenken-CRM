@@ -20,6 +20,7 @@ function renderInstellingen() {
     ['email',       `${svgIcon('mail', 14)} E-mail`],
     ['agenda',      `${svgIcon('calendar', 14)} Agenda`],
     ['backup',      `${svgIcon('download', 14)} Backup`],
+    ['weergave',    `${svgIcon('contrast', 14)} Weergave`],
   ];
 
   let body = '';
@@ -27,6 +28,7 @@ function renderInstellingen() {
   else if (_instellingenTab === 'email')    body = renderInstellingenEmail();
   else if (_instellingenTab === 'agenda')   body = renderInstellingenAgenda();
   else if (_instellingenTab === 'backup')   body = renderInstellingenBackup();
+  else if (_instellingenTab === 'weergave') body = renderInstellingenWeergave();
   else { _instellingenTab = 'categorieen'; body = renderInstellingenCategorieen(); }
 
   return `
@@ -195,6 +197,79 @@ function renderInstellingenEmail() {
           <div style="margin-top:14px;font-size:11.5px;color:var(--navy4);line-height:1.6">
             <strong>Tip:</strong> Bij Gmail of Microsoft 365 met tweestapsverificatie heb je een <em>app-wachtwoord</em> nodig, niet je gewone wachtwoord.
             Ga naar je Google/Microsoft accountinstellingen om er een aan te maken.
+          </div>
+        </div>
+      </div>
+    </div>`;
+}
+
+// ── Tab: Weergave (e-inkmodus voor de Boox) ─────────────────────
+// De CRM wordt ook op een Onyx Boox gebruikt: een e-papierapparaat
+// met een grijswaardescherm, trage refresh en zichtbare ghosting.
+// Het standaardthema (pastelkleuren, glas, schaduwen, animaties) is
+// daar slecht leesbaar. Deze tab schakelt css/eink.css in — zie
+// js/eink.js voor de logica en de automatische apparaatdetectie.
+function renderInstellingenWeergave() {
+  const mode = typeof einkModePref === 'function' ? einkModePref() : 'auto';
+  const size = typeof einkSizePref === 'function' ? einkSizePref() : 'normaal';
+  const herkend = typeof einkDetectDevice === 'function' && einkDetectDevice();
+  const actief  = typeof einkIsActive === 'function' && einkIsActive();
+
+  const keuze = (huidig, waarde, label, fn) => `
+    <button class="btn ${huidig === waarde ? 'btn-primary' : 'btn-secondary'}"
+            onclick="${fn}('${waarde}')">${label}</button>`;
+
+  return `
+    <div style="max-width:780px">
+      <div class="card" style="margin-bottom:16px">
+        <div class="card-header">
+          <h3>${svgIcon('contrast', 16)} E-inkmodus (Onyx Boox)</h3>
+          <span class="badge ${actief ? 'badge-betaald' : 'badge-concept'}">${actief ? 'Actief' : 'Niet actief'}</span>
+        </div>
+        <div class="card-body">
+          <p style="font-size:13px;color:var(--navy3);line-height:1.55;margin-bottom:16px">
+            Op een e-papierscherm zijn kleuren, schaduwen en animaties niet leesbaar en zorgen ze voor
+            spookbeelden. De e-inkmodus schakelt over naar zuiver zwart-wit met dikke randen, grotere
+            letters, ruimere knoppen en zonder enige animatie.
+          </p>
+
+          <label>Wanneer inschakelen</label>
+          <div class="eink-opt-row">
+            ${keuze(mode, 'auto', 'Automatisch', 'setEinkMode')}
+            ${keuze(mode, 'aan',  'Altijd aan',  'setEinkMode')}
+            ${keuze(mode, 'uit',  'Uit',         'setEinkMode')}
+          </div>
+          <p style="font-size:12.5px;color:var(--navy4);margin:-6px 0 18px">
+            Automatisch herkent Boox-apparaten aan de browser en aan trage/grijswaardeschermen.
+            Dit apparaat wordt ${herkend ? '<strong>wel</strong>' : '<strong>niet</strong>'} als e-inkapparaat herkend.
+          </p>
+
+          <label>Tekstgrootte in e-inkmodus</label>
+          <div class="eink-opt-row">
+            ${keuze(size, 'normaal', 'Normaal',      'setEinkTextSize')}
+            ${keuze(size, 'groot',   'Groot',        'setEinkTextSize')}
+            ${keuze(size, 'xl',      'Extra groot',  'setEinkTextSize')}
+          </div>
+
+          <label>Scherm opschonen</label>
+          <div class="eink-opt-row">
+            <button class="btn btn-secondary" onclick="einkRefresh()">${svgIcon('eye', 15)} Scherm verversen</button>
+          </div>
+          <p style="font-size:12.5px;color:var(--navy4);margin:-6px 0 18px">
+            Knippert het scherm eenmaal volledig zwart-wit. Dat wist de grijze waas die e-ink na veel
+            scrollen opbouwt.
+          </p>
+
+          <div class="eink-note">
+            <strong>Tips voor op de Boox</strong><br>
+            &bull; Zet in de browser een bladwijzer naar
+            <code>${esc(location.origin + location.pathname)}?eink=1</code> &mdash; dan start de CRM altijd
+            in e-inkmodus, ook op een schoon profiel.<br>
+            &bull; Schakelen kan ook met de knop rechtsboven in de balk, of met <strong>Ctrl+Shift+E</strong>.<br>
+            &bull; Zet de Boox zelf op een snel refreshprofiel (Regal/A2) voor bladeren, en gebruik hierboven
+            &lsquo;Scherm verversen&rsquo; als er restbeeld blijft staan.<br>
+            &bull; Notities en tekeningen die je op de Boox maakt, voeg je toe als bijlage bij een school,
+            contact of dossieritem; die knoppen zijn in deze modus extra groot gemaakt.
           </div>
         </div>
       </div>

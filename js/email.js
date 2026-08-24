@@ -193,12 +193,18 @@ async function sendEmail(schoolId, factuurId, draftId) {
         container.style.position = 'fixed';
         container.style.left = '-9999px';
         document.body.appendChild(container);
-        const pdfBlob = await html2pdf().set({
+        // In e-inkmodus het zwart-witthema even uitzetten: html2canvas
+        // rastert uit de levende pagina en zou dat thema anders in de
+        // verzonden factuur meenemen.
+        const _renderPdf = () => html2pdf().set({
           margin: [10, 12, 12, 12],
           filename: _pendingPdfFilename,
           html2canvas: { scale: 2 },
           jsPDF: { unit: 'mm', format: 'a4', orientation: 'portrait' }
         }).from(container).outputPdf('blob');
+        const pdfBlob = typeof einkWithoutMode === 'function'
+          ? await einkWithoutMode(_renderPdf)
+          : await _renderPdf();
         document.body.removeChild(container);
         // Converteer blob naar base64
         _pendingPdfBase64 = await new Promise((resolve) => {
